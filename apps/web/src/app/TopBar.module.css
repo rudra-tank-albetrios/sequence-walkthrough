@@ -1,0 +1,124 @@
+/* Kept to one row of controls, so the diagram gets the height */
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-block: 3px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  z-index: 30;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.logo {
+  color: var(--marker);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.seg,
+.zoom {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.seg button,
+.zoom button {
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-md);
+  font-weight: 500;
+}
+
+.seg button + button,
+.zoom button + button {
+  border-left: 1px solid var(--line);
+}
+
+.seg button[aria-pressed='true'] {
+  background: var(--marker-soft);
+}
+
+.zoom button:hover,
+.seg button:hover {
+  background: var(--surface-2);
+}
+
+.zoom button:nth-child(2) {
+  min-width: 56px;
+  font-variant-numeric: tabular-nums;
+}
+
+.select {
+  height: 32px;
+  max-width: 150px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--text-md);
+}
+
+.hint {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.more {
+  display: none;
+}
+
+@media (max-width: 1100px) {
+  .extraMd {
+    display: none !important;
+  }
+
+  .more {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 720px) {
+  .extra,
+  .meta {
+    display: none !important;
+  }
+}

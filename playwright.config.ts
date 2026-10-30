@@ -2,6 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 4173;
 const CI = Boolean(process.env.CI);
+// SWV_E2E_URL=http://127.0.0.1:5173 runs the specs against a dev server that is already up
+// (no build, no preview server). CI never sets it.
+const externalUrl = CI ? undefined : process.env.SWV_E2E_URL;
 
 // Every project runs in CI. Locally, SWV_E2E_PROJECTS=chromium,webkit,phone limits the run when a
 // browser cannot start on the machine (docs/decisions.md). CI ignores the variable.
@@ -26,16 +29,20 @@ export default defineConfig({
   reporter: CI ? [['github'], ['html', { open: 'never' }]] : [['list']],
   timeout: 60_000,
   use: {
-    baseURL: `http://127.0.0.1:${PORT}`,
+    baseURL: externalUrl ?? `http://127.0.0.1:${PORT}`,
     trace: 'retain-on-failure',
   },
   projects: projectFilter
     ? allProjects.filter((project) => projectFilter.includes(project.name))
     : allProjects,
-  webServer: {
-    command: `npm run -w @swv/web preview -- --host 127.0.0.1 --port ${PORT} --strictPort`,
-    url: `http://127.0.0.1:${PORT}`,
-    reuseExistingServer: !CI,
-    timeout: 60_000,
-  },
+  ...(externalUrl
+    ? {}
+    : {
+        webServer: {
+          command: `npm run -w @swv/web preview -- --host 127.0.0.1 --port ${PORT} --strictPort`,
+          url: `http://127.0.0.1:${PORT}`,
+          reuseExistingServer: !CI,
+          timeout: 60_000,
+        },
+      }),
 });
