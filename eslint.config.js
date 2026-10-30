@@ -24,7 +24,12 @@ const rawHtmlSyntax = [
   },
   {
     selector:
-      'CallExpression[callee.property.name=/^(insertAdjacentHTML|write|writeln|createContextualFragment)$/]',
+      'CallExpression[callee.property.name=/^(insertAdjacentHTML|createContextualFragment)$/]',
+    message: `Raw HTML is allowed only in ${SANITISED_HTML_COMPONENT}, after DOMPurify.`,
+  },
+  {
+    selector:
+      'CallExpression[callee.object.name="document"][callee.property.name=/^(write|writeln)$/]',
     message: `Raw HTML is allowed only in ${SANITISED_HTML_COMPONENT}, after DOMPurify.`,
   },
   {
@@ -70,6 +75,10 @@ export default defineConfig(
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { ignoreRestSiblings: true, argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
       '@typescript-eslint/consistent-type-imports': ['error', { fixStyle: 'inline-type-imports' }],
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       'no-console': ['error', { allow: ['warn', 'error'] }],

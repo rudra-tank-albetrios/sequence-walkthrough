@@ -1,0 +1,23 @@
+sequenceDiagram
+    %% @spec walkthrough/2
+    %% @title Labels and entities
+    participant A as Alpha
+    participant B as Beta "quoted" name
+    %% @step A label split over two lines with br.
+    A->>B: First line<br/>Second line<br>Third line
+    %% @step A semicolon written as an entity.
+    B-->>A: 200 OK done #59; really
+    %% @step A quote written as an entity and a hash written as an entity.
+    A->>B: Say #quot;hello#quot; about #35;42
+    %% @step A hash in the label, which Mermaid cuts.
+    B-->>A: close issue #42 now
+    %% @step An empty label.
+    A->>B:
+    %% @step Unicode and symbols stay.
+    B-->>A: 201 Created ₹1,499 → ✓ «ok» #amp; #lt;b#gt;
+    %% @step A colon inside the label.
+    A->>B: POST /api/v1/items key: value: more
+    %% @step An inline comment that Mermaid keeps as text.
+    B-->>A: 204 No Content %% not a comment
+    %% @step Leading and trailing spaces around the label.
+    A->>B:    spaced out

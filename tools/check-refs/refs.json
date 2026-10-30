@@ -1,3 +1,8 @@
 {
-  "flows": []
+  "flows": [
+    {
+      "file": "examples/demo-store/flows/place-order.mmd",
+      "root": "examples/demo-store"
+    }
+  ]
 }

@@ -1,0 +1,988 @@
+{
+  "fixture": "sql-data.mmd",
+  "annotations": {
+    "lines": [
+      "sequenceDiagram",
+      "    %% @spec walkthrough/2",
+      "    %% @title Data touched and payload diff",
+      "    %% @layer C kind=controller Controller",
+      "    %% @layer S kind=service Service",
+      "    %% @layer R kind=repository Repository",
+      "    %% @layer D kind=db Database",
+      "    participant C as Controller",
+      "    participant S as Service",
+      "    participant R as Repository",
+      "    participant D as Database",
+      "    %% @step Hands the request on.",
+      "    %% @payload.body {\"name\": \"Ada\", \"email\": \"ada@example.com\", \"role\": \"admin\"}",
+      "    C->>S: createUser(dto)",
+      "    %% @step Checks for an existing email.",
+      "    %% @payload.sql SELECT id FROM users WHERE email = $1",
+      "    S->>R: findByEmail",
+      "    %% @step Runs the query.",
+      "    R->>D: SELECT id FROM users WHERE email = 'ada@example.com'",
+      "    %% @step No row.",
+      "    D-->>R: 0 rows",
+      "    %% @step Inserts the user and a profile.",
+      "    %% @payload.sql INSERT INTO users (name, email) VALUES ($1, $2)",
+      "    %% @payload.sql INSERT INTO profiles (user_id) VALUES ($1)",
+      "    S->>R: insert",
+      "    %% @step Writes both rows in one transaction.",
+      "    R->>D: INSERT INTO users ... then INSERT INTO profiles ...",
+      "    %% @step Rows written.",
+      "    D-->>R: 2 rows",
+      "    %% @step Returns the new user.",
+      "    %% @payload.body {\"id\": 9, \"name\": \"Ada\", \"email\": \"ada@example.com\"}",
+      "    S-->>C: user",
+      "    %% @step Joins across tables for the report.",
+      "    S->>D: SELECT u.name, p.bio FROM users u JOIN profiles p ON p.user_id = u.id",
+      "    %% @step Updates a counter and deletes a token.",
+      "    %% @payload.sql UPDATE stats SET users = users + 1",
+      "    %% @payload.sql DELETE FROM invite_tokens WHERE email = $1",
+      "    S->>D: UPDATE stats SET users = users + 1",
+      ""
+    ],
+    "title": "Data touched and payload diff",
+    "titleLine": 2,
+    "fmTitle": "",
+    "kwTitle": "",
+    "spec": "walkthrough/2",
+    "mode": "",
+    "scope": "",
+    "trigger": "",
+    "summary": [],
+    "terms": [],
+    "layers": {
+      "C": {
+        "text": "Controller",
+        "kind": "controller",
+        "line": 3
+      },
+      "S": {
+        "text": "Service",
+        "kind": "service",
+        "line": 4
+      },
+      "R": {
+        "text": "Repository",
+        "kind": "repository",
+        "line": 5
+      },
+      "D": {
+        "text": "Database",
+        "kind": "db",
+        "line": 6
+      }
+    },
+    "sectionSummaries": {},
+    "arrows": [
+      {
+        "line": 13,
+        "left": "C->>S",
+        "text": "createUser(dto)",
+        "step": "Hands the request on.",
+        "stepLine": 11,
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{\"name\": \"Ada\", \"email\": \"ada@example.com\", \"role\": \"admin\"}",
+            "line": 12
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [11, 12]
+      },
+      {
+        "line": 16,
+        "left": "S->>R",
+        "text": "findByEmail",
+        "step": "Checks for an existing email.",
+        "stepLine": 14,
+        "payloads": [
+          {
+            "part": "sql",
+            "text": "SELECT id FROM users WHERE email = $1",
+            "line": 15
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [14, 15]
+      },
+      {
+        "line": 18,
+        "left": "R->>D",
+        "text": "SELECT id FROM users WHERE email = 'ada@example.com'",
+        "step": "Runs the query.",
+        "stepLine": 17,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [17]
+      },
+      {
+        "line": 20,
+        "left": "D-->>R",
+        "text": "0 rows",
+        "step": "No row.",
+        "stepLine": 19,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [19]
+      },
+      {
+        "line": 24,
+        "left": "S->>R",
+        "text": "insert",
+        "step": "Inserts the user and a profile.",
+        "stepLine": 21,
+        "payloads": [
+          {
+            "part": "sql",
+            "text": "INSERT INTO users (name, email) VALUES ($1, $2)",
+            "line": 22
+          },
+          {
+            "part": "sql",
+            "text": "INSERT INTO profiles (user_id) VALUES ($1)",
+            "line": 23
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [21, 22, 23]
+      },
+      {
+        "line": 26,
+        "left": "R->>D",
+        "text": "INSERT INTO users ... then INSERT INTO profiles ...",
+        "step": "Writes both rows in one transaction.",
+        "stepLine": 25,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [25]
+      },
+      {
+        "line": 28,
+        "left": "D-->>R",
+        "text": "2 rows",
+        "step": "Rows written.",
+        "stepLine": 27,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [27]
+      },
+      {
+        "line": 31,
+        "left": "S-->>C",
+        "text": "user",
+        "step": "Returns the new user.",
+        "stepLine": 29,
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{\"id\": 9, \"name\": \"Ada\", \"email\": \"ada@example.com\"}",
+            "line": 30
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [29, 30]
+      },
+      {
+        "line": 33,
+        "left": "S->>D",
+        "text": "SELECT u.name, p.bio FROM users u JOIN profiles p ON p.user_id = u.id",
+        "step": "Joins across tables for the report.",
+        "stepLine": 32,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [32]
+      },
+      {
+        "line": 37,
+        "left": "S->>D",
+        "text": "UPDATE stats SET users = users + 1",
+        "step": "Updates a counter and deletes a token.",
+        "stepLine": 34,
+        "payloads": [
+          {
+            "part": "sql",
+            "text": "UPDATE stats SET users = users + 1",
+            "line": 35
+          },
+          {
+            "part": "sql",
+            "text": "DELETE FROM invite_tokens WHERE email = $1",
+            "line": 36
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [34, 35, 36]
+      }
+    ],
+    "lint": [],
+    "diagramType": "sequenceDiagram",
+    "typeLine": 0,
+    "sectionCount": 0,
+    "frontMatterEnd": -1
+  },
+  "mermaid": {
+    "info": {
+      "participants": [
+        {
+          "alias": "C",
+          "name": "Controller",
+          "type": "participant"
+        },
+        {
+          "alias": "S",
+          "name": "Service",
+          "type": "participant"
+        },
+        {
+          "alias": "R",
+          "name": "Repository",
+          "type": "participant"
+        },
+        {
+          "alias": "D",
+          "name": "Database",
+          "type": "participant"
+        }
+      ],
+      "arrows": [
+        {
+          "from": "C",
+          "to": "S",
+          "text": "createUser(dto)",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "S",
+          "to": "R",
+          "text": "findByEmail",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "R",
+          "to": "D",
+          "text": "SELECT id FROM users WHERE email = 'ada@example.com'",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "D",
+          "to": "R",
+          "text": "0 rows",
+          "type": 1,
+          "dotted": true,
+          "branch": []
+        },
+        {
+          "from": "S",
+          "to": "R",
+          "text": "insert",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "R",
+          "to": "D",
+          "text": "INSERT INTO users ... then INSERT INTO profiles ...",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "D",
+          "to": "R",
+          "text": "2 rows",
+          "type": 1,
+          "dotted": true,
+          "branch": []
+        },
+        {
+          "from": "S",
+          "to": "C",
+          "text": "user",
+          "type": 1,
+          "dotted": true,
+          "branch": []
+        },
+        {
+          "from": "S",
+          "to": "D",
+          "text": "SELECT u.name, p.bio FROM users u JOIN profiles p ON p.user_id = u.id",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "S",
+          "to": "D",
+          "text": "UPDATE stats SET users = users + 1",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        }
+      ],
+      "type": "sequence"
+    }
+  },
+  "flow": {
+    "title": "Data touched and payload diff",
+    "hasTitle": true,
+    "spec": "walkthrough/2",
+    "isSequence": true,
+    "diagramType": "sequenceDiagram",
+    "mode": "",
+    "proposed": false,
+    "scope": "",
+    "trigger": "",
+    "summary": "",
+    "terms": [],
+    "layers": {
+      "C": {
+        "name": "Controller",
+        "desc": "Controller",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "S": {
+        "name": "Service",
+        "desc": "Service",
+        "kind": "service",
+        "icon": "🧩",
+        "zone": "ours"
+      },
+      "R": {
+        "name": "Repository",
+        "desc": "Repository",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "D": {
+        "name": "Database",
+        "desc": "Database",
+        "kind": "db",
+        "icon": "🗄",
+        "zone": "ours"
+      }
+    },
+    "participants": [
+      {
+        "alias": "C",
+        "name": "Controller",
+        "type": "participant"
+      },
+      {
+        "alias": "S",
+        "name": "Service",
+        "type": "participant"
+      },
+      {
+        "alias": "R",
+        "name": "Repository",
+        "type": "participant"
+      },
+      {
+        "alias": "D",
+        "name": "Database",
+        "type": "participant"
+      }
+    ],
+    "sections": [],
+    "steps": [
+      {
+        "idx": 0,
+        "n": 1,
+        "line": 13,
+        "annLines": [11, 12],
+        "from": "C",
+        "to": "S",
+        "fromName": "Controller",
+        "toName": "Service",
+        "kind": "request",
+        "labelRaw": "createUser(dto)",
+        "label": ["createUser(dto)"],
+        "explain": "Hands the request on.",
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{\"name\": \"Ada\", \"email\": \"ada@example.com\", \"role\": \"admin\"}"
+          }
+        ],
+        "payload": "Body: {\"name\": \"Ada\", \"email\": \"ada@example.com\", \"role\": \"admin\"}",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "C→S|createUser(dto)",
+        "replies": [7],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 1,
+        "n": 2,
+        "line": 16,
+        "annLines": [14, 15],
+        "from": "S",
+        "to": "R",
+        "fromName": "Service",
+        "toName": "Repository",
+        "kind": "request",
+        "labelRaw": "findByEmail",
+        "label": ["findByEmail"],
+        "explain": "Checks for an existing email.",
+        "payloads": [
+          {
+            "part": "sql",
+            "text": "SELECT id FROM users WHERE email = $1"
+          }
+        ],
+        "payload": "SQL: SELECT id FROM users WHERE email = $1",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "S→R|findByEmail",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 2,
+        "n": 3,
+        "line": 18,
+        "annLines": [17],
+        "from": "R",
+        "to": "D",
+        "fromName": "Repository",
+        "toName": "Database",
+        "kind": "request",
+        "labelRaw": "SELECT id FROM users WHERE email = 'ada@example.com'",
+        "label": ["SELECT id FROM users WHERE email = 'ada@example.com'"],
+        "explain": "Runs the query.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "R→D|SELECT id FROM users WHERE email = 'ada@example.com'",
+        "replies": [3],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 3,
+        "n": 4,
+        "line": 20,
+        "annLines": [19],
+        "from": "D",
+        "to": "R",
+        "fromName": "Database",
+        "toName": "Repository",
+        "kind": "reply",
+        "labelRaw": "0 rows",
+        "label": ["0 rows"],
+        "explain": "No row.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "D→R|0 rows",
+        "replies": [],
+        "answers": 2,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 4,
+        "n": 5,
+        "line": 24,
+        "annLines": [21, 22, 23],
+        "from": "S",
+        "to": "R",
+        "fromName": "Service",
+        "toName": "Repository",
+        "kind": "request",
+        "labelRaw": "insert",
+        "label": ["insert"],
+        "explain": "Inserts the user and a profile.",
+        "payloads": [
+          {
+            "part": "sql",
+            "text": "INSERT INTO users (name, email) VALUES ($1, $2)"
+          },
+          {
+            "part": "sql",
+            "text": "INSERT INTO profiles (user_id) VALUES ($1)"
+          }
+        ],
+        "payload": "SQL: INSERT INTO users (name, email) VALUES ($1, $2)\nSQL: INSERT INTO profiles (user_id) VALUES ($1)",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "S→R|insert",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 5,
+        "n": 6,
+        "line": 26,
+        "annLines": [25],
+        "from": "R",
+        "to": "D",
+        "fromName": "Repository",
+        "toName": "Database",
+        "kind": "request",
+        "labelRaw": "INSERT INTO users ... then INSERT INTO profiles ...",
+        "label": ["INSERT INTO users ... then INSERT INTO profiles ..."],
+        "explain": "Writes both rows in one transaction.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "R→D|INSERT INTO users ... then INSERT INTO profiles ...",
+        "replies": [6],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 6,
+        "n": 7,
+        "line": 28,
+        "annLines": [27],
+        "from": "D",
+        "to": "R",
+        "fromName": "Database",
+        "toName": "Repository",
+        "kind": "reply",
+        "labelRaw": "2 rows",
+        "label": ["2 rows"],
+        "explain": "Rows written.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "D→R|2 rows",
+        "replies": [],
+        "answers": 5,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 7,
+        "n": 8,
+        "line": 31,
+        "annLines": [29, 30],
+        "from": "S",
+        "to": "C",
+        "fromName": "Service",
+        "toName": "Controller",
+        "kind": "reply",
+        "labelRaw": "user",
+        "label": ["user"],
+        "explain": "Returns the new user.",
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{\"id\": 9, \"name\": \"Ada\", \"email\": \"ada@example.com\"}"
+          }
+        ],
+        "payload": "Body: {\"id\": 9, \"name\": \"Ada\", \"email\": \"ada@example.com\"}",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "S→C|user",
+        "replies": [],
+        "answers": 0,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 8,
+        "n": 9,
+        "line": 33,
+        "annLines": [32],
+        "from": "S",
+        "to": "D",
+        "fromName": "Service",
+        "toName": "Database",
+        "kind": "request",
+        "labelRaw": "SELECT u.name, p.bio FROM users u JOIN profiles p ON p.user_id = u.id",
+        "label": ["SELECT u.name, p.bio FROM users u JOIN profiles p ON p.user_id = u.id"],
+        "explain": "Joins across tables for the report.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "S→D|SELECT u.name, p.bio FROM users u JOIN profiles p ON p.user_id = u.id",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 9,
+        "n": 10,
+        "line": 37,
+        "annLines": [34, 35, 36],
+        "from": "S",
+        "to": "D",
+        "fromName": "Service",
+        "toName": "Database",
+        "kind": "request",
+        "labelRaw": "UPDATE stats SET users = users + 1",
+        "label": ["UPDATE stats SET users = users + 1"],
+        "explain": "Updates a counter and deletes a token.",
+        "payloads": [
+          {
+            "part": "sql",
+            "text": "UPDATE stats SET users = users + 1"
+          },
+          {
+            "part": "sql",
+            "text": "DELETE FROM invite_tokens WHERE email = $1"
+          }
+        ],
+        "payload": "SQL: UPDATE stats SET users = users + 1\nSQL: DELETE FROM invite_tokens WHERE email = $1",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "S→D|UPDATE stats SET users = users + 1",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "lint": [],
+    "mismatch": false,
+    "uses": [],
+    "effects": [],
+    "data": [
+      {
+        "table": "invite_tokens",
+        "ops": ["DELETE"],
+        "steps": [9]
+      },
+      {
+        "table": "profiles",
+        "ops": ["INSERT", "SELECT"],
+        "steps": [4, 5, 8]
+      },
+      {
+        "table": "stats",
+        "ops": ["UPDATE"],
+        "steps": [9]
+      },
+      {
+        "table": "users",
+        "ops": ["SELECT", "INSERT"],
+        "steps": [1, 2, 4, 5, 8]
+      }
+    ],
+    "endings": [
+      {
+        "idx": 7,
+        "n": 8,
+        "line": 31,
+        "annLines": [29, 30],
+        "from": "S",
+        "to": "C",
+        "fromName": "Service",
+        "toName": "Controller",
+        "kind": "reply",
+        "labelRaw": "user",
+        "label": ["user"],
+        "explain": "Returns the new user.",
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{\"id\": 9, \"name\": \"Ada\", \"email\": \"ada@example.com\"}"
+          }
+        ],
+        "payload": "Body: {\"id\": 9, \"name\": \"Ada\", \"email\": \"ada@example.com\"}",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "S→C|user",
+        "replies": [],
+        "answers": 0,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "unconfirmed": 0,
+    "boundaries": [],
+    "main": 0
+  }
+}

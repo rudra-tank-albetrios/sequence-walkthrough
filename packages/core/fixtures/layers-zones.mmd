@@ -1,0 +1,54 @@
+sequenceDiagram
+    %% @spec walkthrough/2
+    %% @title Layer kinds and trust boundaries
+    %% @layer U kind=person The person
+    %% @layer FE kind=client Browser app
+    %% @layer E kind=edge CDN and WAF
+    %% @layer APP kind=app Express app
+    %% @layer RT kind=router Router
+    %% @layer MW kind=middleware Auth middleware
+    %% @layer V kind=validator Validator
+    %% @layer CT kind=controller Controller
+    %% @layer SZ kind=serializer Serializer
+    %% @layer SV kind=service Service
+    %% @layer RP kind=repository Repository
+    %% @layer DB kind=db Postgres
+    %% @layer RD kind=cache Redis
+    %% @layer EB kind=eventbus Event bus
+    %% @layer Q kind=queue Queue
+    %% @layer WK kind=worker Worker
+    %% @layer CR kind=cron Cron
+    %% @layer X kind=external Payment provider
+    %% @layer NK Participant without a kind
+    actor U as Person
+    participant FE as Browser
+    participant E as Edge
+    participant APP as App
+    participant RT as Routes
+    participant MW as Middleware
+    participant V as Validator
+    participant CT as Controller
+    participant SZ as Serializer
+    participant SV as Service
+    participant RP as Repository
+    participant DB as Database
+    participant RD as Redis
+    participant EB as Event Bus
+    participant Q as Queue
+    participant WK as Worker
+    participant CR as Cron
+    participant X as Provider
+    participant NK as No kind
+    actor AC as Actor without layer
+    %% @step Starts.
+    U->>FE: click
+    %% @step Goes out.
+    FE->>E: GET /
+    %% @step And on.
+    E->>APP: GET /
+    %% @step Calls out.
+    SV->>X: POST /charge
+    %% @step Comes back.
+    X-->>SV: 200 OK
+    %% @step Ends.
+    NK->>AC: hello

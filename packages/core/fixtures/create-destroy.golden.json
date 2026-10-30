@@ -1,0 +1,498 @@
+{
+  "fixture": "create-destroy.mmd",
+  "annotations": {
+    "lines": [
+      "sequenceDiagram",
+      "    %% @title Create and destroy participants",
+      "    participant A as Alice",
+      "    %% @step Alice calls Bob, who is not declared.",
+      "    A->>Bob: Hello",
+      "    create participant C as Carol",
+      "    %% @step Bob creates Carol.",
+      "    Bob->>C: Welcome",
+      "    %% @step Carol answers.",
+      "    C-->>Bob: Thanks",
+      "    destroy C",
+      "    %% @step Carol leaves.",
+      "    Bob-xC: Goodbye",
+      "    %% @step Bob reports back.",
+      "    Bob-->>A: Done",
+      ""
+    ],
+    "title": "Create and destroy participants",
+    "titleLine": 1,
+    "fmTitle": "",
+    "kwTitle": "",
+    "spec": "",
+    "mode": "",
+    "scope": "",
+    "trigger": "",
+    "summary": [],
+    "terms": [],
+    "layers": {},
+    "sectionSummaries": {},
+    "arrows": [
+      {
+        "line": 4,
+        "left": "A->>Bob",
+        "text": "Hello",
+        "step": "Alice calls Bob, who is not declared.",
+        "stepLine": 3,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [3]
+      },
+      {
+        "line": 7,
+        "left": "Bob->>C",
+        "text": "Welcome",
+        "step": "Bob creates Carol.",
+        "stepLine": 6,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [6]
+      },
+      {
+        "line": 9,
+        "left": "C-->>Bob",
+        "text": "Thanks",
+        "step": "Carol answers.",
+        "stepLine": 8,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [8]
+      },
+      {
+        "line": 12,
+        "left": "Bob-xC",
+        "text": "Goodbye",
+        "step": "Carol leaves.",
+        "stepLine": 11,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [11]
+      },
+      {
+        "line": 14,
+        "left": "Bob-->>A",
+        "text": "Done",
+        "step": "Bob reports back.",
+        "stepLine": 13,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [13]
+      }
+    ],
+    "lint": [],
+    "diagramType": "sequenceDiagram",
+    "typeLine": 0,
+    "sectionCount": 0,
+    "frontMatterEnd": -1
+  },
+  "mermaid": {
+    "info": {
+      "participants": [
+        {
+          "alias": "A",
+          "name": "Alice",
+          "type": "participant"
+        },
+        {
+          "alias": "Bob",
+          "name": "Bob",
+          "type": "participant"
+        },
+        {
+          "alias": "C",
+          "name": "Carol",
+          "type": "participant"
+        }
+      ],
+      "arrows": [
+        {
+          "from": "A",
+          "to": "Bob",
+          "text": "Hello",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "Bob",
+          "to": "C",
+          "text": "Welcome",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "C",
+          "to": "Bob",
+          "text": "Thanks",
+          "type": 1,
+          "dotted": true,
+          "branch": []
+        },
+        {
+          "from": "Bob",
+          "to": "C",
+          "text": "Goodbye",
+          "type": 3,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "Bob",
+          "to": "A",
+          "text": "Done",
+          "type": 1,
+          "dotted": true,
+          "branch": []
+        }
+      ],
+      "type": "sequence"
+    }
+  },
+  "flow": {
+    "title": "Create and destroy participants",
+    "hasTitle": true,
+    "spec": "",
+    "isSequence": true,
+    "diagramType": "sequenceDiagram",
+    "mode": "",
+    "proposed": false,
+    "scope": "",
+    "trigger": "",
+    "summary": "",
+    "terms": [],
+    "layers": {
+      "A": {
+        "name": "Alice",
+        "desc": "",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "Bob": {
+        "name": "Bob",
+        "desc": "",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "C": {
+        "name": "Carol",
+        "desc": "",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      }
+    },
+    "participants": [
+      {
+        "alias": "A",
+        "name": "Alice",
+        "type": "participant"
+      },
+      {
+        "alias": "Bob",
+        "name": "Bob",
+        "type": "participant"
+      },
+      {
+        "alias": "C",
+        "name": "Carol",
+        "type": "participant"
+      }
+    ],
+    "sections": [],
+    "steps": [
+      {
+        "idx": 0,
+        "n": 1,
+        "line": 4,
+        "annLines": [3],
+        "from": "A",
+        "to": "Bob",
+        "fromName": "Alice",
+        "toName": "Bob",
+        "kind": "request",
+        "labelRaw": "Hello",
+        "label": ["Hello"],
+        "explain": "Alice calls Bob, who is not declared.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "A→Bob|Hello",
+        "replies": [4],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 1,
+        "n": 2,
+        "line": 7,
+        "annLines": [6],
+        "from": "Bob",
+        "to": "C",
+        "fromName": "Bob",
+        "toName": "Carol",
+        "kind": "request",
+        "labelRaw": "Welcome",
+        "label": ["Welcome"],
+        "explain": "Bob creates Carol.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "Bob→C|Welcome",
+        "replies": [2],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 2,
+        "n": 3,
+        "line": 9,
+        "annLines": [8],
+        "from": "C",
+        "to": "Bob",
+        "fromName": "Carol",
+        "toName": "Bob",
+        "kind": "reply",
+        "labelRaw": "Thanks",
+        "label": ["Thanks"],
+        "explain": "Carol answers.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "C→Bob|Thanks",
+        "replies": [],
+        "answers": 1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 3,
+        "n": 4,
+        "line": 12,
+        "annLines": [11],
+        "from": "Bob",
+        "to": "C",
+        "fromName": "Bob",
+        "toName": "Carol",
+        "kind": "request",
+        "labelRaw": "Goodbye",
+        "label": ["Goodbye"],
+        "explain": "Carol leaves.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "Bob→C|Goodbye",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 4,
+        "n": 5,
+        "line": 14,
+        "annLines": [13],
+        "from": "Bob",
+        "to": "A",
+        "fromName": "Bob",
+        "toName": "Alice",
+        "kind": "reply",
+        "labelRaw": "Done",
+        "label": ["Done"],
+        "explain": "Bob reports back.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "Bob→A|Done",
+        "replies": [],
+        "answers": 0,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "lint": [],
+    "mismatch": false,
+    "uses": [],
+    "effects": [],
+    "data": [],
+    "endings": [
+      {
+        "idx": 4,
+        "n": 5,
+        "line": 14,
+        "annLines": [13],
+        "from": "Bob",
+        "to": "A",
+        "fromName": "Bob",
+        "toName": "Alice",
+        "kind": "reply",
+        "labelRaw": "Done",
+        "label": ["Done"],
+        "explain": "Bob reports back.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "Bob→A|Done",
+        "replies": [],
+        "answers": 0,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "unconfirmed": 0,
+    "boundaries": [],
+    "main": 0
+  }
+}

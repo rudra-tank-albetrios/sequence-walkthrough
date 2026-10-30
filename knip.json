@@ -13,6 +13,10 @@
     },
     "tools/*": {
       "project": ["src/**/*.ts"]
+    },
+    "examples/*": {
+      "entry": ["src/backend/app/app.ts", "src/frontend/pages/CheckoutPage.ts"],
+      "project": ["src/**/*.ts"]
     }
   }
 }

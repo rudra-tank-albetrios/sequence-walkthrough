@@ -1,0 +1,19 @@
+---
+title: Version one flow
+---
+sequenceDiagram
+    %% @spec walkthrough/1
+    %% @layer U The user
+    %% @layer S The server
+    actor U as User
+    participant S as Server
+    %% @step The user asks for the page.
+    %% @payload GET /home with cookie session=abc
+    %% @ref src/pages/home.ts:12
+    U->>S: GET /home
+    %% @step The server renders the page.
+    %% @payload <html>...</html>
+    %% @payload second payload line
+    %% @ref https://example.com/docs/home
+    %% @ref src/pages/home.ts:40-52
+    S-->>U: 200 OK

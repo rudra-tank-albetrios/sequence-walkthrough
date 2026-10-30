@@ -1,0 +1,250 @@
+{
+  "fixture": "err-no-colon.mmd",
+  "annotations": {
+    "lines": [
+      "sequenceDiagram",
+      "    %% @title Arrow without a colon",
+      "    participant A",
+      "    participant B",
+      "    %% @step This arrow has no colon.",
+      "    A->>B",
+      "    B-->>A: ok",
+      ""
+    ],
+    "title": "Arrow without a colon",
+    "titleLine": 1,
+    "fmTitle": "",
+    "kwTitle": "",
+    "spec": "",
+    "mode": "",
+    "scope": "",
+    "trigger": "",
+    "summary": [],
+    "terms": [],
+    "layers": {},
+    "sectionSummaries": {},
+    "arrows": [
+      {
+        "line": 5,
+        "left": "A->>B",
+        "text": "",
+        "step": "This arrow has no colon.",
+        "stepLine": 4,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [4]
+      },
+      {
+        "line": 6,
+        "left": "B-->>A",
+        "text": "ok",
+        "step": "",
+        "stepLine": -1,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": []
+      }
+    ],
+    "lint": [],
+    "diagramType": "sequenceDiagram",
+    "typeLine": 0,
+    "sectionCount": 0,
+    "frontMatterEnd": -1
+  },
+  "mermaid": {
+    "error": "Parse error on line 4:\n...ticipant B    A->>B    B-->>A: ok\n----------------------^\nExpecting 'TXT', got 'NEWLINE'"
+  },
+  "flow": {
+    "title": "Arrow without a colon",
+    "hasTitle": true,
+    "spec": "",
+    "isSequence": true,
+    "diagramType": "sequenceDiagram",
+    "mode": "",
+    "proposed": false,
+    "scope": "",
+    "trigger": "",
+    "summary": "",
+    "terms": [],
+    "layers": {
+      "A": {
+        "name": "A",
+        "desc": "",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "B": {
+        "name": "B",
+        "desc": "",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      }
+    },
+    "participants": [
+      {
+        "alias": "A",
+        "name": "A",
+        "type": "participant"
+      },
+      {
+        "alias": "B",
+        "name": "B",
+        "type": "participant"
+      }
+    ],
+    "sections": [],
+    "steps": [
+      {
+        "idx": 0,
+        "n": 1,
+        "line": 5,
+        "annLines": [4],
+        "from": "A",
+        "to": "B",
+        "fromName": "A",
+        "toName": "B",
+        "kind": "request",
+        "labelRaw": "",
+        "label": [""],
+        "explain": "This arrow has no colon.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "A→B|",
+        "replies": [1],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 1,
+        "n": 2,
+        "line": 6,
+        "annLines": [],
+        "from": "B",
+        "to": "A",
+        "fromName": "B",
+        "toName": "A",
+        "kind": "reply",
+        "labelRaw": "ok",
+        "label": ["ok"],
+        "explain": "",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "B→A|ok",
+        "replies": [],
+        "answers": 0,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "lint": [
+      {
+        "line": 6,
+        "msg": "Step 2 (B → A) has no @step",
+        "code": "no-step",
+        "step": 1
+      }
+    ],
+    "mismatch": false,
+    "uses": [],
+    "effects": [],
+    "data": [],
+    "endings": [
+      {
+        "idx": 1,
+        "n": 2,
+        "line": 6,
+        "annLines": [],
+        "from": "B",
+        "to": "A",
+        "fromName": "B",
+        "toName": "A",
+        "kind": "reply",
+        "labelRaw": "ok",
+        "label": ["ok"],
+        "explain": "",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "B→A|ok",
+        "replies": [],
+        "answers": 0,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "unconfirmed": 0,
+    "boundaries": [],
+    "main": 0
+  }
+}

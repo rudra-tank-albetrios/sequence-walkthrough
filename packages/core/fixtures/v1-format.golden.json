@@ -1,0 +1,353 @@
+{
+  "fixture": "v1-format.mmd",
+  "annotations": {
+    "lines": [
+      "---",
+      "title: Version one flow",
+      "---",
+      "sequenceDiagram",
+      "    %% @spec walkthrough/1",
+      "    %% @layer U The user",
+      "    %% @layer S The server",
+      "    actor U as User",
+      "    participant S as Server",
+      "    %% @step The user asks for the page.",
+      "    %% @payload GET /home with cookie session=abc",
+      "    %% @ref src/pages/home.ts:12",
+      "    U->>S: GET /home",
+      "    %% @step The server renders the page.",
+      "    %% @payload <html>...</html>",
+      "    %% @payload second payload line",
+      "    %% @ref https://example.com/docs/home",
+      "    %% @ref src/pages/home.ts:40-52",
+      "    S-->>U: 200 OK",
+      ""
+    ],
+    "title": "",
+    "titleLine": -1,
+    "fmTitle": "Version one flow",
+    "kwTitle": "",
+    "spec": "walkthrough/1",
+    "mode": "",
+    "scope": "",
+    "trigger": "",
+    "summary": [],
+    "terms": [],
+    "layers": {
+      "U": {
+        "text": "The user",
+        "kind": "",
+        "line": 5
+      },
+      "S": {
+        "text": "The server",
+        "kind": "",
+        "line": 6
+      }
+    },
+    "sectionSummaries": {},
+    "arrows": [
+      {
+        "line": 12,
+        "left": "U->>S",
+        "text": "GET /home",
+        "step": "The user asks for the page.",
+        "stepLine": 9,
+        "payloads": [
+          {
+            "part": "_",
+            "text": "GET /home with cookie session=abc",
+            "line": 10
+          }
+        ],
+        "refs": ["src/pages/home.ts:12"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [9, 10, 11]
+      },
+      {
+        "line": 18,
+        "left": "S-->>U",
+        "text": "200 OK",
+        "step": "The server renders the page.",
+        "stepLine": 13,
+        "payloads": [
+          {
+            "part": "_",
+            "text": "<html>...</html>",
+            "line": 14
+          },
+          {
+            "part": "_",
+            "text": "second payload line",
+            "line": 15
+          }
+        ],
+        "refs": ["https://example.com/docs/home", "src/pages/home.ts:40-52"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [13, 14, 15, 16, 17]
+      }
+    ],
+    "lint": [],
+    "diagramType": "sequenceDiagram",
+    "typeLine": 3,
+    "sectionCount": 0,
+    "frontMatterEnd": 2
+  },
+  "mermaid": {
+    "info": {
+      "participants": [
+        {
+          "alias": "U",
+          "name": "User",
+          "type": "actor"
+        },
+        {
+          "alias": "S",
+          "name": "Server",
+          "type": "participant"
+        }
+      ],
+      "arrows": [
+        {
+          "from": "U",
+          "to": "S",
+          "text": "GET /home",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "S",
+          "to": "U",
+          "text": "200 OK",
+          "type": 1,
+          "dotted": true,
+          "branch": []
+        }
+      ],
+      "type": "sequence"
+    }
+  },
+  "flow": {
+    "title": "Version one flow",
+    "hasTitle": false,
+    "spec": "walkthrough/1",
+    "isSequence": true,
+    "diagramType": "sequenceDiagram",
+    "mode": "",
+    "proposed": false,
+    "scope": "",
+    "trigger": "",
+    "summary": "",
+    "terms": [],
+    "layers": {
+      "U": {
+        "name": "User",
+        "desc": "The user",
+        "kind": "person",
+        "icon": "👤",
+        "zone": "client"
+      },
+      "S": {
+        "name": "Server",
+        "desc": "The server",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      }
+    },
+    "participants": [
+      {
+        "alias": "U",
+        "name": "User",
+        "type": "actor"
+      },
+      {
+        "alias": "S",
+        "name": "Server",
+        "type": "participant"
+      }
+    ],
+    "sections": [],
+    "steps": [
+      {
+        "idx": 0,
+        "n": 1,
+        "line": 12,
+        "annLines": [9, 10, 11],
+        "from": "U",
+        "to": "S",
+        "fromName": "User",
+        "toName": "Server",
+        "kind": "request",
+        "labelRaw": "GET /home",
+        "label": ["GET /home"],
+        "explain": "The user asks for the page.",
+        "payloads": [
+          {
+            "part": "_",
+            "text": "GET /home with cookie session=abc"
+          }
+        ],
+        "payload": "GET /home with cookie session=abc",
+        "refs": ["src/pages/home.ts:12"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": {
+          "method": "GET",
+          "path": "/home"
+        },
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "U→S|GET /home",
+        "replies": [1],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 1,
+        "n": 2,
+        "line": 18,
+        "annLines": [13, 14, 15, 16, 17],
+        "from": "S",
+        "to": "U",
+        "fromName": "Server",
+        "toName": "User",
+        "kind": "reply",
+        "labelRaw": "200 OK",
+        "label": ["200 OK"],
+        "explain": "The server renders the page.",
+        "payloads": [
+          {
+            "part": "_",
+            "text": "<html>...</html>"
+          },
+          {
+            "part": "_",
+            "text": "second payload line"
+          }
+        ],
+        "payload": "<html>...</html>\nsecond payload line",
+        "refs": ["https://example.com/docs/home", "src/pages/home.ts:40-52"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 200,
+          "reason": "OK"
+        },
+        "section": -1,
+        "branch": [],
+        "key": "S→U|200 OK",
+        "replies": [],
+        "answers": 0,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "lint": [
+      {
+        "line": 3,
+        "msg": "Add %% @title <flow name> so the flow has a name",
+        "code": "no-title"
+      }
+    ],
+    "mismatch": false,
+    "uses": [],
+    "effects": [],
+    "data": [],
+    "endings": [
+      {
+        "idx": 1,
+        "n": 2,
+        "line": 18,
+        "annLines": [13, 14, 15, 16, 17],
+        "from": "S",
+        "to": "U",
+        "fromName": "Server",
+        "toName": "User",
+        "kind": "reply",
+        "labelRaw": "200 OK",
+        "label": ["200 OK"],
+        "explain": "The server renders the page.",
+        "payloads": [
+          {
+            "part": "_",
+            "text": "<html>...</html>"
+          },
+          {
+            "part": "_",
+            "text": "second payload line"
+          }
+        ],
+        "payload": "<html>...</html>\nsecond payload line",
+        "refs": ["https://example.com/docs/home", "src/pages/home.ts:40-52"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 200,
+          "reason": "OK"
+        },
+        "section": -1,
+        "branch": [],
+        "key": "S→U|200 OK",
+        "replies": [],
+        "answers": 0,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "unconfirmed": 0,
+    "boundaries": [],
+    "main": 0
+  }
+}

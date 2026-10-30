@@ -23,7 +23,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "build": "npm run build --workspaces --if-present",
-    "check:deps": "depcruise --config .dependency-cruiser.cjs apps packages tools",
+    "check:deps": "depcruise --config .dependency-cruiser.cjs apps packages tools examples",
     "check:dup": "jscpd",
     "check:unused": "knip",
     "check:budgets": "node tools/check-budgets/src/index.ts",

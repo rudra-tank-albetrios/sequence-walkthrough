@@ -1,0 +1,11 @@
+{
+  "name": "@swv/demo-store",
+  "version": "3.0.0-dev",
+  "private": true,
+  "description": "Small real shop behind the demo flow \"Place an order\": in-memory backend and framework-free frontend.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "demo": "node src/backend/server.ts"
+  }
+}

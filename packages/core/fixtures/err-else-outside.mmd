@@ -1,0 +1,8 @@
+sequenceDiagram
+    %% @title Else outside alt
+    participant A
+    participant B
+    %% @step A plain message.
+    A->>B: hi
+    else Oops
+    B-->>A: ok

@@ -1,0 +1,251 @@
+{
+  "fixture": "err-else-outside.mmd",
+  "annotations": {
+    "lines": [
+      "sequenceDiagram",
+      "    %% @title Else outside alt",
+      "    participant A",
+      "    participant B",
+      "    %% @step A plain message.",
+      "    A->>B: hi",
+      "    else Oops",
+      "    B-->>A: ok",
+      ""
+    ],
+    "title": "Else outside alt",
+    "titleLine": 1,
+    "fmTitle": "",
+    "kwTitle": "",
+    "spec": "",
+    "mode": "",
+    "scope": "",
+    "trigger": "",
+    "summary": [],
+    "terms": [],
+    "layers": {},
+    "sectionSummaries": {},
+    "arrows": [
+      {
+        "line": 5,
+        "left": "A->>B",
+        "text": "hi",
+        "step": "A plain message.",
+        "stepLine": 4,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [4]
+      },
+      {
+        "line": 7,
+        "left": "B-->>A",
+        "text": "ok",
+        "step": "",
+        "stepLine": -1,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": []
+      }
+    ],
+    "lint": [],
+    "diagramType": "sequenceDiagram",
+    "typeLine": 0,
+    "sectionCount": 0,
+    "frontMatterEnd": -1
+  },
+  "mermaid": {
+    "error": "Parse error on line 5:\n...B    A->>B: hi    else Oops    B-->>A\n---------------------^\nExpecting 'SPACE', 'NEWLINE', 'INVALID', 'create', 'box', 'autonumber', 'activate', 'deactivate', 'title', 'legacy_title', 'acc_title', 'acc_descr', 'acc_descr_multiline_value', 'loop', 'rect', 'opt', 'alt', 'par', 'par_over', 'critical', 'break', 'participant', 'participant_actor', 'destroy', 'note', 'links', 'link', 'properties', 'details', 'ACTOR', got 'else'"
+  },
+  "flow": {
+    "title": "Else outside alt",
+    "hasTitle": true,
+    "spec": "",
+    "isSequence": true,
+    "diagramType": "sequenceDiagram",
+    "mode": "",
+    "proposed": false,
+    "scope": "",
+    "trigger": "",
+    "summary": "",
+    "terms": [],
+    "layers": {
+      "A": {
+        "name": "A",
+        "desc": "",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "B": {
+        "name": "B",
+        "desc": "",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      }
+    },
+    "participants": [
+      {
+        "alias": "A",
+        "name": "A",
+        "type": "participant"
+      },
+      {
+        "alias": "B",
+        "name": "B",
+        "type": "participant"
+      }
+    ],
+    "sections": [],
+    "steps": [
+      {
+        "idx": 0,
+        "n": 1,
+        "line": 5,
+        "annLines": [4],
+        "from": "A",
+        "to": "B",
+        "fromName": "A",
+        "toName": "B",
+        "kind": "request",
+        "labelRaw": "hi",
+        "label": ["hi"],
+        "explain": "A plain message.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "A→B|hi",
+        "replies": [1],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 1,
+        "n": 2,
+        "line": 7,
+        "annLines": [],
+        "from": "B",
+        "to": "A",
+        "fromName": "B",
+        "toName": "A",
+        "kind": "reply",
+        "labelRaw": "ok",
+        "label": ["ok"],
+        "explain": "",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "B→A|ok",
+        "replies": [],
+        "answers": 0,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "lint": [
+      {
+        "line": 7,
+        "msg": "Step 2 (B → A) has no @step",
+        "code": "no-step",
+        "step": 1
+      }
+    ],
+    "mismatch": false,
+    "uses": [],
+    "effects": [],
+    "data": [],
+    "endings": [
+      {
+        "idx": 1,
+        "n": 2,
+        "line": 7,
+        "annLines": [],
+        "from": "B",
+        "to": "A",
+        "fromName": "B",
+        "toName": "A",
+        "kind": "reply",
+        "labelRaw": "ok",
+        "label": ["ok"],
+        "explain": "",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "B→A|ok",
+        "replies": [],
+        "answers": 0,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "unconfirmed": 0,
+    "boundaries": [],
+    "main": 0
+  }
+}
