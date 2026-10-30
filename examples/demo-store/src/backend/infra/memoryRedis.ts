@@ -81,10 +81,8 @@ export class MemoryRedis {
   private live(key: string): Entry | undefined {
     const entry = this.entries.get(key);
     if (!entry) return undefined;
-    if (entry.expiresAt !== null && entry.expiresAt <= this.now()) {
-      this.entries.delete(key);
-      return undefined;
-    }
-    return entry;
+    // Expired entries are hidden, not deleted: the cron reads them through expired() to give held
+    // stock back, so a get must never make one disappear.
+    return entry.expiresAt !== null && entry.expiresAt <= this.now() ? undefined : entry;
   }
 }

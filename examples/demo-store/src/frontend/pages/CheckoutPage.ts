@@ -1,7 +1,7 @@
 // Page: renders the checkout from the store and drives "Place an order" through the API client.
 import type { ApiClient, PlaceOrderResult } from '../api/client.ts';
 import { renderCartSummary } from '../components/CartSummary.ts';
-import { escapeHtml } from '../components/html.ts';
+import { escapeHtml } from '../../backend/utils/html.ts';
 import { renderOrderConfirmation } from '../components/OrderConfirmation.ts';
 import type { CartState, CheckoutStatus, Store } from '../store/cartStore.ts';
 

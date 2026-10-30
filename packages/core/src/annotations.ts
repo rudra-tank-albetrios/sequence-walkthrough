@@ -1,4 +1,5 @@
 import { findArrow } from './arrows.ts';
+import { splitStatements } from './statements.ts';
 import { isCodeRef } from './text.ts';
 import type {
   AnnotatedArrow,
@@ -283,37 +284,42 @@ export function parseAnnotations(code: string): Annotations {
       inAccBlock = true;
       continue;
     }
-    if (SEQ_KEYWORD.test(t)) {
-      const tm = /^title\s*:?\s*(.+)$/i.exec(t);
-      if (tm?.[1]) res.kwTitle = tm[1].trim();
-      continue;
-    }
-    const colon = t.indexOf(':');
-    const left = colon >= 0 ? t.slice(0, colon).trim() : t;
-    if (!findArrow(left)) continue;
-    const arrow: AnnotatedArrow = {
-      line: i,
-      left,
-      text: colon >= 0 ? t.slice(colon + 1).trim() : '',
-      step: pending.step.join(' ').trim(),
-      stepLine: pending.stepLine,
-      payloads: pending.payload.slice(),
-      refs: pending.refs.slice(),
-      uses: pending.uses.slice(),
-      effects: pending.effects.slice(),
-      fields: pending.fields.slice(),
-      schema: pending.schema.slice(),
-      state: joinState(pending.state),
-      flags: { ...pending.flags },
-      unconfirmed: pending.unconfirmed.slice(),
-      section: pending.section,
-      sectionLine: pending.sectionLine,
-      annLines: pending.lines.slice(),
-    };
-    if (pending.section !== null && chapter.last) chapter.last.used = true;
-    res.arrows.push(arrow);
-    pending = newPending();
+    for (const statement of splitStatements(t)) readStatement(statement, i);
   }
+  /** One Mermaid statement that is not a comment: a keyword line or an arrow. */
+  function readStatement(t: string, i: number) {
+      if (SEQ_KEYWORD.test(t)) {
+        const tm = /^title\s*:?\s*(.+)$/i.exec(t);
+        if (tm?.[1]) res.kwTitle = tm[1].trim();
+        return;
+      }
+      const colon = t.indexOf(':');
+      const left = colon >= 0 ? t.slice(0, colon).trim() : t;
+      if (!findArrow(left)) return;
+      const arrow: AnnotatedArrow = {
+        line: i,
+        left,
+        text: colon >= 0 ? t.slice(colon + 1).trim() : '',
+        step: pending.step.join(' ').trim(),
+        stepLine: pending.stepLine,
+        payloads: pending.payload.slice(),
+        refs: pending.refs.slice(),
+        uses: pending.uses.slice(),
+        effects: pending.effects.slice(),
+        fields: pending.fields.slice(),
+        schema: pending.schema.slice(),
+        state: joinState(pending.state),
+        flags: { ...pending.flags },
+        unconfirmed: pending.unconfirmed.slice(),
+        section: pending.section,
+        sectionLine: pending.sectionLine,
+        annLines: pending.lines.slice(),
+      };
+      if (pending.section !== null && chapter.last) chapter.last.used = true;
+      res.arrows.push(arrow);
+      pending = newPending();
+  }
+
   if (hasStepContent(pending)) {
     warn(pending.lines[0] ?? lines.length - 1, 'Annotation has no arrow after it', 'orphan');
   }

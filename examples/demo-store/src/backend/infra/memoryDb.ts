@@ -1,15 +1,21 @@
 // Database stand-in: tables are Maps, a transaction rolls every table back when fn throws.
 import type { OrderItemRecord, OrderRecord, ProductRecord, Row, SessionRecord } from './schema.ts';
 
-interface Snapshottable {
-  snapshot(): () => void;
+interface Transactional {
+  begin(): void;
+  commit(): void;
+  rollback(): void;
 }
 
-class Table<T extends Row> implements Snapshottable {
+class Table<T extends Row> implements Transactional {
   private rows = new Map<string, T>();
+  /** The rows as they were when the open transaction began; copied on the first write only. */
+  private backup: Map<string, T> | null = null;
+  private inTransaction = false;
 
   insert(row: T): T {
     if (this.rows.has(row.id)) throw new Error(`Duplicate id "${row.id}"`);
+    if (this.inTransaction && !this.backup) this.backup = new Map(this.rows);
     this.rows.set(row.id, row);
     return row;
   }
@@ -26,12 +32,19 @@ class Table<T extends Row> implements Snapshottable {
     return this.rows.size;
   }
 
-  /** Copies the rows and returns a function that puts the copy back. */
-  snapshot(): () => void {
-    const copy = new Map(this.rows);
-    return () => {
-      this.rows = copy;
-    };
+  begin(): void {
+    this.inTransaction = true;
+    this.backup = null;
+  }
+
+  commit(): void {
+    this.inTransaction = false;
+    this.backup = null;
+  }
+
+  rollback(): void {
+    if (this.backup) this.rows = this.backup;
+    this.commit();
   }
 }
 
@@ -41,17 +54,19 @@ export class MemoryDb {
   readonly orderItems = new Table<OrderItemRecord>();
   readonly sessions = new Table<SessionRecord>();
 
-  private get tables(): Snapshottable[] {
+  private get tables(): Transactional[] {
     return [this.products, this.orders, this.orderItems, this.sessions];
   }
 
-  /** Runs fn; if it throws, every table is restored to how it was before. */
+  /** Runs fn; if it throws, every table it wrote to is restored to how it was before. */
   transaction<T>(fn: () => T): T {
-    const restores = this.tables.map((table) => table.snapshot());
+    for (const table of this.tables) table.begin();
     try {
-      return fn();
+      const result = fn();
+      for (const table of this.tables) table.commit();
+      return result;
     } catch (error) {
-      for (const restore of restores) restore();
+      for (const table of this.tables) table.rollback();
       throw error;
     }
   }

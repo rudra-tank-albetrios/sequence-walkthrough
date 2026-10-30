@@ -102,11 +102,11 @@ function normaliseGolden(golden: Golden): Omit<Flow, 'syntax'> {
 
 /**
  * Recorded difference 4: when Mermaid refused the code, version 2 fell back to a regex read with no
- * participant declarations and no blocks. Version 3 reads everything it can and reports the error,
- * so only the arrows themselves are compared there.
+ * participant declarations, no blocks and no statement splitting at `;`. Version 3 reads everything
+ * it can and reports the error, so only who talks to whom and the step text are compared there.
  */
-function arrowBasics(steps: { from: string; to: string; labelRaw: string; explain: string }[]) {
-  return steps.map(({ from, to, labelRaw, explain }) => ({ from, to, labelRaw, explain }));
+function arrowBasics(steps: { from: string; to: string; explain: string }[]) {
+  return steps.map(({ from, to, explain }) => ({ from, to, explain }));
 }
 
 const fixtures = readdirSync(fixturesDir).filter((name) => name.endsWith('.mmd'));

@@ -1,4 +1,4 @@
-// Components return HTML strings, so every value from data goes through this first.
+// Util: components and the demo home page return HTML strings, so every value from data goes through this first.
 
 const ESCAPES: Record<string, string> = {
   '&': '&amp;',

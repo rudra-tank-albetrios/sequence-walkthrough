@@ -81,7 +81,14 @@ export class OrdersService {
       shippingAddress: dto.shippingAddress,
       placedAt: new Date(now()).toISOString(),
     };
-    const saved = orders.insert(order, items);
+    let saved: OrderWithItems;
+    try {
+      saved = orders.insert(order, items);
+    } catch (error) {
+      // No order exists, so the stock must not stay held until the TTL runs out.
+      this.releaseHolds(orderId, priced);
+      throw error;
+    }
     eventBus.publish({
       type: 'order.placed',
       orderId,
@@ -110,10 +117,21 @@ export class OrdersService {
       const hold = holdKey(orderId, item.product.id);
       const reserved = redis.reserve(key, hold, item.quantity, config.reservationTtlSeconds);
       if (!reserved) {
-        for (const h of held) redis.release(stockKey(h.product.id), holdKey(orderId, h.product.id), h.quantity);
+        this.releaseHolds(orderId, held);
         throw new OutOfStockError(item.product);
       }
       held.push(item);
+    }
+  }
+
+  /** Gives the held units of these lines back to their stock counters. */
+  private releaseHolds(orderId: string, items: PricedItem[]): void {
+    for (const item of items) {
+      this.deps.redis.release(
+        stockKey(item.product.id),
+        holdKey(orderId, item.product.id),
+        item.quantity,
+      );
     }
   }
 }

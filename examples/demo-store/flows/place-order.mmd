@@ -67,7 +67,6 @@ sequenceDiagram
     %% @payload.headers Authorization: Bearer demo-token
     %% @payload.headers Content-Type: application/json
     %% @payload.body { "items": [{ "productId": "p_1", "quantity": 1 }, { "productId": "p_2", "quantity": 2 }], "shippingAddress": { "line1": "1 Lovelace Lane", "city": "Pune", "postcode": "411001" } }
-    %% @timeout none on the client, the demo runs in memory
     %% @ref src/frontend/api/client.ts:50
     API->>APP: POST /api/orders
     %% @step The app catches any unexpected error and otherwise lets the router match the method and path.
@@ -87,7 +86,7 @@ sequenceDiagram
     DB-->>MW: { userId: "u_1", email: "ada@example.com" }
     alt Signed in
         %% @step With a user on the context the chain moves on to the validator.
-        %% @ref src/backend/middleware/auth.middleware.ts:16
+        %% @ref src/backend/middleware/auth.middleware.ts:16-17
         MW->>VAL: next() → placeOrderValidator
     else No or unknown token
         %% @step Without a valid bearer token the chain stops in the middleware, and the shopper gets a plain message.

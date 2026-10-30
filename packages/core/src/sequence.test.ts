@@ -51,6 +51,20 @@ describe('parseSequence', () => {
     ]);
   });
 
+  it('reads two statements on one line, as Mermaid does with a bare semicolon', () => {
+    const info = parseSequence(
+      seq(['A->>B: hi; B-->>A: ok', 'A->>B: retry; wait', 'A->>B: a #59; b'].join('\n')),
+    );
+    expect(info?.arrows.map((a) => a.text)).toEqual(['hi', 'ok', 'retry', 'a #59; b']);
+    expect(info?.syntax).toEqual([
+      {
+        line: 2,
+        code: 'semicolon',
+        msg: 'A semicolon ends a Mermaid statement, so this text is read as a new one; write #59; inside a label',
+      },
+    ]);
+  });
+
   it('strips activation markers and keeps bidirectional arrows', () => {
     const info = parseSequence(seq('A->>+B: start\nB-->>-A: done\nA<<->>B: both'));
     expect(info?.arrows.map((a) => [a.from, a.to, a.type, a.dotted])).toEqual([

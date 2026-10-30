@@ -54,6 +54,13 @@ module.exports = {
       to: { path: '^apps/web/src/app/' },
     },
     {
+      name: 'examples-stand-alone',
+      severity: 'error',
+      comment: 'The demo is a small real project of its own; its code links describe only itself.',
+      from: { path: '^examples/' },
+      to: { path: '^(packages|apps|tools)/' },
+    },
+    {
       name: 'tools-use-only-core',
       severity: 'error',
       from: { path: '^tools/' },

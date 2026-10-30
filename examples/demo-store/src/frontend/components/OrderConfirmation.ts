@@ -1,6 +1,6 @@
 // Component: what the customer sees once the order is placed.
 import type { OrderResponseDto } from '../../backend/dto/placeOrder.dto.ts';
-import { escapeHtml } from './html.ts';
+import { escapeHtml } from '../../backend/utils/html.ts';
 
 export function renderOrderConfirmation(order: OrderResponseDto): string {
   const lines = order.items

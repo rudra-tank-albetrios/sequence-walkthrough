@@ -32,7 +32,10 @@ const NAMED_ENTITIES: Record<string, string> = {
 /** Mermaid writes entities as `#59;` or `#quot;` inside labels. */
 export function decodeEntities(text: string): string {
   return text
-    .replace(/#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code)))
+    .replace(/#(\d+);/g, (match, code: string) => {
+      const point = Number(code);
+      return point <= 0x10ffff ? String.fromCodePoint(point) : match;
+    })
     .replace(/#([a-zA-Z]+);/g, (match, name: string) => NAMED_ENTITIES[name] ?? match)
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')

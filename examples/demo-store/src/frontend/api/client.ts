@@ -1,7 +1,7 @@
 // API Client: the one place the frontend talks HTTP. The fetch is injectable, so tests pass
 // the backend's app.handle and run end to end in memory.
 import type { OrderResponseDto, PlaceOrderDto } from '../../backend/dto/placeOrder.dto.ts';
-import { isRecord } from '../../backend/utils/guards.ts';
+import { isList, isRecord } from '../../backend/utils/guards.ts';
 
 export type FetchLike = (request: Request) => Promise<Response>;
 
@@ -21,10 +21,19 @@ function fieldsOf(payload: unknown): Record<string, string> {
   return fields;
 }
 
+/** The fields the page reads from a placed order must be there and have the right type. */
+function isOrderResponse(payload: unknown): payload is OrderResponseDto {
+  return (
+    isRecord(payload) &&
+    typeof payload.orderNumber === 'string' &&
+    typeof payload.total === 'number' &&
+    typeof payload.totalDisplay === 'string' &&
+    isList(payload.items)
+  );
+}
+
 function toResult(status: number, payload: unknown): PlaceOrderResult {
-  if (status === 201 && isRecord(payload) && typeof payload.orderNumber === 'string') {
-    return { kind: 'placed', order: payload as unknown as OrderResponseDto };
-  }
+  if (status === 201 && isOrderResponse(payload)) return { kind: 'placed', order: payload };
   const message =
     isRecord(payload) && typeof payload.error === 'string'
       ? payload.error

@@ -5,6 +5,7 @@ import { buffer } from 'node:stream/consumers';
 
 import { type App, createApp } from './app/app.ts';
 import { DEMO_TOKEN } from './seed.ts';
+import { escapeHtml } from './utils/html.ts';
 
 const HOST = '127.0.0.1';
 
@@ -13,9 +14,10 @@ function homePage(app: App, baseUrl: string): string {
     items: [{ productId: 'p_1', quantity: 1 }],
     shippingAddress: { line1: '1 Lovelace Lane', city: 'Pune', postcode: '411001' },
   });
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${app.config.shopName}</title></head>
+  const shopName = escapeHtml(app.config.shopName);
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${shopName}</title></head>
 <body style="font-family:system-ui;max-width:48rem;margin:3rem auto;line-height:1.5">
-<h1>${app.config.shopName}</h1>
+<h1>${shopName}</h1>
 <p>This is the small, real project behind the Sequence Walkthrough demo flow "Place an order".
 Everything runs in memory: the database, Redis, the event bus, the mail queue and the mailer are
 stand-ins, so the only endpoint is <code>POST /api/orders</code>. Try it, then watch this terminal
