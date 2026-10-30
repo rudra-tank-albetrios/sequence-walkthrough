@@ -85,6 +85,9 @@ def skill_kit():
     files = list(skill_files())
     if not any(rel == "SKILL.md" for rel, _ in files):
         raise SystemExit("skill/sequence-walkthrough/SKILL.md missing")
+    desc = re.search(r"^description:\s*(.*)$", (SKILL / "SKILL.md").read_text(encoding="utf-8"), re.M)
+    if not desc or len(desc.group(1)) > 1024:
+        raise SystemExit("SKILL.md description must exist and be at most 1024 characters (the Claude app rejects longer ones)")
     skill_zip = zip_bytes([(f"sequence-walkthrough/{rel}", data) for rel, data in files])
     kit = [(f"{KIT_NAME}/{f.name}", f.read_bytes()) for f in sorted(KIT.iterdir()) if f.is_file()]
     kit.append((f"{KIT_NAME}/sequence-walkthrough.zip", skill_zip))
