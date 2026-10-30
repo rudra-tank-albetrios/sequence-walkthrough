@@ -1,0 +1,168 @@
+<div class="app" id="app">
+  <header class="topbar" id="topbar">
+    <div class="tb-left">
+      <span class="logo" aria-hidden="true">&#9670;</span>
+      <h1 class="flow-name" id="flowName">Sequence diagram</h1>
+      <span class="flow-meta" id="flowMeta"></span>
+    </div>
+    <div class="tb-right">
+      <div class="seg tb-extra" role="group" aria-label="View">
+        <button type="button" id="viewDiagram" aria-pressed="true">Diagram</button>
+        <button type="button" id="viewTable" aria-pressed="false">Table</button>
+      </div>
+      <button type="button" class="btn tb-extra" id="findBtn" title="Find (/)"><span aria-hidden="true">&#8981;</span> Find</button>
+      <div class="zoom tb-extra" role="group" aria-label="Zoom">
+        <button type="button" id="zoomOut" aria-label="Zoom out" title="Zoom out (&minus;)">&minus;</button>
+        <button type="button" id="zoomPct" title="Set zoom to 100%">100%</button>
+        <button type="button" id="zoomIn" aria-label="Zoom in" title="Zoom in (+)">+</button>
+      </div>
+      <button type="button" class="btn tb-extra" id="fitBtn" title="Fit width (0). Fit all (F)">Fit</button>
+      <button type="button" class="btn tb-extra tb-extra-md" id="wheelBtn" aria-pressed="false" title="Mouse wheel behaviour">Wheel: Scroll</button>
+      <select class="tb-sel tb-extra tb-extra-md" id="themeSel" aria-label="Diagram theme">
+        <option value="redux-color">redux-color</option>
+        <option value="redux">redux</option>
+        <option value="redux-dark">redux-dark</option>
+        <option value="redux-dark-color">redux-dark-color</option>
+        <option value="default">default</option>
+        <option value="dark">dark</option>
+        <option value="neutral">neutral</option>
+        <option value="forest">forest</option>
+      </select>
+      <button type="button" class="btn tb-extra" id="guideBtn" title="How the viewer and the Claude skill work">How it works</button>
+      <div class="menu-wrap tb-extra">
+        <button type="button" class="btn" id="exportBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="exportMenu">Export &#9662;</button>
+        <div class="menu" id="exportMenu" role="menu" hidden>
+          <div class="menu-h">Files named after the flow</div>
+          <button type="button" role="menuitem" data-act="pdf">PDF&hellip; <span class="hint">pages, header repeated</span></button>
+          <div class="row"><span class="hint">PNG</span>
+            <button type="button" class="btn" role="menuitem" data-act="png1">1&times;</button>
+            <button type="button" class="btn" role="menuitem" data-act="png2">2&times;</button>
+            <button type="button" class="btn" role="menuitem" data-act="png4">4&times;</button>
+          </div>
+          <button type="button" role="menuitem" data-act="svg">SVG <span class="hint">vector</span></button>
+          <button type="button" role="menuitem" data-act="stepimg">Step image <span class="hint">current view</span></button>
+          <button type="button" role="menuitem" data-act="mmd">Code <span class="hint">.mmd</span></button>
+          <button type="button" role="menuitem" data-act="csv">Step table <span class="hint">.csv</span></button>
+          <button type="button" role="menuitem" data-act="md">Copy table as Markdown</button>
+          <hr>
+          <div class="menu-h">Share</div>
+          <button type="button" role="menuitem" data-act="live-open">Open in mermaid.live <span class="hint">new tab</span></button>
+          <button type="button" role="menuitem" data-act="live-copy">Copy mermaid.live link</button>
+          <button type="button" role="menuitem" data-act="share">Copy viewer link <span class="hint">code in URL</span></button>
+          <hr>
+          <div class="menu-h">Skill for Claude</div>
+          <button type="button" role="menuitem" data-act="skill">Download the skill <span class="hint">.zip with setup guide</span></button>
+          <hr>
+          <div class="menu-h">Import</div>
+          <button type="button" role="menuitem" data-act="import">Paste a link or code&hellip;</button>
+          <button type="button" role="menuitem" data-act="open-file">Open a file&hellip; <span class="hint">.mmd .md .txt</span></button>
+        </div>
+      </div>
+      <button type="button" class="btn icon tb-extra" id="helpBtn" aria-label="Keyboard shortcuts and help" title="Shortcuts (?)">?</button>
+      <div class="menu-wrap">
+        <button type="button" class="btn icon more-btn" id="moreBtn" aria-label="More" aria-haspopup="menu" aria-expanded="false" aria-controls="moreMenu">&#8943;</button>
+        <div class="menu" id="moreMenu" role="menu" hidden>
+          <button type="button" role="menuitem" data-more="guide">How it works</button>
+          <button type="button" role="menuitem" data-more="view">Switch to table view</button>
+          <button type="button" role="menuitem" data-more="find">Find</button>
+          <button type="button" role="menuitem" data-more="fit">Fit width</button>
+          <button type="button" role="menuitem" data-more="fitall">Fit all</button>
+          <button type="button" role="menuitem" data-more="wheel">Wheel: Scroll</button>
+          <div class="row"><span class="hint">Theme</span><select class="tb-sel" id="themeSel2" aria-label="Diagram theme"></select></div>
+          <button type="button" role="menuitem" data-more="export">Export and share&hellip;</button>
+          <button type="button" role="menuitem" data-more="help">Shortcuts and help</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="stage" id="stage">
+    <div class="find-pop" id="findPop" hidden role="search">
+      <input id="findInput" type="search" placeholder="Find in labels and explanations" aria-label="Find" autocomplete="off">
+      <span class="find-count" id="findCount" aria-live="polite"></span>
+      <button type="button" class="btn icon" id="findPrev" aria-label="Previous match">&#8593;</button>
+      <button type="button" class="btn icon" id="findNext" aria-label="Next match">&#8595;</button>
+      <button type="button" class="btn icon ghost" id="findClose" aria-label="Close find">&times;</button>
+    </div>
+    <div class="canvas grid" id="canvas" tabindex="0" role="application" aria-roledescription="diagram canvas" aria-label="Diagram. Arrow keys step through the flow, drag or scroll to move, plus and minus zoom.">
+      <div class="layer" id="layer"></div>
+      <div class="hdr-band" id="hdrBand" hidden></div>
+      <div class="hdr-layer" id="hdrLayer" hidden></div>
+      <div class="loading" id="loading">Loading Mermaid 12.2.0&hellip;</div>
+      <div class="canvas-msg" id="notice" hidden></div>
+      <div class="canvas-msg err" id="errBadge" hidden></div>
+      <div class="cv-controls">
+        <button type="button" class="btn code-btn" id="codeBtn" aria-expanded="false" aria-controls="codePanel" title="Code (C)"><span aria-hidden="true">&lt;/&gt;</span> Code <span class="count" id="codeCount" hidden></span></button>
+        <div class="cv-right">
+          <button type="button" class="btn" id="playBtn" aria-pressed="false" title="Play / pause (Space)"><span aria-hidden="true" id="playIcon">&#9654;</span> <span class="lbl" id="playLbl">Play</span></button>
+          <select class="tb-sel" id="speedSel" aria-label="Seconds per step" title="Seconds per step">
+            <option value="1000">1 s</option><option value="2000">2 s</option><option value="3000" selected>3 s</option><option value="4000">4 s</option><option value="5000">5 s</option>
+          </select>
+          <button type="button" class="btn" id="dimBtn" aria-pressed="false" title="Fade the other arrows"><span aria-hidden="true">&#9680;</span> <span class="lbl">Dim others</span></button>
+          <button type="button" class="btn" id="hideBtn" title="Hide controls (H)"><span aria-hidden="true">&#9974;</span> <span class="lbl">Hide</span></button>
+        </div>
+      </div>
+      <div class="tooltip" id="tip" role="tooltip" hidden></div>
+    </div>
+    <button type="button" class="btn show-ctrls" id="showCtrls" hidden>Show controls &middot; <span class="kbd">Esc</span></button>
+    <!-- Edge tabs: fold the header, the step bar or the code panel away; the same tab stays at the edge to bring it back -->
+    <button type="button" class="edge edge-top" id="edgeTop" aria-controls="topbar" aria-expanded="true" aria-label="Hide the header" title="Hide the header"><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 5 5 1 9 5"/></svg></button>
+    <button type="button" class="edge edge-bottom" id="edgeBottom" aria-controls="wbar" aria-expanded="true" aria-label="Hide the step bar" title="Hide the step bar"><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 5 5 1 9 5"/></svg></button>
+    <button type="button" class="edge edge-left" id="edgeLeft" aria-controls="codePanel" aria-expanded="false" aria-label="Show the code" title="Show the code (C)"><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 5 5 1 9 5"/></svg></button>
+
+    <section class="code-panel" id="codePanel" hidden aria-label="Code">
+      <div class="cp-head">
+        <h2>Code</h2>
+        <button type="button" class="btn ghost" id="sampleBtn" title="Replace the code with the example flow">Load example</button>
+        <button type="button" class="btn icon ghost" id="codeClose" aria-label="Close code panel">&times;</button>
+      </div>
+      <div class="cp-tools">
+        <button type="button" class="btn" id="fixPromptBtn" title="Copy a prompt for the sequence-walkthrough skill">Copy fix-prompt</button>
+        <button type="button" class="btn" id="gridBtn" aria-pressed="true">Grid</button>
+        <button type="button" class="btn" id="copyCodeBtn">Copy code</button>
+      </div>
+      <div class="editor">
+        <div class="gutter" id="gutter" aria-hidden="true"></div>
+        <div class="ed-wrap">
+          <pre class="ed-hl" id="edHl" aria-hidden="true"></pre>
+          <textarea class="ed-ta" id="code" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="Mermaid code"></textarea>
+        </div>
+      </div>
+      <div class="ed-status" id="edStatus" role="status"></div>
+      <ul class="lint" id="lintList" aria-label="Annotation warnings"></ul>
+    </section>
+
+    <section class="table-view" id="tableView" hidden aria-label="Step table">
+      <div class="tv-scroll" id="tvScroll">
+        <table class="tv" id="tv">
+          <thead><tr><th scope="col">#</th><th scope="col" class="th-ch">Chapter</th><th scope="col">From &rarr; To</th><th scope="col">Sends</th><th scope="col">Does</th><th scope="col">Branch</th><th scope="col">Ref</th><th scope="col">&#9733; Note</th></tr></thead>
+          <tbody id="tvBody"></tbody>
+        </table>
+      </div>
+      <div class="tv-foot">
+        <label><input type="checkbox" id="tvNotes"> Include my notes</label>
+        <button type="button" class="btn tv-close" id="tvClose">Back to diagram</button>
+        <button type="button" class="btn" id="tvMd">Copy as Markdown</button>
+        <button type="button" class="btn" id="tvCsv">Download CSV</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wbar" id="wbar" aria-label="Walkthrough">
+    <div class="wb-top">
+      <nav class="chapters" id="chapters" aria-label="Chapters" hidden></nav>
+      <div class="follow-strip" id="followStrip" hidden></div>
+      <button type="button" class="btn ghost bm-btn" id="bmBtn" aria-haspopup="dialog" aria-expanded="false" title="Bookmarks and notes">&#9733; 0</button>
+    </div>
+    <div class="cards" id="cards">
+      <button type="button" class="nav-btn" id="prevBtn" aria-label="Previous step">&#9664;</button>
+      <div class="card side" id="cardPrev" role="button" tabindex="-1"></div>
+      <div class="card center" id="cardCur"></div>
+      <div class="card side" id="cardNext" role="button" tabindex="-1"></div>
+      <button type="button" class="nav-btn" id="nextBtn" aria-label="Next step">&#9654;</button>
+    </div>
+  </footer>
+</div>
+<div class="sr-only" id="live" aria-live="polite" aria-atomic="true"></div>
+<input type="file" id="fileInput" accept=".mmd,.md,.txt,.mermaid,text/plain,text/markdown" hidden>
+<input type="file" id="notesInput" accept=".json,application/json" hidden>

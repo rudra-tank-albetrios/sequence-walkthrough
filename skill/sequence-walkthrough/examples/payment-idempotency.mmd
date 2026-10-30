@@ -1,0 +1,101 @@
+sequenceDiagram
+    %% @spec walkthrough/1
+    %% @title Payment idempotency
+    %% @layer U The person paying. Taps Pay, and sometimes taps it twice.
+    %% @layer FE Checkout page in the browser. Creates the Idempotency-Key and keeps it until the payment settles.
+    %% @layer MW Express middleware in front of the payment routes. Makes sure one key means one charge.
+    %% @layer DB Postgres. The unique index on idempotency_keys.key is the lock that decides who goes first.
+    %% @layer PS Payment Service. Creates the payment and talks to the provider.
+    %% @layer PSP External payment provider. Also deduplicates on the key we forward.
+    autonumber
+    actor U as User
+    participant FE as Checkout UI
+    participant MW as Idempotency Middleware
+    participant DB as Database
+    participant PS as Payment Service
+    participant PSP as Payment Provider
+
+    %% @step The user presses Pay. Nothing has been sent yet, so this is the moment to decide which key this attempt uses.
+    U->>FE: Click "Pay ₹1,499"
+    %% @step The page looks for a key saved for this cart. Reusing it means a reload or double tap is treated as the same attempt, not a new charge.
+    %% @payload sessionStorage["pay:cart_77"] = "4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10"
+    %% @ref src/checkout/pay.ts:31
+    FE->>FE: Reuse key from sessionStorage<br/>or create a new UUID
+    %% @step The key travels in a header so the server can recognise repeats of this exact request.
+    %% @payload Authorization: Bearer eyJhbGciOi…
+    %% @payload Idempotency-Key: 4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10
+    %% @payload { "cartId": "cart_77", "amount": 149900, "currency": "INR" }
+    %% @ref src/checkout/pay.ts:42
+    FE->>MW: POST /api/v1/payments<br/>Idempotency-Key: 4f9c…
+
+    %% @section Claim the key
+    %% @step After hashing the body, the middleware tries to claim the key. The unique index lets exactly one request insert it; every other request gets 0 rows.
+    %% @payload INSERT INTO idempotency_keys (key, user_id, body_hash, status) VALUES ('4f9c…', 'u_9', 'sha256:5f…', 'running') ON CONFLICT (key) DO NOTHING
+    %% @ref src/middleware/idempotency.ts:58
+    MW->>DB: INSERT idempotency_keys<br/>ON CONFLICT (key) DO NOTHING
+    %% @step One row inserted means this request owns the key. Zero rows means the key was used before.
+    DB-->>MW: 1 row inserted (0 on conflict)
+    Note over MW,DB: The unique index is the lock
+
+    %% @section Charge once
+    alt Key claimed (1 row inserted)
+        %% @step This request owns the key, so it is passed on to the real payment handler.
+        %% @payload { "userId": "u_9", "cartId": "cart_77", "amount": 149900, "currency": "INR" }
+        %% @ref src/middleware/idempotency.ts:66
+        MW->>PS: next() → createPayment()
+        %% @step The key is forwarded to the provider too, so even a retry between us and the provider cannot charge twice.
+        %% @payload Idempotency-Key: 4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10
+        %% @payload { "amount": 149900, "currency": "inr", "source": "tok_visa", "metadata": { "payment_id": "pay_456" } }
+        %% @ref src/payments/provider.ts:22
+        PS->>PSP: POST https://api.psp.example/v1/charges<br/>Idempotency-Key: 4f9c…
+        %% @step The provider confirms the charge and returns its id.
+        %% @payload { "id": "ch_789", "status": "succeeded", "amount": 149900 }
+        PSP-->>PS: 200 OK<br/>ch_789, status: succeeded
+        %% @step The handler answers with the new payment, now marked as paid.
+        %% @payload { "id": "pay_456", "status": "paid", "amount": 149900, "currency": "INR" }
+        %% @ref src/payments/routes.ts:37
+        PS-->>MW: 201 Created<br/>pay_456, status: paid
+        %% @step The response is saved against the key, so any later repeat gets the same answer without charging again.
+        %% @payload UPDATE idempotency_keys SET status = 'done', response_code = 201, response_body = '{"id":"pay_456",…}' WHERE key = '4f9c…'
+        %% @ref src/middleware/idempotency.ts:91
+        MW->>DB: UPDATE idempotency_keys<br/>SET status = done, response = 201
+        %% @step The browser gets the result of the one and only charge.
+        %% @payload { "id": "pay_456", "status": "paid", "amount": 149900, "currency": "INR" }
+        %% @ref src/middleware/idempotency.ts:97
+        MW-->>FE: 201 Created<br/>pay_456, status: paid
+
+    %% @section Repeats
+    else Key already used (0 rows)
+        %% @step The key exists, so the middleware reads what happened to the first request with it.
+        %% @payload SELECT status, body_hash, response_code, response_body FROM idempotency_keys WHERE key = '4f9c…'
+        %% @ref src/middleware/idempotency.ts:70
+        MW->>DB: SELECT status, body_hash, response<br/>WHERE key = '4f9c…'
+        %% @step The saved row for this key comes back.
+        DB-->>MW: 1 row: status, body_hash, response
+        alt Done, same body (the response was lost)
+            %% @step The browser receives the original answer again, marked as a replay. No second charge happened.
+            %% @payload Idempotent-Replayed: true
+            %% @payload { "id": "pay_456", "status": "paid", "amount": 149900, "currency": "INR" }
+            %% @ref src/middleware/idempotency.ts:78
+            MW-->>FE: 201 Created<br/>Idempotent-Replayed: true
+        else Still running
+            %% @step The first request is still being processed, so this one is told to wait instead of charging again.
+            %% @payload Retry-After: 1
+            %% @payload { "error": "request_in_progress", "message": "A payment with this key is already being processed." }
+            %% @ref src/middleware/idempotency.ts:82
+            MW-->>FE: 409 Conflict<br/>Retry-After: 1
+        else Different body
+            %% @step The key was reused for a different amount or cart. That is a client bug, so it is refused rather than guessed at.
+            %% @payload { "error": "idempotency_key_mismatch", "message": "This key was used with a different request body." }
+            %% @ref src/middleware/idempotency.ts:86
+            MW-->>FE: 422 Unprocessable Entity<br/>"This key was used with a different request body."
+        end
+    end
+
+    %% @section Finish
+    %% @step The payment is settled, so the key is removed. The next checkout starts with a fresh key.
+    %% @ref src/checkout/pay.ts:57
+    FE->>FE: Clear key from sessionStorage
+    %% @step The user sees one receipt for one charge, however many times they tapped.
+    %% @ref src/checkout/pay.ts:59
+    FE-->>U: Receipt for ₹1,499

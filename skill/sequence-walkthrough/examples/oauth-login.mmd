@@ -1,0 +1,93 @@
+sequenceDiagram
+    %% @spec walkthrough/1
+    %% @title Sign in with OAuth (PKCE)
+    %% @layer U The person signing in.
+    %% @layer APP Single-page web app. Starts the login and never sees a password or a refresh token.
+    %% @layer API Our backend. Swaps the one-time code for tokens and keeps them in a server-side session.
+    %% @layer IDP Identity provider (OAuth 2.1 / OpenID Connect). Checks the password and MFA, then issues the tokens.
+    %% @layer DB Session store. One row per signed-in browser, holding the refresh token.
+    autonumber
+    actor U as User
+    participant APP as Web App
+    participant API as Backend API
+    participant IDP as Identity Provider
+    participant DB as Session Store
+
+    %% @section Ask the identity provider
+    %% @step The user chooses to sign in. The app has no session cookie yet, so it has to send them to the provider.
+    U->>APP: Click "Sign in with Acme"
+    %% @step A random verifier and state are made for this attempt only. The verifier proves later that whoever swaps the code is the one who started the login.
+    %% @payload sessionStorage["pkce"] = { "verifier": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk", "state": "7f3a" }
+    APP->>APP: Create PKCE verifier and state<br/>save both in sessionStorage
+    %% @step The browser goes to the provider with only the hash of the verifier. Nothing secret travels in the URL.
+    %% @payload response_type=code&client_id=web&redirect_uri=https://app.example/callback&code_challenge=Qm9...&code_challenge_method=S256&state=7f3a
+    APP->>IDP: GET https://id.acme.example/authorize<br/>code_challenge, state
+    %% @step The password is typed on the provider's page, so our app and backend never handle it.
+    IDP->>U: Login page
+    %% @step The provider checks the password and asks for a second factor if the account has one.
+    U->>IDP: Email, password, MFA code
+
+    %% @section Swap the code for tokens
+    alt Login approved
+        %% @step The provider sends the browser back with a one-time code. The app checks that state matches what it saved, which blocks forged callbacks.
+        %% @payload Location: https://app.example/callback?code=SplxlOBeZQ&state=7f3a
+        IDP-->>APP: 302 Found<br/>Location: /callback?code=…&state=7f3a
+        %% @step The app hands the code and the original verifier to its own backend. Tokens will be issued to the backend, not the browser.
+        %% @payload { "code": "SplxlOBeZQ", "code_verifier": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk" }
+        APP->>API: POST /auth/callback<br/>code, verifier
+        %% @step The backend redeems the code with its client secret. The provider rejects it if the verifier does not hash to the challenge from step 3.
+        %% @payload Content-Type: application/x-www-form-urlencoded
+        %% @payload grant_type=authorization_code&code=SplxlOBeZQ&code_verifier=dBjftJ…&client_id=web&client_secret=•••&redirect_uri=https://app.example/callback
+        API->>IDP: POST https://id.acme.example/token<br/>code, verifier, client secret
+        alt Code and verifier accepted
+            %% @step The code is now used up. The provider answers with three tokens.
+            %% @payload { "id_token": "eyJhbGciOi…", "access_token": "eyJraWQiOi…", "refresh_token": "8xLOxBtZp8", "token_type": "Bearer", "expires_in": 600 }
+            IDP-->>API: 200 OK<br/>id_token, access_token, refresh_token
+            %% @step The backend checks the id_token signature, issuer, audience and expiry before trusting who the user is.
+            API->>API: Verify id_token
+            %% @step A session row ties a random session id to the user and their refresh token, so the browser only ever holds the session id.
+            %% @payload { "sid": "s_3f9a…", "user_id": "u_9", "refresh_token": "8xLOxBtZp8", "expires_at": "2026-11-28T10:00:00Z" }
+            API->>DB: INSERT session<br/>sid, user, refresh token, expires
+            %% @step The session id goes into an HttpOnly cookie that page scripts cannot read. The user is now signed in.
+            %% @payload Set-Cookie: sid=s_3f9a…; HttpOnly; Secure; SameSite=Lax; Path=/
+            %% @payload { "user": { "id": "u_9", "name": "Ana" } }
+            API-->>APP: 200 OK<br/>Set-Cookie: sid (HttpOnly, Secure)
+        else Code expired, reused or verifier wrong
+            %% @step The provider refuses the swap. Nothing is stored, so a stolen or replayed code gets an attacker nothing.
+            %% @payload { "error": "invalid_grant", "error_description": "Authorization code is invalid or expired" }
+            IDP-->>API: 400 Bad Request<br/>error: invalid_grant
+            %% @step The app is told the sign-in failed and can start again from step 1.
+            %% @payload { "error": "login_failed", "message": "Sign-in could not be completed. Please try again." }
+            API-->>APP: 401 Unauthorized<br/>"Sign-in could not be completed."
+        end
+    else User cancels or login fails
+        %% @step The provider reports the failure on the same callback URL, with no code.
+        %% @payload Location: https://app.example/callback?error=access_denied&state=7f3a
+        IDP-->>APP: 302 Found<br/>Location: /callback?error=access_denied
+        %% @step The app clears the saved verifier and state and offers to try again. Nothing was stored on the backend.
+        APP-->>U: "Sign-in cancelled"
+    end
+
+    %% @section Use and refresh the session
+    loop Every API call while signed in
+        %% @step The cookie travels with each request. The app never attaches tokens itself.
+        %% @payload Cookie: sid=s_3f9a…
+        APP->>API: GET /me<br/>Cookie: sid
+        %% @step The backend looks up the session to find the user and their tokens.
+        API->>DB: SELECT session WHERE sid = 's_3f9a…'
+        %% @step The session row comes back with the user and the stored tokens.
+        DB-->>API: 1 row: user u_9, tokens, expiry
+        opt Access token expired
+            %% @step Access tokens live for minutes. The backend quietly gets a new one with the refresh token, and the user notices nothing.
+            %% @payload grant_type=refresh_token&refresh_token=8xLOxBtZp8&client_id=web&client_secret=•••
+            API->>IDP: POST https://id.acme.example/token<br/>grant_type=refresh_token
+            %% @step The provider rotates the refresh token. Each one works once, so a stolen copy is useless after the next refresh.
+            %% @payload { "access_token": "eyJraWQiOi…", "refresh_token": "Q2vR7c1kLm", "token_type": "Bearer", "expires_in": 600 }
+            IDP-->>API: 200 OK<br/>new access_token, refresh_token
+            %% @step Both new tokens replace the old ones in the session row.
+            API->>DB: UPDATE session tokens
+        end
+        %% @step The request succeeds as the signed-in user.
+        %% @payload { "id": "u_9", "name": "Ana", "email": "ana@example.com" }
+        API-->>APP: 200 OK<br/>user profile
+    end

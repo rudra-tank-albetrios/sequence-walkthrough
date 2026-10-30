@@ -1,0 +1,13 @@
+# Build output: run `python build.py` to recreate it
+dist/
+dist-claude/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

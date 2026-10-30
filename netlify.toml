@@ -1,0 +1,4 @@
+# Netlify (connected to a Git repository): builds the viewer and serves dist/.
+[build]
+  command = "python3 build.py"
+  publish = "dist"
