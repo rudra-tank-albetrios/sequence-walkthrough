@@ -1,0 +1,15 @@
+# Gitleaks runs on every pull request (plan section 4). The default rules stay on; only example
+# values that are not secrets are allowed through.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Example data in walkthrough diagrams: an idempotency key is a request id, not a credential"
+regexTarget = "line"
+regexes = [
+  '''Idempotency-Key: 4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10''',
+]
+# The golden files are machine-recorded parses of the fixtures next to them.
+paths = [
+  '''packages/core/fixtures/.*\.golden\.json$''',
+]
