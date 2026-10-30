@@ -10,7 +10,8 @@ const CONTENT_SECURITY_POLICY = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  // Ask AI calls the model URL the user chose; Ollama runs on localhost over http
+  "connect-src 'self' https: http://localhost:* http://127.0.0.1:*",
   "object-src 'none'",
   "base-uri 'none'",
   "form-action 'none'",
