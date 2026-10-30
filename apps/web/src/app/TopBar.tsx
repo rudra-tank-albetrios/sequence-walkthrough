@@ -7,15 +7,15 @@ import { DIAGRAM_THEMES, type DiagramTheme } from '../shared/storage/settings.ts
 import { Button } from '../shared/ui/Button.tsx';
 import { Chip } from '../shared/ui/Chip.tsx';
 import { Menu, MenuHeading, MenuItem, MenuRow, MenuSeparator } from '../shared/ui/Menu.tsx';
+import { Select } from '../shared/ui/Select.tsx';
 import styles from './TopBar.module.css';
 
 function ThemeSelect({ id }: { id: string }) {
   const theme = useFlowStore((s) => s.settings.theme);
   const updateSettings = useFlowStore((s) => s.updateSettings);
   return (
-    <select
+    <Select
       id={id}
-      className={styles.select}
       aria-label="Diagram theme"
       value={theme}
       onChange={(e) => {
@@ -27,7 +27,7 @@ function ThemeSelect({ id }: { id: string }) {
           {t}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }
 
@@ -44,9 +44,12 @@ export function TopBar() {
   const narrow = useIsNarrow();
 
   const steps = flow?.isSequence ? flow.steps.length : 0;
+  const layers = flow?.isSequence ? flow.participants.length : 0;
   const chapters = flow?.isSequence ? flow.sections.length : 0;
   const meta = steps
-    ? `${plural(steps, 'step')}${chapters ? ` · ${plural(chapters, 'chapter')}` : ''}`
+    ? [plural(steps, 'step'), plural(layers, 'layer'), chapters ? plural(chapters, 'chapter') : '']
+        .filter(Boolean)
+        .join(', ')
     : '';
   const toggleWheel = () => {
     updateSettings({ wheel: settings.wheel === 'scroll' ? 'zoom' : 'scroll' });

@@ -1,4 +1,5 @@
 import { Button } from '../../shared/ui/Button.tsx';
+import { Select } from '../../shared/ui/Select.tsx';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import styles from './viewer.module.css';
 
@@ -46,8 +47,7 @@ export function CanvasControls() {
           <span aria-hidden="true">{playing ? '❚❚' : '▶'}</span>{' '}
           <span className={styles.lbl}>{playing ? 'Pause' : 'Play'}</span>
         </Button>
-        <select
-          className={styles.select}
+        <Select
           aria-label="Seconds per step"
           title="Seconds per step"
           value={settings.speed}
@@ -60,7 +60,7 @@ export function CanvasControls() {
               {ms / 1000} s
             </option>
           ))}
-        </select>
+        </Select>
         <Button
           pressed={settings.dim}
           title="Fade the other arrows"

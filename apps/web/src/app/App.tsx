@@ -22,7 +22,7 @@ import { ToastHost } from '../shared/ui/Toast.tsx';
 import { toast } from '../shared/ui/toast.ts';
 import { TooltipProvider } from '../shared/ui/Tooltip.tsx';
 import styles from './App.module.css';
-import { DEFAULT_TITLE_SUFFIX, useDocumentTitle } from './title.ts';
+import { useDocumentTitle } from './title.ts';
 import { TopBar } from './TopBar.tsx';
 import { loadInitialCode } from './boot.ts';
 import { useGlobalKeys } from './useGlobalKeys.ts';
@@ -167,4 +167,3 @@ export function App() {
   );
 }
 
-export { DEFAULT_TITLE_SUFFIX };

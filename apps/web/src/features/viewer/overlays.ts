@@ -1,6 +1,14 @@
 import type { Flow } from '@swv/core';
 
-import { lineStart, localCenter, svgEl, type Box, type Geo, type StepDom, type ViewBox } from './geometry.ts';
+import {
+  labelBounds,
+  lineStart,
+  localCenter,
+  svgEl,
+  type Geo,
+  type StepDom,
+  type ViewBox,
+} from './geometry.ts';
 
 export interface DrawContext {
   svg: SVGSVGElement;
@@ -17,14 +25,6 @@ const remove = (root: ParentNode, selector: string) => {
   });
 };
 
-const labelBounds = (texts: SVGGraphicsElement[]): Box => {
-  const bs = texts.map((t) => t.getBBox());
-  const x0 = Math.min(...bs.map((b) => b.x));
-  const y0 = Math.min(...bs.map((b) => b.y));
-  const x1 = Math.max(...bs.map((b) => b.x + b.width));
-  const y1 = Math.max(...bs.map((b) => b.y + b.height));
-  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
-};
 
 /**
  * Marks the current step: a thick marker stroke under the arrow, a pill behind its label, a ring

@@ -9,7 +9,7 @@ const cut = (text: string, n: number): string => {
   return t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t;
 };
 
-export const statusClass = (step: Step): string =>
+const statusClass = (step: Step): string =>
   step.status ? `s${Math.floor(step.status.code / 100)}xx` : '';
 
 /** Hovering an arrow: what the label does not say, so the step bar is only needed for the detail. */

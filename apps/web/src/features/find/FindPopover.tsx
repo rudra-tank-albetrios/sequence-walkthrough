@@ -77,5 +77,3 @@ export function FindPopover() {
   );
 }
 
-/** Steps that match the current Find query, for the table's highlighting. */
-export { findHits };

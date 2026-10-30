@@ -1,5 +1,5 @@
 import { parseArrowLeft } from './arrows.ts';
-import { ENTITY_AT_START, splitStatements } from './statements.ts';
+import { ENTITY_AT_START, skipFrontMatter, splitStatements } from './statements.ts';
 import type { BlockKind, Branch, Participant, SequenceInfo } from './types.ts';
 import { BLOCK_MID, BLOCK_START, RESERVED_ALIASES } from './vocabulary.ts';
 
@@ -185,13 +185,3 @@ export function parseSequence(code: string): SequenceInfo | null {
   }
 }
 
-/** The index of the first line after a `--- ... ---` front matter block, or 0. */
-function skipFrontMatter(lines: string[]): number {
-  let i = 0;
-  while (i < lines.length && !lines[i]?.trim()) i++;
-  if (lines[i]?.trim() !== '---') return 0;
-  for (let j = i + 1; j < lines.length; j++) {
-    if (lines[j]?.trim() === '---') return j + 1;
-  }
-  return 0;
-}

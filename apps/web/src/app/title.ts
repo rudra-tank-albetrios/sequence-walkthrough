@@ -1,7 +1,7 @@
 import { DEFAULT_TITLE, type Flow } from '@swv/core';
 import { useEffect } from 'react';
 
-export const DEFAULT_TITLE_SUFFIX = 'Sequence Walkthrough';
+const DEFAULT_TITLE_SUFFIX = 'Sequence Walkthrough';
 
 /** `<flow title> · Sequence Walkthrough`, or just the product name for an untitled diagram. */
 export function useDocumentTitle(flow: Flow | null): void {

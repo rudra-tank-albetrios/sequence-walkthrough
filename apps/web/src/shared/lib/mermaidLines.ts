@@ -1,3 +1,5 @@
+import { skipFrontMatter } from '@swv/core';
+
 /**
  * Mermaid strips front matter, comment lines and the blank lines just above a comment before
  * parsing, so the line numbers in its errors skip them. Maps Mermaid's line `n` (1-based) back to
@@ -5,17 +7,7 @@
  */
 export function mermaidLineToCode(code: string, n: number): number {
   const lines = code.replace(/\r\n?/g, '\n').split('\n');
-  let start = 0;
-  let i = 0;
-  while (i < lines.length && !lines[i]?.trim()) i++;
-  if (lines[i]?.trim() === '---') {
-    for (let j = i + 1; j < lines.length; j++) {
-      if (lines[j]?.trim() === '---') {
-        start = j + 1;
-        break;
-      }
-    }
-  }
+  const start = skipFrontMatter(lines);
   const removed = new Set<number>();
   for (let j = start; j < lines.length; j++) {
     if (!/^\s*%%(?!\{)./.test(lines[j] ?? '')) continue;

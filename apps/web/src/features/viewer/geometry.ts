@@ -33,7 +33,7 @@ export interface Geo {
   hdrH: number;
 }
 
-export const SVGNS = 'http://www.w3.org/2000/svg';
+const SVGNS = 'http://www.w3.org/2000/svg';
 
 export function svgEl<K extends keyof SVGElementTagNameMap>(
   tag: K,
@@ -198,6 +198,16 @@ export function measure(
   };
 }
 
+/** The box around a step's label texts, in their parent's coordinates. */
+export function labelBounds(texts: SVGGraphicsElement[]): Box {
+  const bs = texts.map((t) => t.getBBox());
+  const x0 = Math.min(...bs.map((b) => b.x));
+  const y0 = Math.min(...bs.map((b) => b.y));
+  const x1 = Math.max(...bs.map((b) => b.x + b.width));
+  const y1 = Math.max(...bs.map((b) => b.y + b.height));
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
+
 /** Wide transparent copies of each arrow and label, so hovering and clicking are easy. */
 export function addHits(dom: StepDom[]): void {
   dom.forEach((d, i) => {
@@ -209,16 +219,12 @@ export function addHits(dom: StepDom[]): void {
     d.line.after(h);
     d.hitLine = h;
     if (d.texts.length) {
-      const bs = d.texts.map((t) => t.getBBox());
-      const x0 = Math.min(...bs.map((b) => b.x));
-      const y0 = Math.min(...bs.map((b) => b.y));
-      const x1 = Math.max(...bs.map((b) => b.x + b.width));
-      const y1 = Math.max(...bs.map((b) => b.y + b.height));
+      const b = labelBounds(d.texts);
       const r = svgEl('rect', {
-        x: x0 - 4,
-        y: y0 - 2,
-        width: x1 - x0 + 8,
-        height: y1 - y0 + 4,
+        x: b.x - 4,
+        y: b.y - 2,
+        width: b.w + 8,
+        height: b.h + 4,
         class: 'swv-hit',
         'data-step': i,
         style: 'fill: transparent; pointer-events: all',

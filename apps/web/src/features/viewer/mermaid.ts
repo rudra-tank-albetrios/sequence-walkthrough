@@ -9,7 +9,7 @@ type Mermaid = typeof mermaidDefault;
 let loading: Promise<Mermaid> | null = null;
 
 /** Mermaid is large, so it is a separate chunk loaded the first time a diagram is drawn. */
-export function loadMermaid(): Promise<Mermaid> {
+function loadMermaid(): Promise<Mermaid> {
   loading ??= import('mermaid').then((m) => m.default);
   return loading;
 }
