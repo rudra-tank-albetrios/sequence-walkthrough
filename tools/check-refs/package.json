@@ -1,0 +1,13 @@
+{
+  "name": "@swv/check-refs",
+  "version": "3.0.0-dev",
+  "private": true,
+  "description": "Fails when a code link in a flow points to a missing file or line.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@swv/tool-kit": "*"
+  }
+}

@@ -1,0 +1,18 @@
+# Generated
+node_modules/
+dist/
+dist-single/
+dist-claude/
+coverage/
+playwright-report/
+test-results/
+package-lock.json
+
+# The version 2 app and skill, replaced phase by phase
+src/
+skill/
+skill-kit/
+build.py
+
+# Prose keeps its own layout
+*.md

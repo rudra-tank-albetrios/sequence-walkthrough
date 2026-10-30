@@ -406,6 +406,8 @@ Connect the repository and use these settings. Netlify reads them from [netlify.
 
 ## Development
 
+> **Version 3 is being built.** The viewer is moving to TypeScript, React and Vite in `apps/web`, with the parser in `packages/core`. The plan is in [`docs/IMPLEMENTATION-PLAN.md`](docs/IMPLEMENTATION-PLAN.md), the layout in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and the setup in [`CONTRIBUTING.md`](CONTRIBUTING.md): `npm ci`, then `npm run verify`. Until the cutover, the hosted site is still the version 2 page built by `build.py`, described below.
+
 - Edit files in `src/`, then run `python build.py` and reload the page. The build joins the JavaScript files in order, inlines the CSS and fonts, and embeds the default diagram and the skill kit.
 - The build is reproducible: the same sources always give the same bytes, including the zips.
 - **To change the default diagram,** edit `skill/sequence-walkthrough/examples/payment-idempotency.mmd`. Keep its arrow lines unchanged if you want existing notes to stay attached.

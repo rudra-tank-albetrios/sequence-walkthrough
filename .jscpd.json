@@ -1,0 +1,12 @@
+{
+  "path": ["apps", "packages", "tools", "e2e"],
+  "format": ["typescript", "tsx", "javascript", "css"],
+  "threshold": 2,
+  "minTokens": 50,
+  "minLines": 5,
+  "gitignore": true,
+  "ignore": ["**/node_modules/**", "**/dist/**", "**/dist-single/**", "**/*.d.ts"],
+  "reporters": ["consoleFull"],
+  "absolute": true,
+  "exitCode": 1
+}
