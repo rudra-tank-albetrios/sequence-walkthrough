@@ -1,0 +1,2628 @@
+{
+  "fixture": "oauth-login.mmd",
+  "annotations": {
+    "lines": [
+      "sequenceDiagram",
+      "    %% @spec walkthrough/2",
+      "    %% @title Sign in with OAuth (PKCE)",
+      "    %% @trigger The user clicks \"Sign in with Acme\" on a page that has no session cookie yet.",
+      "    %% @term PKCE: Proof Key for Code Exchange; the app makes a random secret, sends only its hash first, and proves it owns the secret later, so a stolen code is useless.",
+      "    %% @term authorization code: a short-lived one-time code the identity provider hands to the browser, which the backend swaps for tokens.",
+      "    %% @term refresh token: a long-lived token used to get a new access token quietly when the old one expires; it is kept on the server, never in the browser.",
+      "    %% @term HttpOnly cookie: a cookie that page scripts cannot read, so a cross-site-scripting bug cannot steal it.",
+      "    %% @layer U kind=person The person signing in.",
+      "    %% @layer APP kind=client Single-page web app. Starts the login and never sees a password or a refresh token.",
+      "    %% @layer API kind=service Our backend. Swaps the one-time code for tokens and keeps them in a server-side session.",
+      "    %% @layer IDP kind=external Identity provider (OAuth 2.1 / OpenID Connect). Checks the password and MFA, then issues the tokens.",
+      "    %% @layer DB kind=db Session store. One row per signed-in browser, holding the refresh token.",
+      "    autonumber",
+      "    actor U as User",
+      "    participant APP as Web App",
+      "    participant API as Backend API",
+      "    participant IDP as Identity Provider",
+      "    participant DB as Session Store",
+      "",
+      "    %% @section Ask the identity provider",
+      "    %% @summary The browser is sent to the provider with a hash of a secret it will prove later.",
+      "    %% @step The user chooses to sign in. The app has no session cookie yet, so it has to send them to the provider.",
+      "    U->>APP: Click \"Sign in with Acme\"",
+      "    %% @step A random verifier and state are made for this attempt only. The verifier proves later that whoever swaps the code is the one who started the login.",
+      "    %% @payload.result sessionStorage[\"pkce\"] = { \"verifier\": \"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\", \"state\": \"7f3a\" }",
+      "    APP->>APP: Create PKCE verifier and state<br/>save both in sessionStorage",
+      "    %% @step The browser goes to the provider with only the hash of the verifier. Nothing secret travels in the URL.",
+      "    %% @payload.query response_type=code&client_id=web&redirect_uri=https://app.example/callback&code_challenge=Qm9...&code_challenge_method=S256&state=7f3a",
+      "    APP->>IDP: GET https://id.acme.example/authorize<br/>code_challenge, state",
+      "    %% @step The password is typed on the provider's page, so our app and backend never handle it.",
+      "    IDP->>U: Login page",
+      "    %% @step The provider checks the password and asks for a second factor if the account has one.",
+      "    U->>IDP: Email, password, MFA code",
+      "",
+      "    %% @section Swap the code for tokens",
+      "    %% @summary The backend, not the browser, redeems the code and ends up holding the tokens.",
+      "    alt Login approved",
+      "        %% @step The provider sends the browser back with a one-time code. The app checks that state matches what it saved, which blocks forged callbacks.",
+      "        %% @payload.headers Location: https://app.example/callback?code=SplxlOBeZQ&state=7f3a",
+      "        IDP-->>APP: 302 Found<br/>Location: /callback?code=…&state=7f3a",
+      "        %% @step The app hands the code and the original verifier to its own backend. Tokens will be issued to the backend, not the browser.",
+      "        %% @payload.body { \"code\": \"SplxlOBeZQ\", \"code_verifier\": \"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\" }",
+      "        APP->>API: POST /auth/callback<br/>code, verifier",
+      "        %% @step The backend redeems the code with its client secret. The provider rejects it if the verifier does not hash to the challenge from step 3.",
+      "        %% @payload.headers Content-Type: application/x-www-form-urlencoded",
+      "        %% @payload.body grant_type=authorization_code&code=SplxlOBeZQ&code_verifier=dBjftJ…&client_id=web&client_secret=•••&redirect_uri=https://app.example/callback",
+      "        %% @timeout 5 s, then the sign-in fails and the user can start again",
+      "        API->>IDP: POST https://id.acme.example/token<br/>code, verifier, client secret",
+      "        alt Code and verifier accepted",
+      "            %% @step The code is now used up. The provider answers with three tokens.",
+      "            %% @payload.body { \"id_token\": \"eyJhbGciOi…\", \"access_token\": \"eyJraWQiOi…\", \"refresh_token\": \"8xLOxBtZp8\", \"token_type\": \"Bearer\", \"expires_in\": 600 }",
+      "            IDP-->>API: 200 OK<br/>id_token, access_token, refresh_token",
+      "            %% @step The backend checks the id_token signature, issuer, audience and expiry before trusting who the user is.",
+      "            API->>API: Verify id_token",
+      "            %% @step A session row ties a random session id to the user and their refresh token, so the browser only ever holds the session id.",
+      "            %% @payload.sql INSERT INTO sessions (sid, user_id, refresh_token, expires_at) VALUES ('s_3f9a…', 'u_9', '8xLOxBtZp8', '2026-11-28T10:00:00Z')",
+      "            %% @state before no session row for this browser",
+      "            %% @state after one row s_3f9a… for user u_9 with the refresh token",
+      "            API->>DB: INSERT session<br/>sid, user, refresh token, expires",
+      "            %% @step The session id goes into an HttpOnly cookie that page scripts cannot read. The user is now signed in and gets their profile back.",
+      "            %% @payload.headers Set-Cookie: sid=s_3f9a…; HttpOnly; Secure; SameSite=Lax; Path=/",
+      "            %% @payload.body { \"user\": { \"id\": \"u_9\", \"name\": \"Ana\" } }",
+      "            %% @effect Audit log entry \"login\" with user id and time",
+      "            API-->>APP: 200 OK<br/>Set-Cookie: sid (HttpOnly, Secure)",
+      "        else Code expired, reused or verifier wrong",
+      "            %% @step The provider refuses the swap with a 400. Nothing is stored, so a stolen or replayed code gets an attacker nothing.",
+      "            %% @payload.body { \"error\": \"invalid_grant\", \"error_description\": \"Authorization code is invalid or expired\" }",
+      "            IDP-->>API: 400 Bad Request<br/>error: invalid_grant",
+      "            %% @step The app is told the sign-in failed and can start again from step 1.",
+      "            %% @payload.body { \"error\": \"login_failed\", \"message\": \"Sign-in could not be completed. Please try again.\" }",
+      "            API-->>APP: 401 Unauthorized<br/>\"Sign-in could not be completed.\"",
+      "        end",
+      "    else User cancels or login fails",
+      "        %% @step The provider sends the browser back to the same callback URL with an error and no code.",
+      "        %% @payload.headers Location: https://app.example/callback?error=access_denied&state=7f3a",
+      "        IDP-->>APP: 302 Found<br/>Location: /callback?error=access_denied",
+      "        %% @step The app clears the saved verifier and state and offers to try again. Nothing was stored on the backend.",
+      "        APP-->>U: \"Sign-in cancelled\"",
+      "    end",
+      "",
+      "    %% @section Use and refresh the session",
+      "    %% @summary Every call carries only the cookie; the backend renews tokens without the user noticing.",
+      "    loop Every API call while signed in",
+      "        %% @step The cookie travels with each request. The app never attaches tokens itself.",
+      "        %% @payload.cookies sid=s_3f9a…",
+      "        APP->>API: GET /me<br/>Cookie: sid",
+      "        %% @step The backend looks up the session to find the user and their tokens.",
+      "        %% @payload.sql SELECT user_id, access_token, refresh_token, expires_at FROM sessions WHERE sid = 's_3f9a…'",
+      "        API->>DB: SELECT session WHERE sid = 's_3f9a…'",
+      "        %% @step The session row comes back with the user and the stored tokens.",
+      "        DB-->>API: 1 row: user u_9, tokens, expiry",
+      "        opt Access token expired",
+      "            %% @step Access tokens live for minutes. The backend quietly gets a new one with the refresh token, and the user notices nothing.",
+      "            %% @payload.body grant_type=refresh_token&refresh_token=8xLOxBtZp8&client_id=web&client_secret=•••",
+      "            %% @retry once, after a network error; the provider accepts the same refresh token until it has been used",
+      "            API->>IDP: POST https://id.acme.example/token<br/>grant_type=refresh_token",
+      "            %% @step The provider rotates the refresh token and returns a new pair. Each one works once, so a stolen copy is useless after the next refresh.",
+      "            %% @payload.body { \"access_token\": \"eyJraWQiOi…\", \"refresh_token\": \"Q2vR7c1kLm\", \"token_type\": \"Bearer\", \"expires_in\": 600 }",
+      "            IDP-->>API: 200 OK<br/>new access_token, refresh_token",
+      "            %% @step Both new tokens replace the old ones in the session row.",
+      "            %% @payload.sql UPDATE sessions SET access_token = 'eyJraWQiOi…', refresh_token = 'Q2vR7c1kLm' WHERE sid = 's_3f9a…'",
+      "            API->>DB: UPDATE session tokens",
+      "        end",
+      "        %% @step The request succeeds as the signed-in user, who gets their profile back.",
+      "        %% @payload.body { \"id\": \"u_9\", \"name\": \"Ana\", \"email\": \"ana@example.com\" }",
+      "        API-->>APP: 200 OK<br/>user profile",
+      "    end",
+      ""
+    ],
+    "title": "Sign in with OAuth (PKCE)",
+    "titleLine": 2,
+    "fmTitle": "",
+    "kwTitle": "",
+    "spec": "walkthrough/2",
+    "mode": "",
+    "scope": "",
+    "trigger": "The user clicks \"Sign in with Acme\" on a page that has no session cookie yet.",
+    "summary": [],
+    "terms": [
+      {
+        "term": "PKCE",
+        "def": "Proof Key for Code Exchange; the app makes a random secret, sends only its hash first, and proves it owns the secret later, so a stolen code is useless.",
+        "line": 4
+      },
+      {
+        "term": "authorization code",
+        "def": "a short-lived one-time code the identity provider hands to the browser, which the backend swaps for tokens.",
+        "line": 5
+      },
+      {
+        "term": "refresh token",
+        "def": "a long-lived token used to get a new access token quietly when the old one expires; it is kept on the server, never in the browser.",
+        "line": 6
+      },
+      {
+        "term": "HttpOnly cookie",
+        "def": "a cookie that page scripts cannot read, so a cross-site-scripting bug cannot steal it.",
+        "line": 7
+      }
+    ],
+    "layers": {
+      "U": {
+        "text": "The person signing in.",
+        "kind": "person",
+        "line": 8
+      },
+      "APP": {
+        "text": "Single-page web app. Starts the login and never sees a password or a refresh token.",
+        "kind": "client",
+        "line": 9
+      },
+      "API": {
+        "text": "Our backend. Swaps the one-time code for tokens and keeps them in a server-side session.",
+        "kind": "service",
+        "line": 10
+      },
+      "IDP": {
+        "text": "Identity provider (OAuth 2.1 / OpenID Connect). Checks the password and MFA, then issues the tokens.",
+        "kind": "external",
+        "line": 11
+      },
+      "DB": {
+        "text": "Session store. One row per signed-in browser, holding the refresh token.",
+        "kind": "db",
+        "line": 12
+      }
+    },
+    "sectionSummaries": {
+      "20": ["The browser is sent to the provider with a hash of a secret it will prove later."],
+      "35": ["The backend, not the browser, redeems the code and ends up holding the tokens."],
+      "81": [
+        "Every call carries only the cookie; the backend renews tokens without the user noticing."
+      ]
+    },
+    "arrows": [
+      {
+        "line": 23,
+        "left": "U->>APP",
+        "text": "Click \"Sign in with Acme\"",
+        "step": "The user chooses to sign in. The app has no session cookie yet, so it has to send them to the provider.",
+        "stepLine": 22,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": "Ask the identity provider",
+        "sectionLine": 20,
+        "annLines": [20, 21, 22]
+      },
+      {
+        "line": 26,
+        "left": "APP->>APP",
+        "text": "Create PKCE verifier and state<br/>save both in sessionStorage",
+        "step": "A random verifier and state are made for this attempt only. The verifier proves later that whoever swaps the code is the one who started the login.",
+        "stepLine": 24,
+        "payloads": [
+          {
+            "part": "result",
+            "text": "sessionStorage[\"pkce\"] = { \"verifier\": \"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\", \"state\": \"7f3a\" }",
+            "line": 25
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [24, 25]
+      },
+      {
+        "line": 29,
+        "left": "APP->>IDP",
+        "text": "GET https://id.acme.example/authorize<br/>code_challenge, state",
+        "step": "The browser goes to the provider with only the hash of the verifier. Nothing secret travels in the URL.",
+        "stepLine": 27,
+        "payloads": [
+          {
+            "part": "query",
+            "text": "response_type=code&client_id=web&redirect_uri=https://app.example/callback&code_challenge=Qm9...&code_challenge_method=S256&state=7f3a",
+            "line": 28
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [27, 28]
+      },
+      {
+        "line": 31,
+        "left": "IDP->>U",
+        "text": "Login page",
+        "step": "The password is typed on the provider's page, so our app and backend never handle it.",
+        "stepLine": 30,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [30]
+      },
+      {
+        "line": 33,
+        "left": "U->>IDP",
+        "text": "Email, password, MFA code",
+        "step": "The provider checks the password and asks for a second factor if the account has one.",
+        "stepLine": 32,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [32]
+      },
+      {
+        "line": 40,
+        "left": "IDP-->>APP",
+        "text": "302 Found<br/>Location: /callback?code=…&state=7f3a",
+        "step": "The provider sends the browser back with a one-time code. The app checks that state matches what it saved, which blocks forged callbacks.",
+        "stepLine": 38,
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Location: https://app.example/callback?code=SplxlOBeZQ&state=7f3a",
+            "line": 39
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": "Swap the code for tokens",
+        "sectionLine": 35,
+        "annLines": [35, 36, 38, 39]
+      },
+      {
+        "line": 43,
+        "left": "APP->>API",
+        "text": "POST /auth/callback<br/>code, verifier",
+        "step": "The app hands the code and the original verifier to its own backend. Tokens will be issued to the backend, not the browser.",
+        "stepLine": 41,
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"code\": \"SplxlOBeZQ\", \"code_verifier\": \"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\" }",
+            "line": 42
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [41, 42]
+      },
+      {
+        "line": 48,
+        "left": "API->>IDP",
+        "text": "POST https://id.acme.example/token<br/>code, verifier, client secret",
+        "step": "The backend redeems the code with its client secret. The provider rejects it if the verifier does not hash to the challenge from step 3.",
+        "stepLine": 44,
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Content-Type: application/x-www-form-urlencoded",
+            "line": 45
+          },
+          {
+            "part": "body",
+            "text": "grant_type=authorization_code&code=SplxlOBeZQ&code_verifier=dBjftJ…&client_id=web&client_secret=•••&redirect_uri=https://app.example/callback",
+            "line": 46
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {
+          "timeout": "5 s, then the sign-in fails and the user can start again"
+        },
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [44, 45, 46, 47]
+      },
+      {
+        "line": 52,
+        "left": "IDP-->>API",
+        "text": "200 OK<br/>id_token, access_token, refresh_token",
+        "step": "The code is now used up. The provider answers with three tokens.",
+        "stepLine": 50,
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"id_token\": \"eyJhbGciOi…\", \"access_token\": \"eyJraWQiOi…\", \"refresh_token\": \"8xLOxBtZp8\", \"token_type\": \"Bearer\", \"expires_in\": 600 }",
+            "line": 51
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [50, 51]
+      },
+      {
+        "line": 54,
+        "left": "API->>API",
+        "text": "Verify id_token",
+        "step": "The backend checks the id_token signature, issuer, audience and expiry before trusting who the user is.",
+        "stepLine": 53,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [53]
+      },
+      {
+        "line": 59,
+        "left": "API->>DB",
+        "text": "INSERT session<br/>sid, user, refresh token, expires",
+        "step": "A session row ties a random session id to the user and their refresh token, so the browser only ever holds the session id.",
+        "stepLine": 55,
+        "payloads": [
+          {
+            "part": "sql",
+            "text": "INSERT INTO sessions (sid, user_id, refresh_token, expires_at) VALUES ('s_3f9a…', 'u_9', '8xLOxBtZp8', '2026-11-28T10:00:00Z')",
+            "line": 56
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "no session row for this browser",
+          "after": "one row s_3f9a… for user u_9 with the refresh token"
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [55, 56, 57, 58]
+      },
+      {
+        "line": 64,
+        "left": "API-->>APP",
+        "text": "200 OK<br/>Set-Cookie: sid (HttpOnly, Secure)",
+        "step": "The session id goes into an HttpOnly cookie that page scripts cannot read. The user is now signed in and gets their profile back.",
+        "stepLine": 60,
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Set-Cookie: sid=s_3f9a…; HttpOnly; Secure; SameSite=Lax; Path=/",
+            "line": 61
+          },
+          {
+            "part": "body",
+            "text": "{ \"user\": { \"id\": \"u_9\", \"name\": \"Ana\" } }",
+            "line": 62
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": ["Audit log entry \"login\" with user id and time"],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [60, 61, 62, 63]
+      },
+      {
+        "line": 68,
+        "left": "IDP-->>API",
+        "text": "400 Bad Request<br/>error: invalid_grant",
+        "step": "The provider refuses the swap with a 400. Nothing is stored, so a stolen or replayed code gets an attacker nothing.",
+        "stepLine": 66,
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"error\": \"invalid_grant\", \"error_description\": \"Authorization code is invalid or expired\" }",
+            "line": 67
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [66, 67]
+      },
+      {
+        "line": 71,
+        "left": "API-->>APP",
+        "text": "401 Unauthorized<br/>\"Sign-in could not be completed.\"",
+        "step": "The app is told the sign-in failed and can start again from step 1.",
+        "stepLine": 69,
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"error\": \"login_failed\", \"message\": \"Sign-in could not be completed. Please try again.\" }",
+            "line": 70
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [69, 70]
+      },
+      {
+        "line": 76,
+        "left": "IDP-->>APP",
+        "text": "302 Found<br/>Location: /callback?error=access_denied",
+        "step": "The provider sends the browser back to the same callback URL with an error and no code.",
+        "stepLine": 74,
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Location: https://app.example/callback?error=access_denied&state=7f3a",
+            "line": 75
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [74, 75]
+      },
+      {
+        "line": 78,
+        "left": "APP-->>U",
+        "text": "\"Sign-in cancelled\"",
+        "step": "The app clears the saved verifier and state and offers to try again. Nothing was stored on the backend.",
+        "stepLine": 77,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [77]
+      },
+      {
+        "line": 86,
+        "left": "APP->>API",
+        "text": "GET /me<br/>Cookie: sid",
+        "step": "The cookie travels with each request. The app never attaches tokens itself.",
+        "stepLine": 84,
+        "payloads": [
+          {
+            "part": "cookies",
+            "text": "sid=s_3f9a…",
+            "line": 85
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": "Use and refresh the session",
+        "sectionLine": 81,
+        "annLines": [81, 82, 84, 85]
+      },
+      {
+        "line": 89,
+        "left": "API->>DB",
+        "text": "SELECT session WHERE sid = 's_3f9a…'",
+        "step": "The backend looks up the session to find the user and their tokens.",
+        "stepLine": 87,
+        "payloads": [
+          {
+            "part": "sql",
+            "text": "SELECT user_id, access_token, refresh_token, expires_at FROM sessions WHERE sid = 's_3f9a…'",
+            "line": 88
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [87, 88]
+      },
+      {
+        "line": 91,
+        "left": "DB-->>API",
+        "text": "1 row: user u_9, tokens, expiry",
+        "step": "The session row comes back with the user and the stored tokens.",
+        "stepLine": 90,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [90]
+      },
+      {
+        "line": 96,
+        "left": "API->>IDP",
+        "text": "POST https://id.acme.example/token<br/>grant_type=refresh_token",
+        "step": "Access tokens live for minutes. The backend quietly gets a new one with the refresh token, and the user notices nothing.",
+        "stepLine": 93,
+        "payloads": [
+          {
+            "part": "body",
+            "text": "grant_type=refresh_token&refresh_token=8xLOxBtZp8&client_id=web&client_secret=•••",
+            "line": 94
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {
+          "retry": "once, after a network error; the provider accepts the same refresh token until it has been used"
+        },
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [93, 94, 95]
+      },
+      {
+        "line": 99,
+        "left": "IDP-->>API",
+        "text": "200 OK<br/>new access_token, refresh_token",
+        "step": "The provider rotates the refresh token and returns a new pair. Each one works once, so a stolen copy is useless after the next refresh.",
+        "stepLine": 97,
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"access_token\": \"eyJraWQiOi…\", \"refresh_token\": \"Q2vR7c1kLm\", \"token_type\": \"Bearer\", \"expires_in\": 600 }",
+            "line": 98
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [97, 98]
+      },
+      {
+        "line": 102,
+        "left": "API->>DB",
+        "text": "UPDATE session tokens",
+        "step": "Both new tokens replace the old ones in the session row.",
+        "stepLine": 100,
+        "payloads": [
+          {
+            "part": "sql",
+            "text": "UPDATE sessions SET access_token = 'eyJraWQiOi…', refresh_token = 'Q2vR7c1kLm' WHERE sid = 's_3f9a…'",
+            "line": 101
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [100, 101]
+      },
+      {
+        "line": 106,
+        "left": "API-->>APP",
+        "text": "200 OK<br/>user profile",
+        "step": "The request succeeds as the signed-in user, who gets their profile back.",
+        "stepLine": 104,
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"id\": \"u_9\", \"name\": \"Ana\", \"email\": \"ana@example.com\" }",
+            "line": 105
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [104, 105]
+      }
+    ],
+    "lint": [],
+    "diagramType": "sequenceDiagram",
+    "typeLine": 0,
+    "sectionCount": 3,
+    "frontMatterEnd": -1
+  },
+  "mermaid": {
+    "info": {
+      "participants": [
+        {
+          "alias": "U",
+          "name": "User",
+          "type": "actor"
+        },
+        {
+          "alias": "APP",
+          "name": "Web App",
+          "type": "participant"
+        },
+        {
+          "alias": "API",
+          "name": "Backend API",
+          "type": "participant"
+        },
+        {
+          "alias": "IDP",
+          "name": "Identity Provider",
+          "type": "participant"
+        },
+        {
+          "alias": "DB",
+          "name": "Session Store",
+          "type": "participant"
+        }
+      ],
+      "arrows": [
+        {
+          "from": "U",
+          "to": "APP",
+          "text": "Click \"Sign in with Acme\"",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "APP",
+          "to": "APP",
+          "text": "Create PKCE verifier and state<br/>save both in sessionStorage",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "APP",
+          "to": "IDP",
+          "text": "GET https://id.acme.example/authorize<br/>code_challenge, state",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "IDP",
+          "to": "U",
+          "text": "Login page",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "U",
+          "to": "IDP",
+          "text": "Email, password, MFA code",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "IDP",
+          "to": "APP",
+          "text": "302 Found<br/>Location: /callback?code=…&state=7f3a",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "alt",
+              "label": "Login approved",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "APP",
+          "to": "API",
+          "text": "POST /auth/callback<br/>code, verifier",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "alt",
+              "label": "Login approved",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "API",
+          "to": "IDP",
+          "text": "POST https://id.acme.example/token<br/>code, verifier, client secret",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "alt",
+              "label": "Login approved",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "IDP",
+          "to": "API",
+          "text": "200 OK<br/>id_token, access_token, refresh_token",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "alt",
+              "label": "Login approved",
+              "first": true
+            },
+            {
+              "id": 2,
+              "kind": "alt",
+              "label": "Code and verifier accepted",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "API",
+          "to": "API",
+          "text": "Verify id_token",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "alt",
+              "label": "Login approved",
+              "first": true
+            },
+            {
+              "id": 2,
+              "kind": "alt",
+              "label": "Code and verifier accepted",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "API",
+          "to": "DB",
+          "text": "INSERT session<br/>sid, user, refresh token, expires",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "alt",
+              "label": "Login approved",
+              "first": true
+            },
+            {
+              "id": 2,
+              "kind": "alt",
+              "label": "Code and verifier accepted",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "API",
+          "to": "APP",
+          "text": "200 OK<br/>Set-Cookie: sid (HttpOnly, Secure)",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "alt",
+              "label": "Login approved",
+              "first": true
+            },
+            {
+              "id": 2,
+              "kind": "alt",
+              "label": "Code and verifier accepted",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "IDP",
+          "to": "API",
+          "text": "400 Bad Request<br/>error: invalid_grant",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "alt",
+              "label": "Login approved",
+              "first": true
+            },
+            {
+              "id": 2,
+              "kind": "else",
+              "label": "Code expired, reused or verifier wrong",
+              "first": false
+            }
+          ]
+        },
+        {
+          "from": "API",
+          "to": "APP",
+          "text": "401 Unauthorized<br/>\"Sign-in could not be completed.\"",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "alt",
+              "label": "Login approved",
+              "first": true
+            },
+            {
+              "id": 2,
+              "kind": "else",
+              "label": "Code expired, reused or verifier wrong",
+              "first": false
+            }
+          ]
+        },
+        {
+          "from": "IDP",
+          "to": "APP",
+          "text": "302 Found<br/>Location: /callback?error=access_denied",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "else",
+              "label": "User cancels or login fails",
+              "first": false
+            }
+          ]
+        },
+        {
+          "from": "APP",
+          "to": "U",
+          "text": "\"Sign-in cancelled\"",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "else",
+              "label": "User cancels or login fails",
+              "first": false
+            }
+          ]
+        },
+        {
+          "from": "APP",
+          "to": "API",
+          "text": "GET /me<br/>Cookie: sid",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 3,
+              "kind": "loop",
+              "label": "Every API call while signed in",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "API",
+          "to": "DB",
+          "text": "SELECT session WHERE sid = 's_3f9a…'",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 3,
+              "kind": "loop",
+              "label": "Every API call while signed in",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "DB",
+          "to": "API",
+          "text": "1 row: user u_9, tokens, expiry",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 3,
+              "kind": "loop",
+              "label": "Every API call while signed in",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "API",
+          "to": "IDP",
+          "text": "POST https://id.acme.example/token<br/>grant_type=refresh_token",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 3,
+              "kind": "loop",
+              "label": "Every API call while signed in",
+              "first": true
+            },
+            {
+              "id": 4,
+              "kind": "opt",
+              "label": "Access token expired",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "IDP",
+          "to": "API",
+          "text": "200 OK<br/>new access_token, refresh_token",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 3,
+              "kind": "loop",
+              "label": "Every API call while signed in",
+              "first": true
+            },
+            {
+              "id": 4,
+              "kind": "opt",
+              "label": "Access token expired",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "API",
+          "to": "DB",
+          "text": "UPDATE session tokens",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 3,
+              "kind": "loop",
+              "label": "Every API call while signed in",
+              "first": true
+            },
+            {
+              "id": 4,
+              "kind": "opt",
+              "label": "Access token expired",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "API",
+          "to": "APP",
+          "text": "200 OK<br/>user profile",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 3,
+              "kind": "loop",
+              "label": "Every API call while signed in",
+              "first": true
+            }
+          ]
+        }
+      ],
+      "type": "sequence"
+    }
+  },
+  "flow": {
+    "title": "Sign in with OAuth (PKCE)",
+    "hasTitle": true,
+    "spec": "walkthrough/2",
+    "isSequence": true,
+    "diagramType": "sequenceDiagram",
+    "mode": "",
+    "proposed": false,
+    "scope": "",
+    "trigger": "The user clicks \"Sign in with Acme\" on a page that has no session cookie yet.",
+    "summary": "",
+    "terms": [
+      {
+        "term": "PKCE",
+        "def": "Proof Key for Code Exchange; the app makes a random secret, sends only its hash first, and proves it owns the secret later, so a stolen code is useless.",
+        "line": 4
+      },
+      {
+        "term": "authorization code",
+        "def": "a short-lived one-time code the identity provider hands to the browser, which the backend swaps for tokens.",
+        "line": 5
+      },
+      {
+        "term": "refresh token",
+        "def": "a long-lived token used to get a new access token quietly when the old one expires; it is kept on the server, never in the browser.",
+        "line": 6
+      },
+      {
+        "term": "HttpOnly cookie",
+        "def": "a cookie that page scripts cannot read, so a cross-site-scripting bug cannot steal it.",
+        "line": 7
+      }
+    ],
+    "layers": {
+      "U": {
+        "name": "User",
+        "desc": "The person signing in.",
+        "kind": "person",
+        "icon": "👤",
+        "zone": "client"
+      },
+      "APP": {
+        "name": "Web App",
+        "desc": "Single-page web app. Starts the login and never sees a password or a refresh token.",
+        "kind": "client",
+        "icon": "🖥",
+        "zone": "client"
+      },
+      "API": {
+        "name": "Backend API",
+        "desc": "Our backend. Swaps the one-time code for tokens and keeps them in a server-side session.",
+        "kind": "service",
+        "icon": "🧩",
+        "zone": "ours"
+      },
+      "IDP": {
+        "name": "Identity Provider",
+        "desc": "Identity provider (OAuth 2.1 / OpenID Connect). Checks the password and MFA, then issues the tokens.",
+        "kind": "external",
+        "icon": "🌐",
+        "zone": "outside"
+      },
+      "DB": {
+        "name": "Session Store",
+        "desc": "Session store. One row per signed-in browser, holding the refresh token.",
+        "kind": "db",
+        "icon": "🗄",
+        "zone": "ours"
+      }
+    },
+    "participants": [
+      {
+        "alias": "U",
+        "name": "User",
+        "type": "actor"
+      },
+      {
+        "alias": "APP",
+        "name": "Web App",
+        "type": "participant"
+      },
+      {
+        "alias": "API",
+        "name": "Backend API",
+        "type": "participant"
+      },
+      {
+        "alias": "IDP",
+        "name": "Identity Provider",
+        "type": "participant"
+      },
+      {
+        "alias": "DB",
+        "name": "Session Store",
+        "type": "participant"
+      }
+    ],
+    "sections": [
+      {
+        "name": "Ask the identity provider",
+        "firstStep": 0,
+        "count": 5,
+        "line": 20,
+        "summary": "The browser is sent to the provider with a hash of a secret it will prove later.",
+        "hue": 210,
+        "idx": 0
+      },
+      {
+        "name": "Swap the code for tokens",
+        "firstStep": 5,
+        "count": 11,
+        "line": 35,
+        "summary": "The backend, not the browser, redeems the code and ends up holding the tokens.",
+        "hue": 150,
+        "idx": 1
+      },
+      {
+        "name": "Use and refresh the session",
+        "firstStep": 16,
+        "count": 7,
+        "line": 81,
+        "summary": "Every call carries only the cookie; the backend renews tokens without the user noticing.",
+        "hue": 30,
+        "idx": 2
+      }
+    ],
+    "steps": [
+      {
+        "idx": 0,
+        "n": 1,
+        "line": 23,
+        "annLines": [20, 21, 22],
+        "from": "U",
+        "to": "APP",
+        "fromName": "User",
+        "toName": "Web App",
+        "kind": "request",
+        "labelRaw": "Click \"Sign in with Acme\"",
+        "label": ["Click \"Sign in with Acme\""],
+        "explain": "The user chooses to sign in. The app has no session cookie yet, so it has to send them to the provider.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 0,
+        "branch": [],
+        "key": "U→APP|Click \"Sign in with Acme\"",
+        "replies": [15],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 1,
+        "n": 2,
+        "line": 26,
+        "annLines": [24, 25],
+        "from": "APP",
+        "to": "APP",
+        "fromName": "Web App",
+        "toName": "Web App",
+        "kind": "self",
+        "labelRaw": "Create PKCE verifier and state<br/>save both in sessionStorage",
+        "label": ["Create PKCE verifier and state", "save both in sessionStorage"],
+        "explain": "A random verifier and state are made for this attempt only. The verifier proves later that whoever swaps the code is the one who started the login.",
+        "payloads": [
+          {
+            "part": "result",
+            "text": "sessionStorage[\"pkce\"] = { \"verifier\": \"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\", \"state\": \"7f3a\" }"
+          }
+        ],
+        "payload": "Result: sessionStorage[\"pkce\"] = { \"verifier\": \"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\", \"state\": \"7f3a\" }",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 0,
+        "branch": [],
+        "key": "APP→APP|Create PKCE verifier and state / save both in sessionStorage",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 2,
+        "n": 3,
+        "line": 29,
+        "annLines": [27, 28],
+        "from": "APP",
+        "to": "IDP",
+        "fromName": "Web App",
+        "toName": "Identity Provider",
+        "kind": "request",
+        "labelRaw": "GET https://id.acme.example/authorize<br/>code_challenge, state",
+        "label": ["GET https://id.acme.example/authorize", "code_challenge, state"],
+        "explain": "The browser goes to the provider with only the hash of the verifier. Nothing secret travels in the URL.",
+        "payloads": [
+          {
+            "part": "query",
+            "text": "response_type=code&client_id=web&redirect_uri=https://app.example/callback&code_challenge=Qm9...&code_challenge_method=S256&state=7f3a"
+          }
+        ],
+        "payload": "Query: response_type=code&client_id=web&redirect_uri=https://app.example/callback&code_challenge=Qm9...&code_challenge_method=S256&state=7f3a",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": {
+          "method": "GET",
+          "path": "https://id.acme.example/authorize"
+        },
+        "status": null,
+        "section": 0,
+        "branch": [],
+        "key": "APP→IDP|GET https://id.acme.example/authorize / code_challenge, state",
+        "replies": [5, 14],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 3,
+        "n": 4,
+        "line": 31,
+        "annLines": [30],
+        "from": "IDP",
+        "to": "U",
+        "fromName": "Identity Provider",
+        "toName": "User",
+        "kind": "request",
+        "labelRaw": "Login page",
+        "label": ["Login page"],
+        "explain": "The password is typed on the provider's page, so our app and backend never handle it.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 0,
+        "branch": [],
+        "key": "IDP→U|Login page",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 4,
+        "n": 5,
+        "line": 33,
+        "annLines": [32],
+        "from": "U",
+        "to": "IDP",
+        "fromName": "User",
+        "toName": "Identity Provider",
+        "kind": "request",
+        "labelRaw": "Email, password, MFA code",
+        "label": ["Email, password, MFA code"],
+        "explain": "The provider checks the password and asks for a second factor if the account has one.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 0,
+        "branch": [],
+        "key": "U→IDP|Email, password, MFA code",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 5,
+        "n": 6,
+        "line": 40,
+        "annLines": [35, 36, 38, 39],
+        "from": "IDP",
+        "to": "APP",
+        "fromName": "Identity Provider",
+        "toName": "Web App",
+        "kind": "reply",
+        "labelRaw": "302 Found<br/>Location: /callback?code=…&state=7f3a",
+        "label": ["302 Found", "Location: /callback?code=…&state=7f3a"],
+        "explain": "The provider sends the browser back with a one-time code. The app checks that state matches what it saved, which blocks forged callbacks.",
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Location: https://app.example/callback?code=SplxlOBeZQ&state=7f3a"
+          }
+        ],
+        "payload": "Headers: Location: https://app.example/callback?code=SplxlOBeZQ&state=7f3a",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 302,
+          "reason": "Found"
+        },
+        "section": 1,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "alt",
+            "label": "Login approved",
+            "first": true
+          }
+        ],
+        "key": "IDP→APP|302 Found / Location: /callback?code=…&state=7f3a",
+        "replies": [],
+        "answers": 2,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 6,
+        "n": 7,
+        "line": 43,
+        "annLines": [41, 42],
+        "from": "APP",
+        "to": "API",
+        "fromName": "Web App",
+        "toName": "Backend API",
+        "kind": "request",
+        "labelRaw": "POST /auth/callback<br/>code, verifier",
+        "label": ["POST /auth/callback", "code, verifier"],
+        "explain": "The app hands the code and the original verifier to its own backend. Tokens will be issued to the backend, not the browser.",
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"code\": \"SplxlOBeZQ\", \"code_verifier\": \"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\" }"
+          }
+        ],
+        "payload": "Body: { \"code\": \"SplxlOBeZQ\", \"code_verifier\": \"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\" }",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": {
+          "method": "POST",
+          "path": "/auth/callback"
+        },
+        "status": null,
+        "section": 1,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "alt",
+            "label": "Login approved",
+            "first": true
+          }
+        ],
+        "key": "APP→API|POST /auth/callback / code, verifier",
+        "replies": [11, 13],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 7,
+        "n": 8,
+        "line": 48,
+        "annLines": [44, 45, 46, 47],
+        "from": "API",
+        "to": "IDP",
+        "fromName": "Backend API",
+        "toName": "Identity Provider",
+        "kind": "request",
+        "labelRaw": "POST https://id.acme.example/token<br/>code, verifier, client secret",
+        "label": ["POST https://id.acme.example/token", "code, verifier, client secret"],
+        "explain": "The backend redeems the code with its client secret. The provider rejects it if the verifier does not hash to the challenge from step 3.",
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Content-Type: application/x-www-form-urlencoded"
+          },
+          {
+            "part": "body",
+            "text": "grant_type=authorization_code&code=SplxlOBeZQ&code_verifier=dBjftJ…&client_id=web&client_secret=•••&redirect_uri=https://app.example/callback"
+          }
+        ],
+        "payload": "Headers: Content-Type: application/x-www-form-urlencoded\nBody: grant_type=authorization_code&code=SplxlOBeZQ&code_verifier=dBjftJ…&client_id=web&client_secret=•••&redirect_uri=https://app.example/callback",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {
+          "timeout": "5 s, then the sign-in fails and the user can start again"
+        },
+        "unconfirmed": [],
+        "http": {
+          "method": "POST",
+          "path": "https://id.acme.example/token"
+        },
+        "status": null,
+        "section": 1,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "alt",
+            "label": "Login approved",
+            "first": true
+          }
+        ],
+        "key": "API→IDP|POST https://id.acme.example/token / code, verifier, client secret",
+        "replies": [8, 12],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 8,
+        "n": 9,
+        "line": 52,
+        "annLines": [50, 51],
+        "from": "IDP",
+        "to": "API",
+        "fromName": "Identity Provider",
+        "toName": "Backend API",
+        "kind": "reply",
+        "labelRaw": "200 OK<br/>id_token, access_token, refresh_token",
+        "label": ["200 OK", "id_token, access_token, refresh_token"],
+        "explain": "The code is now used up. The provider answers with three tokens.",
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"id_token\": \"eyJhbGciOi…\", \"access_token\": \"eyJraWQiOi…\", \"refresh_token\": \"8xLOxBtZp8\", \"token_type\": \"Bearer\", \"expires_in\": 600 }"
+          }
+        ],
+        "payload": "Body: { \"id_token\": \"eyJhbGciOi…\", \"access_token\": \"eyJraWQiOi…\", \"refresh_token\": \"8xLOxBtZp8\", \"token_type\": \"Bearer\", \"expires_in\": 600 }",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 200,
+          "reason": "OK"
+        },
+        "section": 1,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "alt",
+            "label": "Login approved",
+            "first": true
+          },
+          {
+            "id": 2,
+            "kind": "alt",
+            "label": "Code and verifier accepted",
+            "first": true
+          }
+        ],
+        "key": "IDP→API|200 OK / id_token, access_token, refresh_token",
+        "replies": [],
+        "answers": 7,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 9,
+        "n": 10,
+        "line": 54,
+        "annLines": [53],
+        "from": "API",
+        "to": "API",
+        "fromName": "Backend API",
+        "toName": "Backend API",
+        "kind": "self",
+        "labelRaw": "Verify id_token",
+        "label": ["Verify id_token"],
+        "explain": "The backend checks the id_token signature, issuer, audience and expiry before trusting who the user is.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 1,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "alt",
+            "label": "Login approved",
+            "first": true
+          },
+          {
+            "id": 2,
+            "kind": "alt",
+            "label": "Code and verifier accepted",
+            "first": true
+          }
+        ],
+        "key": "API→API|Verify id_token",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 10,
+        "n": 11,
+        "line": 59,
+        "annLines": [55, 56, 57, 58],
+        "from": "API",
+        "to": "DB",
+        "fromName": "Backend API",
+        "toName": "Session Store",
+        "kind": "request",
+        "labelRaw": "INSERT session<br/>sid, user, refresh token, expires",
+        "label": ["INSERT session", "sid, user, refresh token, expires"],
+        "explain": "A session row ties a random session id to the user and their refresh token, so the browser only ever holds the session id.",
+        "payloads": [
+          {
+            "part": "sql",
+            "text": "INSERT INTO sessions (sid, user_id, refresh_token, expires_at) VALUES ('s_3f9a…', 'u_9', '8xLOxBtZp8', '2026-11-28T10:00:00Z')"
+          }
+        ],
+        "payload": "SQL: INSERT INTO sessions (sid, user_id, refresh_token, expires_at) VALUES ('s_3f9a…', 'u_9', '8xLOxBtZp8', '2026-11-28T10:00:00Z')",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "no session row for this browser",
+          "after": "one row s_3f9a… for user u_9 with the refresh token"
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 1,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "alt",
+            "label": "Login approved",
+            "first": true
+          },
+          {
+            "id": 2,
+            "kind": "alt",
+            "label": "Code and verifier accepted",
+            "first": true
+          }
+        ],
+        "key": "API→DB|INSERT session / sid, user, refresh token, expires",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 11,
+        "n": 12,
+        "line": 64,
+        "annLines": [60, 61, 62, 63],
+        "from": "API",
+        "to": "APP",
+        "fromName": "Backend API",
+        "toName": "Web App",
+        "kind": "reply",
+        "labelRaw": "200 OK<br/>Set-Cookie: sid (HttpOnly, Secure)",
+        "label": ["200 OK", "Set-Cookie: sid (HttpOnly, Secure)"],
+        "explain": "The session id goes into an HttpOnly cookie that page scripts cannot read. The user is now signed in and gets their profile back.",
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Set-Cookie: sid=s_3f9a…; HttpOnly; Secure; SameSite=Lax; Path=/"
+          },
+          {
+            "part": "body",
+            "text": "{ \"user\": { \"id\": \"u_9\", \"name\": \"Ana\" } }"
+          }
+        ],
+        "payload": "Headers: Set-Cookie: sid=s_3f9a…; HttpOnly; Secure; SameSite=Lax; Path=/\nBody: { \"user\": { \"id\": \"u_9\", \"name\": \"Ana\" } }",
+        "refs": [],
+        "uses": [],
+        "effects": ["Audit log entry \"login\" with user id and time"],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 200,
+          "reason": "OK"
+        },
+        "section": 1,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "alt",
+            "label": "Login approved",
+            "first": true
+          },
+          {
+            "id": 2,
+            "kind": "alt",
+            "label": "Code and verifier accepted",
+            "first": true
+          }
+        ],
+        "key": "API→APP|200 OK / Set-Cookie: sid (HttpOnly, Secure)",
+        "replies": [],
+        "answers": 6,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 12,
+        "n": 13,
+        "line": 68,
+        "annLines": [66, 67],
+        "from": "IDP",
+        "to": "API",
+        "fromName": "Identity Provider",
+        "toName": "Backend API",
+        "kind": "reply",
+        "labelRaw": "400 Bad Request<br/>error: invalid_grant",
+        "label": ["400 Bad Request", "error: invalid_grant"],
+        "explain": "The provider refuses the swap with a 400. Nothing is stored, so a stolen or replayed code gets an attacker nothing.",
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"error\": \"invalid_grant\", \"error_description\": \"Authorization code is invalid or expired\" }"
+          }
+        ],
+        "payload": "Body: { \"error\": \"invalid_grant\", \"error_description\": \"Authorization code is invalid or expired\" }",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 400,
+          "reason": "Bad Request"
+        },
+        "section": 1,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "alt",
+            "label": "Login approved",
+            "first": true
+          },
+          {
+            "id": 2,
+            "kind": "else",
+            "label": "Code expired, reused or verifier wrong",
+            "first": false
+          }
+        ],
+        "key": "IDP→API|400 Bad Request / error: invalid_grant",
+        "replies": [],
+        "answers": 7,
+        "isError": true,
+        "inElse": true
+      },
+      {
+        "idx": 13,
+        "n": 14,
+        "line": 71,
+        "annLines": [69, 70],
+        "from": "API",
+        "to": "APP",
+        "fromName": "Backend API",
+        "toName": "Web App",
+        "kind": "reply",
+        "labelRaw": "401 Unauthorized<br/>\"Sign-in could not be completed.\"",
+        "label": ["401 Unauthorized", "\"Sign-in could not be completed.\""],
+        "explain": "The app is told the sign-in failed and can start again from step 1.",
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"error\": \"login_failed\", \"message\": \"Sign-in could not be completed. Please try again.\" }"
+          }
+        ],
+        "payload": "Body: { \"error\": \"login_failed\", \"message\": \"Sign-in could not be completed. Please try again.\" }",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 401,
+          "reason": "Unauthorized"
+        },
+        "section": 1,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "alt",
+            "label": "Login approved",
+            "first": true
+          },
+          {
+            "id": 2,
+            "kind": "else",
+            "label": "Code expired, reused or verifier wrong",
+            "first": false
+          }
+        ],
+        "key": "API→APP|401 Unauthorized / \"Sign-in could not be completed.\"",
+        "replies": [],
+        "answers": 6,
+        "isError": true,
+        "inElse": true
+      },
+      {
+        "idx": 14,
+        "n": 15,
+        "line": 76,
+        "annLines": [74, 75],
+        "from": "IDP",
+        "to": "APP",
+        "fromName": "Identity Provider",
+        "toName": "Web App",
+        "kind": "reply",
+        "labelRaw": "302 Found<br/>Location: /callback?error=access_denied",
+        "label": ["302 Found", "Location: /callback?error=access_denied"],
+        "explain": "The provider sends the browser back to the same callback URL with an error and no code.",
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Location: https://app.example/callback?error=access_denied&state=7f3a"
+          }
+        ],
+        "payload": "Headers: Location: https://app.example/callback?error=access_denied&state=7f3a",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 302,
+          "reason": "Found"
+        },
+        "section": 1,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "else",
+            "label": "User cancels or login fails",
+            "first": false
+          }
+        ],
+        "key": "IDP→APP|302 Found / Location: /callback?error=access_denied",
+        "replies": [],
+        "answers": 2,
+        "isError": false,
+        "inElse": true
+      },
+      {
+        "idx": 15,
+        "n": 16,
+        "line": 78,
+        "annLines": [77],
+        "from": "APP",
+        "to": "U",
+        "fromName": "Web App",
+        "toName": "User",
+        "kind": "reply",
+        "labelRaw": "\"Sign-in cancelled\"",
+        "label": ["\"Sign-in cancelled\""],
+        "explain": "The app clears the saved verifier and state and offers to try again. Nothing was stored on the backend.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 1,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "else",
+            "label": "User cancels or login fails",
+            "first": false
+          }
+        ],
+        "key": "APP→U|\"Sign-in cancelled\"",
+        "replies": [],
+        "answers": 0,
+        "isError": false,
+        "inElse": true
+      },
+      {
+        "idx": 16,
+        "n": 17,
+        "line": 86,
+        "annLines": [81, 82, 84, 85],
+        "from": "APP",
+        "to": "API",
+        "fromName": "Web App",
+        "toName": "Backend API",
+        "kind": "request",
+        "labelRaw": "GET /me<br/>Cookie: sid",
+        "label": ["GET /me", "Cookie: sid"],
+        "explain": "The cookie travels with each request. The app never attaches tokens itself.",
+        "payloads": [
+          {
+            "part": "cookies",
+            "text": "sid=s_3f9a…"
+          }
+        ],
+        "payload": "Cookies: sid=s_3f9a…",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": {
+          "method": "GET",
+          "path": "/me"
+        },
+        "status": null,
+        "section": 2,
+        "branch": [
+          {
+            "id": 3,
+            "kind": "loop",
+            "label": "Every API call while signed in",
+            "first": true
+          }
+        ],
+        "key": "APP→API|GET /me / Cookie: sid",
+        "replies": [22],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 17,
+        "n": 18,
+        "line": 89,
+        "annLines": [87, 88],
+        "from": "API",
+        "to": "DB",
+        "fromName": "Backend API",
+        "toName": "Session Store",
+        "kind": "request",
+        "labelRaw": "SELECT session WHERE sid = 's_3f9a…'",
+        "label": ["SELECT session WHERE sid = 's_3f9a…'"],
+        "explain": "The backend looks up the session to find the user and their tokens.",
+        "payloads": [
+          {
+            "part": "sql",
+            "text": "SELECT user_id, access_token, refresh_token, expires_at FROM sessions WHERE sid = 's_3f9a…'"
+          }
+        ],
+        "payload": "SQL: SELECT user_id, access_token, refresh_token, expires_at FROM sessions WHERE sid = 's_3f9a…'",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 2,
+        "branch": [
+          {
+            "id": 3,
+            "kind": "loop",
+            "label": "Every API call while signed in",
+            "first": true
+          }
+        ],
+        "key": "API→DB|SELECT session WHERE sid = 's_3f9a…'",
+        "replies": [18],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 18,
+        "n": 19,
+        "line": 91,
+        "annLines": [90],
+        "from": "DB",
+        "to": "API",
+        "fromName": "Session Store",
+        "toName": "Backend API",
+        "kind": "reply",
+        "labelRaw": "1 row: user u_9, tokens, expiry",
+        "label": ["1 row: user u_9, tokens, expiry"],
+        "explain": "The session row comes back with the user and the stored tokens.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 2,
+        "branch": [
+          {
+            "id": 3,
+            "kind": "loop",
+            "label": "Every API call while signed in",
+            "first": true
+          }
+        ],
+        "key": "DB→API|1 row: user u_9, tokens, expiry",
+        "replies": [],
+        "answers": 17,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 19,
+        "n": 20,
+        "line": 96,
+        "annLines": [93, 94, 95],
+        "from": "API",
+        "to": "IDP",
+        "fromName": "Backend API",
+        "toName": "Identity Provider",
+        "kind": "request",
+        "labelRaw": "POST https://id.acme.example/token<br/>grant_type=refresh_token",
+        "label": ["POST https://id.acme.example/token", "grant_type=refresh_token"],
+        "explain": "Access tokens live for minutes. The backend quietly gets a new one with the refresh token, and the user notices nothing.",
+        "payloads": [
+          {
+            "part": "body",
+            "text": "grant_type=refresh_token&refresh_token=8xLOxBtZp8&client_id=web&client_secret=•••"
+          }
+        ],
+        "payload": "Body: grant_type=refresh_token&refresh_token=8xLOxBtZp8&client_id=web&client_secret=•••",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {
+          "retry": "once, after a network error; the provider accepts the same refresh token until it has been used"
+        },
+        "unconfirmed": [],
+        "http": {
+          "method": "POST",
+          "path": "https://id.acme.example/token"
+        },
+        "status": null,
+        "section": 2,
+        "branch": [
+          {
+            "id": 3,
+            "kind": "loop",
+            "label": "Every API call while signed in",
+            "first": true
+          },
+          {
+            "id": 4,
+            "kind": "opt",
+            "label": "Access token expired",
+            "first": true
+          }
+        ],
+        "key": "API→IDP|POST https://id.acme.example/token / grant_type=refresh_token",
+        "replies": [20],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 20,
+        "n": 21,
+        "line": 99,
+        "annLines": [97, 98],
+        "from": "IDP",
+        "to": "API",
+        "fromName": "Identity Provider",
+        "toName": "Backend API",
+        "kind": "reply",
+        "labelRaw": "200 OK<br/>new access_token, refresh_token",
+        "label": ["200 OK", "new access_token, refresh_token"],
+        "explain": "The provider rotates the refresh token and returns a new pair. Each one works once, so a stolen copy is useless after the next refresh.",
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"access_token\": \"eyJraWQiOi…\", \"refresh_token\": \"Q2vR7c1kLm\", \"token_type\": \"Bearer\", \"expires_in\": 600 }"
+          }
+        ],
+        "payload": "Body: { \"access_token\": \"eyJraWQiOi…\", \"refresh_token\": \"Q2vR7c1kLm\", \"token_type\": \"Bearer\", \"expires_in\": 600 }",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 200,
+          "reason": "OK"
+        },
+        "section": 2,
+        "branch": [
+          {
+            "id": 3,
+            "kind": "loop",
+            "label": "Every API call while signed in",
+            "first": true
+          },
+          {
+            "id": 4,
+            "kind": "opt",
+            "label": "Access token expired",
+            "first": true
+          }
+        ],
+        "key": "IDP→API|200 OK / new access_token, refresh_token",
+        "replies": [],
+        "answers": 19,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 21,
+        "n": 22,
+        "line": 102,
+        "annLines": [100, 101],
+        "from": "API",
+        "to": "DB",
+        "fromName": "Backend API",
+        "toName": "Session Store",
+        "kind": "request",
+        "labelRaw": "UPDATE session tokens",
+        "label": ["UPDATE session tokens"],
+        "explain": "Both new tokens replace the old ones in the session row.",
+        "payloads": [
+          {
+            "part": "sql",
+            "text": "UPDATE sessions SET access_token = 'eyJraWQiOi…', refresh_token = 'Q2vR7c1kLm' WHERE sid = 's_3f9a…'"
+          }
+        ],
+        "payload": "SQL: UPDATE sessions SET access_token = 'eyJraWQiOi…', refresh_token = 'Q2vR7c1kLm' WHERE sid = 's_3f9a…'",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 2,
+        "branch": [
+          {
+            "id": 3,
+            "kind": "loop",
+            "label": "Every API call while signed in",
+            "first": true
+          },
+          {
+            "id": 4,
+            "kind": "opt",
+            "label": "Access token expired",
+            "first": true
+          }
+        ],
+        "key": "API→DB|UPDATE session tokens",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 22,
+        "n": 23,
+        "line": 106,
+        "annLines": [104, 105],
+        "from": "API",
+        "to": "APP",
+        "fromName": "Backend API",
+        "toName": "Web App",
+        "kind": "reply",
+        "labelRaw": "200 OK<br/>user profile",
+        "label": ["200 OK", "user profile"],
+        "explain": "The request succeeds as the signed-in user, who gets their profile back.",
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"id\": \"u_9\", \"name\": \"Ana\", \"email\": \"ana@example.com\" }"
+          }
+        ],
+        "payload": "Body: { \"id\": \"u_9\", \"name\": \"Ana\", \"email\": \"ana@example.com\" }",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 200,
+          "reason": "OK"
+        },
+        "section": 2,
+        "branch": [
+          {
+            "id": 3,
+            "kind": "loop",
+            "label": "Every API call while signed in",
+            "first": true
+          }
+        ],
+        "key": "API→APP|200 OK / user profile",
+        "replies": [],
+        "answers": 16,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "lint": [],
+    "mismatch": false,
+    "uses": [],
+    "effects": [
+      {
+        "text": "Audit log entry \"login\" with user id and time",
+        "step": 11
+      }
+    ],
+    "data": [
+      {
+        "table": "session",
+        "ops": ["UPDATE"],
+        "steps": [21]
+      },
+      {
+        "table": "sessions",
+        "ops": ["INSERT", "SELECT", "UPDATE"],
+        "steps": [10, 17, 21]
+      }
+    ],
+    "endings": [
+      {
+        "idx": 5,
+        "n": 6,
+        "line": 40,
+        "annLines": [35, 36, 38, 39],
+        "from": "IDP",
+        "to": "APP",
+        "fromName": "Identity Provider",
+        "toName": "Web App",
+        "kind": "reply",
+        "labelRaw": "302 Found<br/>Location: /callback?code=…&state=7f3a",
+        "label": ["302 Found", "Location: /callback?code=…&state=7f3a"],
+        "explain": "The provider sends the browser back with a one-time code. The app checks that state matches what it saved, which blocks forged callbacks.",
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Location: https://app.example/callback?code=SplxlOBeZQ&state=7f3a"
+          }
+        ],
+        "payload": "Headers: Location: https://app.example/callback?code=SplxlOBeZQ&state=7f3a",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 302,
+          "reason": "Found"
+        },
+        "section": 1,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "alt",
+            "label": "Login approved",
+            "first": true
+          }
+        ],
+        "key": "IDP→APP|302 Found / Location: /callback?code=…&state=7f3a",
+        "replies": [],
+        "answers": 2,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 14,
+        "n": 15,
+        "line": 76,
+        "annLines": [74, 75],
+        "from": "IDP",
+        "to": "APP",
+        "fromName": "Identity Provider",
+        "toName": "Web App",
+        "kind": "reply",
+        "labelRaw": "302 Found<br/>Location: /callback?error=access_denied",
+        "label": ["302 Found", "Location: /callback?error=access_denied"],
+        "explain": "The provider sends the browser back to the same callback URL with an error and no code.",
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Location: https://app.example/callback?error=access_denied&state=7f3a"
+          }
+        ],
+        "payload": "Headers: Location: https://app.example/callback?error=access_denied&state=7f3a",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 302,
+          "reason": "Found"
+        },
+        "section": 1,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "else",
+            "label": "User cancels or login fails",
+            "first": false
+          }
+        ],
+        "key": "IDP→APP|302 Found / Location: /callback?error=access_denied",
+        "replies": [],
+        "answers": 2,
+        "isError": false,
+        "inElse": true
+      }
+    ],
+    "unconfirmed": 0,
+    "boundaries": [
+      {
+        "left": "APP",
+        "right": "API",
+        "from": "client",
+        "to": "ours"
+      },
+      {
+        "left": "API",
+        "right": "IDP",
+        "from": "ours",
+        "to": "outside"
+      },
+      {
+        "left": "IDP",
+        "right": "DB",
+        "from": "outside",
+        "to": "ours"
+      }
+    ],
+    "main": 2
+  }
+}

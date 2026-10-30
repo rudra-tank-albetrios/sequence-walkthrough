@@ -1,0 +1,59 @@
+{
+  "fixture": "not-sequence.mmd",
+  "annotations": {
+    "lines": [
+      "%% @title A flowchart, not a sequence",
+      "flowchart TD",
+      "    A[Start] --> B{Is it a sequence?}",
+      "    B -- No --> C[Pan and zoom only]",
+      "    B -- Yes --> D[Walkthrough]",
+      ""
+    ],
+    "title": "A flowchart, not a sequence",
+    "titleLine": 0,
+    "fmTitle": "",
+    "kwTitle": "",
+    "spec": "",
+    "mode": "",
+    "scope": "",
+    "trigger": "",
+    "summary": [],
+    "terms": [],
+    "layers": {},
+    "sectionSummaries": {},
+    "arrows": [],
+    "lint": [],
+    "diagramType": "flowchart",
+    "typeLine": 1,
+    "sectionCount": 0,
+    "frontMatterEnd": -1
+  },
+  "mermaid": {
+    "info": null
+  },
+  "flow": {
+    "title": "A flowchart, not a sequence",
+    "hasTitle": true,
+    "spec": "",
+    "isSequence": false,
+    "diagramType": "flowchart",
+    "mode": "",
+    "proposed": false,
+    "scope": "",
+    "trigger": "",
+    "summary": "",
+    "terms": [],
+    "layers": {},
+    "participants": [],
+    "sections": [],
+    "steps": [],
+    "lint": [],
+    "mismatch": false,
+    "uses": [],
+    "effects": [],
+    "data": [],
+    "endings": [],
+    "unconfirmed": 0,
+    "boundaries": []
+  }
+}

@@ -1,0 +1,33 @@
+sequenceDiagram
+    %% @spec walkthrough/2
+    %% @mode proposed
+    %% @scope From the click to the saved row.
+    %% @term tombstone
+    %% @term soft delete: marking a row as deleted without removing it.
+    %% @term soft delete: a newer definition that replaces the first.
+    %% @layer
+    %% @layer GHOST kind=service A layer whose alias is not a participant.
+    %% @layer A kind=unknownkind A kind the viewer does not know.
+    %% @bogus this tag does not exist
+    participant A as App
+    participant B as Backend
+    %% @section
+    %% @section Empty chapter
+    %% @section Real chapter
+    %% @uses onlyonewordhere
+    %% @field
+    %% @schema name
+    %% @state sideways nothing
+    %% @payload.weird 1 2 3
+    %% @unconfirmed
+    %% @async
+    %% @retry 3 times
+    %% @step This step text is deliberately much longer than two hundred and forty characters so that the viewer reports the long-step lint code for it, and it keeps going with more and more words until the limit has clearly been crossed by a wide margin indeed.
+    A->>B: POST /things
+    B-->>A: 201 Created
+    %% @Step Upper-case tag name works.
+    A->>B: GET /things
+    B-->>A: 200 OK
+    %% @section Chapter with no arrows after it
+    %% @step An annotation with no arrow after it.
+    %% @payload.body {"left": "over"}

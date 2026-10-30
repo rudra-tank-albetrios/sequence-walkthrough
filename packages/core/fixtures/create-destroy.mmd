@@ -1,0 +1,15 @@
+sequenceDiagram
+    %% @title Create and destroy participants
+    participant A as Alice
+    %% @step Alice calls Bob, who is not declared.
+    A->>Bob: Hello
+    create participant C as Carol
+    %% @step Bob creates Carol.
+    Bob->>C: Welcome
+    %% @step Carol answers.
+    C-->>Bob: Thanks
+    destroy C
+    %% @step Carol leaves.
+    Bob-xC: Goodbye
+    %% @step Bob reports back.
+    Bob-->>A: Done

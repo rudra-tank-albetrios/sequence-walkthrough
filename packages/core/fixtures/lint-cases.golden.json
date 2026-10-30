@@ -1,0 +1,658 @@
+{
+  "fixture": "lint-cases.mmd",
+  "annotations": {
+    "lines": [
+      "sequenceDiagram",
+      "    %% @spec walkthrough/2",
+      "    %% @mode proposed",
+      "    %% @scope From the click to the saved row.",
+      "    %% @term tombstone",
+      "    %% @term soft delete: marking a row as deleted without removing it.",
+      "    %% @term soft delete: a newer definition that replaces the first.",
+      "    %% @layer",
+      "    %% @layer GHOST kind=service A layer whose alias is not a participant.",
+      "    %% @layer A kind=unknownkind A kind the viewer does not know.",
+      "    %% @bogus this tag does not exist",
+      "    participant A as App",
+      "    participant B as Backend",
+      "    %% @section",
+      "    %% @section Empty chapter",
+      "    %% @section Real chapter",
+      "    %% @uses onlyonewordhere",
+      "    %% @field",
+      "    %% @schema name",
+      "    %% @state sideways nothing",
+      "    %% @payload.weird 1 2 3",
+      "    %% @unconfirmed",
+      "    %% @async",
+      "    %% @retry 3 times",
+      "    %% @step This step text is deliberately much longer than two hundred and forty characters so that the viewer reports the long-step lint code for it, and it keeps going with more and more words until the limit has clearly been crossed by a wide margin indeed.",
+      "    A->>B: POST /things",
+      "    B-->>A: 201 Created",
+      "    %% @Step Upper-case tag name works.",
+      "    A->>B: GET /things",
+      "    B-->>A: 200 OK",
+      "    %% @section Chapter with no arrows after it",
+      "    %% @step An annotation with no arrow after it.",
+      "    %% @payload.body {\"left\": \"over\"}",
+      ""
+    ],
+    "title": "",
+    "titleLine": -1,
+    "fmTitle": "",
+    "kwTitle": "",
+    "spec": "walkthrough/2",
+    "mode": "proposed",
+    "scope": "From the click to the saved row.",
+    "trigger": "",
+    "summary": [],
+    "terms": [
+      {
+        "term": "soft delete",
+        "def": "a newer definition that replaces the first.",
+        "line": 6
+      }
+    ],
+    "layers": {
+      "GHOST": {
+        "text": "A layer whose alias is not a participant.",
+        "kind": "service",
+        "line": 8
+      },
+      "A": {
+        "text": "A kind the viewer does not know.",
+        "kind": "unknownkind",
+        "line": 9
+      }
+    },
+    "sectionSummaries": {},
+    "arrows": [
+      {
+        "line": 25,
+        "left": "A->>B",
+        "text": "POST /things",
+        "step": "This step text is deliberately much longer than two hundred and forty characters so that the viewer reports the long-step lint code for it, and it keeps going with more and more words until the limit has clearly been crossed by a wide margin indeed.",
+        "stepLine": 24,
+        "payloads": [
+          {
+            "part": "_",
+            "text": "1 2 3",
+            "line": 20
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {
+          "async": true,
+          "retry": "3 times"
+        },
+        "unconfirmed": ["Not confirmed from the code"],
+        "section": "Real chapter",
+        "sectionLine": 15,
+        "annLines": [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+      },
+      {
+        "line": 26,
+        "left": "B-->>A",
+        "text": "201 Created",
+        "step": "",
+        "stepLine": -1,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": []
+      },
+      {
+        "line": 28,
+        "left": "A->>B",
+        "text": "GET /things",
+        "step": "Upper-case tag name works.",
+        "stepLine": 27,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [27]
+      },
+      {
+        "line": 29,
+        "left": "B-->>A",
+        "text": "200 OK",
+        "step": "",
+        "stepLine": -1,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": []
+      }
+    ],
+    "lint": [
+      {
+        "line": 4,
+        "msg": "@term needs a word and a definition: @term tombstone: …",
+        "code": "term-empty"
+      },
+      {
+        "line": 7,
+        "msg": "@layer needs an alias and a description",
+        "code": "layer-empty"
+      },
+      {
+        "line": 10,
+        "msg": "Unknown tag @bogus (known: @spec, @title, @mode, @scope, @trigger, @term, @layer, @section, @summary, @step, @payload, @ref, @uses, @effect, @field, @schema, @state, @async, @retry, @timeout, @idempotent, @unconfirmed)",
+        "code": "unknown-tag"
+      },
+      {
+        "line": 13,
+        "msg": "@section needs a name",
+        "code": "empty-section"
+      },
+      {
+        "line": 13,
+        "msg": "Chapter \"(no name)\" has no steps",
+        "code": "empty-section"
+      },
+      {
+        "line": 14,
+        "msg": "Chapter \"Empty chapter\" has no steps",
+        "code": "empty-section"
+      },
+      {
+        "line": 16,
+        "msg": "@uses needs a kind and a name: @uses hook useCart …",
+        "code": "uses-format"
+      },
+      {
+        "line": 17,
+        "msg": "@field needs a name and where it comes from",
+        "code": "field-empty"
+      },
+      {
+        "line": 18,
+        "msg": "@schema needs a field and its rule",
+        "code": "schema-empty"
+      },
+      {
+        "line": 19,
+        "msg": "@state needs before or after",
+        "code": "state-kind"
+      },
+      {
+        "line": 20,
+        "msg": "Unknown payload part \"weird\" (known: headers, query, params, cookies, body, sql, event, input, result)",
+        "code": "payload-part"
+      },
+      {
+        "line": 30,
+        "msg": "Annotation has no arrow after it",
+        "code": "orphan"
+      },
+      {
+        "line": 30,
+        "msg": "Chapter \"Chapter with no arrows after it\" has no steps",
+        "code": "empty-section"
+      }
+    ],
+    "diagramType": "sequenceDiagram",
+    "typeLine": 0,
+    "sectionCount": 4,
+    "frontMatterEnd": -1
+  },
+  "mermaid": {
+    "info": {
+      "participants": [
+        {
+          "alias": "A",
+          "name": "App",
+          "type": "participant"
+        },
+        {
+          "alias": "B",
+          "name": "Backend",
+          "type": "participant"
+        }
+      ],
+      "arrows": [
+        {
+          "from": "A",
+          "to": "B",
+          "text": "POST /things",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "B",
+          "to": "A",
+          "text": "201 Created",
+          "type": 1,
+          "dotted": true,
+          "branch": []
+        },
+        {
+          "from": "A",
+          "to": "B",
+          "text": "GET /things",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "B",
+          "to": "A",
+          "text": "200 OK",
+          "type": 1,
+          "dotted": true,
+          "branch": []
+        }
+      ],
+      "type": "sequence"
+    }
+  },
+  "flow": {
+    "title": "Sequence diagram",
+    "hasTitle": false,
+    "spec": "walkthrough/2",
+    "isSequence": true,
+    "diagramType": "sequenceDiagram",
+    "mode": "proposed",
+    "proposed": true,
+    "scope": "From the click to the saved row.",
+    "trigger": "",
+    "summary": "",
+    "terms": [
+      {
+        "term": "soft delete",
+        "def": "a newer definition that replaces the first.",
+        "line": 6
+      }
+    ],
+    "layers": {
+      "A": {
+        "name": "App",
+        "desc": "A kind the viewer does not know.",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "B": {
+        "name": "Backend",
+        "desc": "",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      }
+    },
+    "participants": [
+      {
+        "alias": "A",
+        "name": "App",
+        "type": "participant"
+      },
+      {
+        "alias": "B",
+        "name": "Backend",
+        "type": "participant"
+      }
+    ],
+    "sections": [
+      {
+        "name": "Real chapter",
+        "firstStep": 0,
+        "count": 4,
+        "line": 15,
+        "summary": "",
+        "hue": 210,
+        "idx": 0
+      }
+    ],
+    "steps": [
+      {
+        "idx": 0,
+        "n": 1,
+        "line": 25,
+        "annLines": [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+        "from": "A",
+        "to": "B",
+        "fromName": "App",
+        "toName": "Backend",
+        "kind": "request",
+        "labelRaw": "POST /things",
+        "label": ["POST /things"],
+        "explain": "This step text is deliberately much longer than two hundred and forty characters so that the viewer reports the long-step lint code for it, and it keeps going with more and more words until the limit has clearly been crossed by a wide margin indeed.",
+        "payloads": [
+          {
+            "part": "_",
+            "text": "1 2 3"
+          }
+        ],
+        "payload": "1 2 3",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {
+          "async": true,
+          "retry": "3 times"
+        },
+        "unconfirmed": ["Not confirmed from the code"],
+        "http": {
+          "method": "POST",
+          "path": "/things"
+        },
+        "status": null,
+        "section": 0,
+        "branch": [],
+        "key": "A→B|POST /things",
+        "replies": [1],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 1,
+        "n": 2,
+        "line": 26,
+        "annLines": [],
+        "from": "B",
+        "to": "A",
+        "fromName": "Backend",
+        "toName": "App",
+        "kind": "reply",
+        "labelRaw": "201 Created",
+        "label": ["201 Created"],
+        "explain": "",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 201,
+          "reason": "Created"
+        },
+        "section": 0,
+        "branch": [],
+        "key": "B→A|201 Created",
+        "replies": [],
+        "answers": 0,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 2,
+        "n": 3,
+        "line": 28,
+        "annLines": [27],
+        "from": "A",
+        "to": "B",
+        "fromName": "App",
+        "toName": "Backend",
+        "kind": "request",
+        "labelRaw": "GET /things",
+        "label": ["GET /things"],
+        "explain": "Upper-case tag name works.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": {
+          "method": "GET",
+          "path": "/things"
+        },
+        "status": null,
+        "section": 0,
+        "branch": [],
+        "key": "A→B|GET /things",
+        "replies": [3],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 3,
+        "n": 4,
+        "line": 29,
+        "annLines": [],
+        "from": "B",
+        "to": "A",
+        "fromName": "Backend",
+        "toName": "App",
+        "kind": "reply",
+        "labelRaw": "200 OK",
+        "label": ["200 OK"],
+        "explain": "",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 200,
+          "reason": "OK"
+        },
+        "section": 0,
+        "branch": [],
+        "key": "B→A|200 OK",
+        "replies": [],
+        "answers": 2,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "lint": [
+      {
+        "line": 0,
+        "msg": "Add %% @title <flow name> so the flow has a name",
+        "code": "no-title"
+      },
+      {
+        "line": 4,
+        "msg": "@term needs a word and a definition: @term tombstone: …",
+        "code": "term-empty"
+      },
+      {
+        "line": 7,
+        "msg": "@layer needs an alias and a description",
+        "code": "layer-empty"
+      },
+      {
+        "line": 8,
+        "msg": "@layer GHOST: no participant has this alias",
+        "code": "unknown-alias"
+      },
+      {
+        "line": 10,
+        "msg": "Unknown tag @bogus (known: @spec, @title, @mode, @scope, @trigger, @term, @layer, @section, @summary, @step, @payload, @ref, @uses, @effect, @field, @schema, @state, @async, @retry, @timeout, @idempotent, @unconfirmed)",
+        "code": "unknown-tag"
+      },
+      {
+        "line": 13,
+        "msg": "@section needs a name",
+        "code": "empty-section"
+      },
+      {
+        "line": 13,
+        "msg": "Chapter \"(no name)\" has no steps",
+        "code": "empty-section"
+      },
+      {
+        "line": 14,
+        "msg": "Chapter \"Empty chapter\" has no steps",
+        "code": "empty-section"
+      },
+      {
+        "line": 16,
+        "msg": "@uses needs a kind and a name: @uses hook useCart …",
+        "code": "uses-format"
+      },
+      {
+        "line": 17,
+        "msg": "@field needs a name and where it comes from",
+        "code": "field-empty"
+      },
+      {
+        "line": 18,
+        "msg": "@schema needs a field and its rule",
+        "code": "schema-empty"
+      },
+      {
+        "line": 19,
+        "msg": "@state needs before or after",
+        "code": "state-kind"
+      },
+      {
+        "line": 20,
+        "msg": "Unknown payload part \"weird\" (known: headers, query, params, cookies, body, sql, event, input, result)",
+        "code": "payload-part"
+      },
+      {
+        "line": 24,
+        "msg": "Step 1: @step is 249 characters (keep it under 240)",
+        "code": "long-step",
+        "step": 0
+      },
+      {
+        "line": 26,
+        "msg": "Step 2 (Backend → App) has no @step",
+        "code": "no-step",
+        "step": 1
+      },
+      {
+        "line": 29,
+        "msg": "Step 4 (Backend → App) has no @step",
+        "code": "no-step",
+        "step": 3
+      },
+      {
+        "line": 30,
+        "msg": "Annotation has no arrow after it",
+        "code": "orphan"
+      },
+      {
+        "line": 30,
+        "msg": "Chapter \"Chapter with no arrows after it\" has no steps",
+        "code": "empty-section"
+      }
+    ],
+    "mismatch": false,
+    "uses": [],
+    "effects": [],
+    "data": [],
+    "endings": [
+      {
+        "idx": 1,
+        "n": 2,
+        "line": 26,
+        "annLines": [],
+        "from": "B",
+        "to": "A",
+        "fromName": "Backend",
+        "toName": "App",
+        "kind": "reply",
+        "labelRaw": "201 Created",
+        "label": ["201 Created"],
+        "explain": "",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 201,
+          "reason": "Created"
+        },
+        "section": 0,
+        "branch": [],
+        "key": "B→A|201 Created",
+        "replies": [],
+        "answers": 0,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "unconfirmed": 1,
+    "boundaries": [],
+    "main": 0
+  }
+}

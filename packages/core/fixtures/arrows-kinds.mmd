@@ -1,0 +1,57 @@
+sequenceDiagram
+    %% @spec walkthrough/2
+    %% @title Arrow kinds and pairing
+    %% @layer FE kind=client Browser
+    %% @layer API kind=controller API
+    %% @layer DB kind=db Database
+    autonumber
+    participant FE as Browser
+    participant API as API
+    participant DB as Database
+    %% @step Solid line without head.
+    FE->API: solid no head
+    %% @step Dotted line without head.
+    API-->FE: dotted no head
+    %% @step Solid with arrowhead, the main request.
+    %% @payload.body {"a": 1, "b": "x"}
+    FE->>API: POST /things
+    %% @step Request to the database.
+    API->>DB: INSERT INTO things (a, b) VALUES (1, 'x')
+    %% @step Reply from the database.
+    DB-->>API: 1 row
+    alt Saved
+        %% @step Success reply with an added field.
+        %% @payload.body {"a": 1, "b": "x", "id": 7}
+        API-->>FE: 201 Created
+    else Duplicate
+        %% @step Conflict reply.
+        %% @payload.body {"error": "exists"}
+        API-->>FE: 409 Conflict
+    else Broken
+        %% @step Server error reply.
+        API-->>FE: 500 Internal Server Error
+    end
+    %% @step Cross arrow, solid.
+    FE-xAPI: solid cross
+    %% @step Cross arrow, dotted.
+    API--xFE: dotted cross
+    %% @step Open arrow, solid.
+    FE-)API: solid open
+    %% @step Open arrow, dotted.
+    API--)FE: dotted open
+    %% @step Bidirectional solid.
+    FE<<->>API: bidirectional solid
+    %% @step Bidirectional dotted.
+    API<<-->>FE: bidirectional dotted
+    %% @step Self message.
+    API->>API: check cache
+    %% @step Self message dotted.
+    API-->>API: cache miss
+    %% @step Same arrow as step 3, so its key gets a count.
+    FE->>API: POST /things
+    %% @step Same again.
+    FE->>API: POST /things
+    %% @step Activation plus on the target.
+    FE->>+API: GET /things/7
+    %% @step Activation minus on the source.
+    API-->>-FE: 200 OK

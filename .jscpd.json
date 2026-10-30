@@ -1,5 +1,5 @@
 {
-  "path": ["apps", "packages", "tools", "e2e"],
+  "path": ["apps", "packages", "tools", "examples", "e2e"],
   "format": ["typescript", "tsx", "javascript", "css"],
   "threshold": 2,
   "minTokens": 50,

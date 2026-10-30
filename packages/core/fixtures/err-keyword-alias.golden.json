@@ -1,0 +1,147 @@
+{
+  "fixture": "err-keyword-alias.mmd",
+  "annotations": {
+    "lines": [
+      "sequenceDiagram",
+      "    %% @title Keyword used as an alias",
+      "    participant end as The End",
+      "    participant A",
+      "    %% @step Uses a reserved word as a participant.",
+      "    A->>end: hi",
+      ""
+    ],
+    "title": "Keyword used as an alias",
+    "titleLine": 1,
+    "fmTitle": "",
+    "kwTitle": "",
+    "spec": "",
+    "mode": "",
+    "scope": "",
+    "trigger": "",
+    "summary": [],
+    "terms": [],
+    "layers": {},
+    "sectionSummaries": {},
+    "arrows": [
+      {
+        "line": 5,
+        "left": "A->>end",
+        "text": "hi",
+        "step": "Uses a reserved word as a participant.",
+        "stepLine": 4,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [4]
+      }
+    ],
+    "lint": [],
+    "diagramType": "sequenceDiagram",
+    "typeLine": 0,
+    "sectionCount": 0,
+    "frontMatterEnd": -1
+  },
+  "mermaid": {
+    "error": "Parse error on line 4:\n...rticipant A    A->>end: hi\n----------------------^\nExpecting 'link', '+', '-', '()', 'ACTOR', got 'end'"
+  },
+  "flow": {
+    "title": "Keyword used as an alias",
+    "hasTitle": true,
+    "spec": "",
+    "isSequence": true,
+    "diagramType": "sequenceDiagram",
+    "mode": "",
+    "proposed": false,
+    "scope": "",
+    "trigger": "",
+    "summary": "",
+    "terms": [],
+    "layers": {
+      "A": {
+        "name": "A",
+        "desc": "",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "end": {
+        "name": "end",
+        "desc": "",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      }
+    },
+    "participants": [
+      {
+        "alias": "A",
+        "name": "A",
+        "type": "participant"
+      },
+      {
+        "alias": "end",
+        "name": "end",
+        "type": "participant"
+      }
+    ],
+    "sections": [],
+    "steps": [
+      {
+        "idx": 0,
+        "n": 1,
+        "line": 5,
+        "annLines": [4],
+        "from": "A",
+        "to": "end",
+        "fromName": "A",
+        "toName": "end",
+        "kind": "request",
+        "labelRaw": "hi",
+        "label": ["hi"],
+        "explain": "Uses a reserved word as a participant.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "A→end|hi",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "lint": [],
+    "mismatch": false,
+    "uses": [],
+    "effects": [],
+    "data": [],
+    "endings": [],
+    "unconfirmed": 0,
+    "boundaries": [],
+    "main": 0
+  }
+}

@@ -1,0 +1,8 @@
+sequenceDiagram
+    %% @title Alt without end
+    participant A
+    participant B
+    alt Works
+        %% @step Inside an alt that never closes.
+        A->>B: hi
+        B-->>A: ok

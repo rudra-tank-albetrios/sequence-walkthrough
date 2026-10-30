@@ -1,0 +1,970 @@
+{
+  "fixture": "layers-zones.mmd",
+  "annotations": {
+    "lines": [
+      "sequenceDiagram",
+      "    %% @spec walkthrough/2",
+      "    %% @title Layer kinds and trust boundaries",
+      "    %% @layer U kind=person The person",
+      "    %% @layer FE kind=client Browser app",
+      "    %% @layer E kind=edge CDN and WAF",
+      "    %% @layer APP kind=app Express app",
+      "    %% @layer RT kind=router Router",
+      "    %% @layer MW kind=middleware Auth middleware",
+      "    %% @layer V kind=validator Validator",
+      "    %% @layer CT kind=controller Controller",
+      "    %% @layer SZ kind=serializer Serializer",
+      "    %% @layer SV kind=service Service",
+      "    %% @layer RP kind=repository Repository",
+      "    %% @layer DB kind=db Postgres",
+      "    %% @layer RD kind=cache Redis",
+      "    %% @layer EB kind=eventbus Event bus",
+      "    %% @layer Q kind=queue Queue",
+      "    %% @layer WK kind=worker Worker",
+      "    %% @layer CR kind=cron Cron",
+      "    %% @layer X kind=external Payment provider",
+      "    %% @layer NK Participant without a kind",
+      "    actor U as Person",
+      "    participant FE as Browser",
+      "    participant E as Edge",
+      "    participant APP as App",
+      "    participant RT as Routes",
+      "    participant MW as Middleware",
+      "    participant V as Validator",
+      "    participant CT as Controller",
+      "    participant SZ as Serializer",
+      "    participant SV as Service",
+      "    participant RP as Repository",
+      "    participant DB as Database",
+      "    participant RD as Redis",
+      "    participant EB as Event Bus",
+      "    participant Q as Queue",
+      "    participant WK as Worker",
+      "    participant CR as Cron",
+      "    participant X as Provider",
+      "    participant NK as No kind",
+      "    actor AC as Actor without layer",
+      "    %% @step Starts.",
+      "    U->>FE: click",
+      "    %% @step Goes out.",
+      "    FE->>E: GET /",
+      "    %% @step And on.",
+      "    E->>APP: GET /",
+      "    %% @step Calls out.",
+      "    SV->>X: POST /charge",
+      "    %% @step Comes back.",
+      "    X-->>SV: 200 OK",
+      "    %% @step Ends.",
+      "    NK->>AC: hello",
+      ""
+    ],
+    "title": "Layer kinds and trust boundaries",
+    "titleLine": 2,
+    "fmTitle": "",
+    "kwTitle": "",
+    "spec": "walkthrough/2",
+    "mode": "",
+    "scope": "",
+    "trigger": "",
+    "summary": [],
+    "terms": [],
+    "layers": {
+      "U": {
+        "text": "The person",
+        "kind": "person",
+        "line": 3
+      },
+      "FE": {
+        "text": "Browser app",
+        "kind": "client",
+        "line": 4
+      },
+      "E": {
+        "text": "CDN and WAF",
+        "kind": "edge",
+        "line": 5
+      },
+      "APP": {
+        "text": "Express app",
+        "kind": "app",
+        "line": 6
+      },
+      "RT": {
+        "text": "Router",
+        "kind": "router",
+        "line": 7
+      },
+      "MW": {
+        "text": "Auth middleware",
+        "kind": "middleware",
+        "line": 8
+      },
+      "V": {
+        "text": "Validator",
+        "kind": "validator",
+        "line": 9
+      },
+      "CT": {
+        "text": "Controller",
+        "kind": "controller",
+        "line": 10
+      },
+      "SZ": {
+        "text": "Serializer",
+        "kind": "serializer",
+        "line": 11
+      },
+      "SV": {
+        "text": "Service",
+        "kind": "service",
+        "line": 12
+      },
+      "RP": {
+        "text": "Repository",
+        "kind": "repository",
+        "line": 13
+      },
+      "DB": {
+        "text": "Postgres",
+        "kind": "db",
+        "line": 14
+      },
+      "RD": {
+        "text": "Redis",
+        "kind": "cache",
+        "line": 15
+      },
+      "EB": {
+        "text": "Event bus",
+        "kind": "eventbus",
+        "line": 16
+      },
+      "Q": {
+        "text": "Queue",
+        "kind": "queue",
+        "line": 17
+      },
+      "WK": {
+        "text": "Worker",
+        "kind": "worker",
+        "line": 18
+      },
+      "CR": {
+        "text": "Cron",
+        "kind": "cron",
+        "line": 19
+      },
+      "X": {
+        "text": "Payment provider",
+        "kind": "external",
+        "line": 20
+      },
+      "NK": {
+        "text": "Participant without a kind",
+        "kind": "",
+        "line": 21
+      }
+    },
+    "sectionSummaries": {},
+    "arrows": [
+      {
+        "line": 43,
+        "left": "U->>FE",
+        "text": "click",
+        "step": "Starts.",
+        "stepLine": 42,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [42]
+      },
+      {
+        "line": 45,
+        "left": "FE->>E",
+        "text": "GET /",
+        "step": "Goes out.",
+        "stepLine": 44,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [44]
+      },
+      {
+        "line": 47,
+        "left": "E->>APP",
+        "text": "GET /",
+        "step": "And on.",
+        "stepLine": 46,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [46]
+      },
+      {
+        "line": 49,
+        "left": "SV->>X",
+        "text": "POST /charge",
+        "step": "Calls out.",
+        "stepLine": 48,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [48]
+      },
+      {
+        "line": 51,
+        "left": "X-->>SV",
+        "text": "200 OK",
+        "step": "Comes back.",
+        "stepLine": 50,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [50]
+      },
+      {
+        "line": 53,
+        "left": "NK->>AC",
+        "text": "hello",
+        "step": "Ends.",
+        "stepLine": 52,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [52]
+      }
+    ],
+    "lint": [],
+    "diagramType": "sequenceDiagram",
+    "typeLine": 0,
+    "sectionCount": 0,
+    "frontMatterEnd": -1
+  },
+  "mermaid": {
+    "info": {
+      "participants": [
+        {
+          "alias": "U",
+          "name": "Person",
+          "type": "actor"
+        },
+        {
+          "alias": "FE",
+          "name": "Browser",
+          "type": "participant"
+        },
+        {
+          "alias": "E",
+          "name": "Edge",
+          "type": "participant"
+        },
+        {
+          "alias": "APP",
+          "name": "App",
+          "type": "participant"
+        },
+        {
+          "alias": "RT",
+          "name": "Routes",
+          "type": "participant"
+        },
+        {
+          "alias": "MW",
+          "name": "Middleware",
+          "type": "participant"
+        },
+        {
+          "alias": "V",
+          "name": "Validator",
+          "type": "participant"
+        },
+        {
+          "alias": "CT",
+          "name": "Controller",
+          "type": "participant"
+        },
+        {
+          "alias": "SZ",
+          "name": "Serializer",
+          "type": "participant"
+        },
+        {
+          "alias": "SV",
+          "name": "Service",
+          "type": "participant"
+        },
+        {
+          "alias": "RP",
+          "name": "Repository",
+          "type": "participant"
+        },
+        {
+          "alias": "DB",
+          "name": "Database",
+          "type": "participant"
+        },
+        {
+          "alias": "RD",
+          "name": "Redis",
+          "type": "participant"
+        },
+        {
+          "alias": "EB",
+          "name": "Event Bus",
+          "type": "participant"
+        },
+        {
+          "alias": "Q",
+          "name": "Queue",
+          "type": "participant"
+        },
+        {
+          "alias": "WK",
+          "name": "Worker",
+          "type": "participant"
+        },
+        {
+          "alias": "CR",
+          "name": "Cron",
+          "type": "participant"
+        },
+        {
+          "alias": "X",
+          "name": "Provider",
+          "type": "participant"
+        },
+        {
+          "alias": "NK",
+          "name": "No kind",
+          "type": "participant"
+        },
+        {
+          "alias": "AC",
+          "name": "Actor without layer",
+          "type": "actor"
+        }
+      ],
+      "arrows": [
+        {
+          "from": "U",
+          "to": "FE",
+          "text": "click",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "FE",
+          "to": "E",
+          "text": "GET /",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "E",
+          "to": "APP",
+          "text": "GET /",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "SV",
+          "to": "X",
+          "text": "POST /charge",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "X",
+          "to": "SV",
+          "text": "200 OK",
+          "type": 1,
+          "dotted": true,
+          "branch": []
+        },
+        {
+          "from": "NK",
+          "to": "AC",
+          "text": "hello",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        }
+      ],
+      "type": "sequence"
+    }
+  },
+  "flow": {
+    "title": "Layer kinds and trust boundaries",
+    "hasTitle": true,
+    "spec": "walkthrough/2",
+    "isSequence": true,
+    "diagramType": "sequenceDiagram",
+    "mode": "",
+    "proposed": false,
+    "scope": "",
+    "trigger": "",
+    "summary": "",
+    "terms": [],
+    "layers": {
+      "U": {
+        "name": "Person",
+        "desc": "The person",
+        "kind": "person",
+        "icon": "👤",
+        "zone": "client"
+      },
+      "FE": {
+        "name": "Browser",
+        "desc": "Browser app",
+        "kind": "client",
+        "icon": "🖥",
+        "zone": "client"
+      },
+      "E": {
+        "name": "Edge",
+        "desc": "CDN and WAF",
+        "kind": "edge",
+        "icon": "🛡",
+        "zone": "ours"
+      },
+      "APP": {
+        "name": "App",
+        "desc": "Express app",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "RT": {
+        "name": "Routes",
+        "desc": "Router",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "MW": {
+        "name": "Middleware",
+        "desc": "Auth middleware",
+        "kind": "middleware",
+        "icon": "⚙",
+        "zone": "ours"
+      },
+      "V": {
+        "name": "Validator",
+        "desc": "Validator",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "CT": {
+        "name": "Controller",
+        "desc": "Controller",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "SZ": {
+        "name": "Serializer",
+        "desc": "Serializer",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "SV": {
+        "name": "Service",
+        "desc": "Service",
+        "kind": "service",
+        "icon": "🧩",
+        "zone": "ours"
+      },
+      "RP": {
+        "name": "Repository",
+        "desc": "Repository",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "DB": {
+        "name": "Database",
+        "desc": "Postgres",
+        "kind": "db",
+        "icon": "🗄",
+        "zone": "ours"
+      },
+      "RD": {
+        "name": "Redis",
+        "desc": "Redis",
+        "kind": "cache",
+        "icon": "⚡",
+        "zone": "ours"
+      },
+      "EB": {
+        "name": "Event Bus",
+        "desc": "Event bus",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "Q": {
+        "name": "Queue",
+        "desc": "Queue",
+        "kind": "queue",
+        "icon": "📨",
+        "zone": "ours"
+      },
+      "WK": {
+        "name": "Worker",
+        "desc": "Worker",
+        "kind": "worker",
+        "icon": "🛠",
+        "zone": "ours"
+      },
+      "CR": {
+        "name": "Cron",
+        "desc": "Cron",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "X": {
+        "name": "Provider",
+        "desc": "Payment provider",
+        "kind": "external",
+        "icon": "🌐",
+        "zone": "outside"
+      },
+      "NK": {
+        "name": "No kind",
+        "desc": "Participant without a kind",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "AC": {
+        "name": "Actor without layer",
+        "desc": "",
+        "kind": "person",
+        "icon": "👤",
+        "zone": "client"
+      }
+    },
+    "participants": [
+      {
+        "alias": "U",
+        "name": "Person",
+        "type": "actor"
+      },
+      {
+        "alias": "FE",
+        "name": "Browser",
+        "type": "participant"
+      },
+      {
+        "alias": "E",
+        "name": "Edge",
+        "type": "participant"
+      },
+      {
+        "alias": "APP",
+        "name": "App",
+        "type": "participant"
+      },
+      {
+        "alias": "RT",
+        "name": "Routes",
+        "type": "participant"
+      },
+      {
+        "alias": "MW",
+        "name": "Middleware",
+        "type": "participant"
+      },
+      {
+        "alias": "V",
+        "name": "Validator",
+        "type": "participant"
+      },
+      {
+        "alias": "CT",
+        "name": "Controller",
+        "type": "participant"
+      },
+      {
+        "alias": "SZ",
+        "name": "Serializer",
+        "type": "participant"
+      },
+      {
+        "alias": "SV",
+        "name": "Service",
+        "type": "participant"
+      },
+      {
+        "alias": "RP",
+        "name": "Repository",
+        "type": "participant"
+      },
+      {
+        "alias": "DB",
+        "name": "Database",
+        "type": "participant"
+      },
+      {
+        "alias": "RD",
+        "name": "Redis",
+        "type": "participant"
+      },
+      {
+        "alias": "EB",
+        "name": "Event Bus",
+        "type": "participant"
+      },
+      {
+        "alias": "Q",
+        "name": "Queue",
+        "type": "participant"
+      },
+      {
+        "alias": "WK",
+        "name": "Worker",
+        "type": "participant"
+      },
+      {
+        "alias": "CR",
+        "name": "Cron",
+        "type": "participant"
+      },
+      {
+        "alias": "X",
+        "name": "Provider",
+        "type": "participant"
+      },
+      {
+        "alias": "NK",
+        "name": "No kind",
+        "type": "participant"
+      },
+      {
+        "alias": "AC",
+        "name": "Actor without layer",
+        "type": "actor"
+      }
+    ],
+    "sections": [],
+    "steps": [
+      {
+        "idx": 0,
+        "n": 1,
+        "line": 43,
+        "annLines": [42],
+        "from": "U",
+        "to": "FE",
+        "fromName": "Person",
+        "toName": "Browser",
+        "kind": "request",
+        "labelRaw": "click",
+        "label": ["click"],
+        "explain": "Starts.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "U→FE|click",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 1,
+        "n": 2,
+        "line": 45,
+        "annLines": [44],
+        "from": "FE",
+        "to": "E",
+        "fromName": "Browser",
+        "toName": "Edge",
+        "kind": "request",
+        "labelRaw": "GET /",
+        "label": ["GET /"],
+        "explain": "Goes out.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": {
+          "method": "GET",
+          "path": "/"
+        },
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "FE→E|GET /",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 2,
+        "n": 3,
+        "line": 47,
+        "annLines": [46],
+        "from": "E",
+        "to": "APP",
+        "fromName": "Edge",
+        "toName": "App",
+        "kind": "request",
+        "labelRaw": "GET /",
+        "label": ["GET /"],
+        "explain": "And on.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": {
+          "method": "GET",
+          "path": "/"
+        },
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "E→APP|GET /",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 3,
+        "n": 4,
+        "line": 49,
+        "annLines": [48],
+        "from": "SV",
+        "to": "X",
+        "fromName": "Service",
+        "toName": "Provider",
+        "kind": "request",
+        "labelRaw": "POST /charge",
+        "label": ["POST /charge"],
+        "explain": "Calls out.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": {
+          "method": "POST",
+          "path": "/charge"
+        },
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "SV→X|POST /charge",
+        "replies": [4],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 4,
+        "n": 5,
+        "line": 51,
+        "annLines": [50],
+        "from": "X",
+        "to": "SV",
+        "fromName": "Provider",
+        "toName": "Service",
+        "kind": "reply",
+        "labelRaw": "200 OK",
+        "label": ["200 OK"],
+        "explain": "Comes back.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 200,
+          "reason": "OK"
+        },
+        "section": -1,
+        "branch": [],
+        "key": "X→SV|200 OK",
+        "replies": [],
+        "answers": 3,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 5,
+        "n": 6,
+        "line": 53,
+        "annLines": [52],
+        "from": "NK",
+        "to": "AC",
+        "fromName": "No kind",
+        "toName": "Actor without layer",
+        "kind": "request",
+        "labelRaw": "hello",
+        "label": ["hello"],
+        "explain": "Ends.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "NK→AC|hello",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "lint": [],
+    "mismatch": false,
+    "uses": [],
+    "effects": [],
+    "data": [],
+    "endings": [],
+    "unconfirmed": 0,
+    "boundaries": [
+      {
+        "left": "FE",
+        "right": "E",
+        "from": "client",
+        "to": "ours"
+      }
+    ],
+    "main": 1
+  }
+}

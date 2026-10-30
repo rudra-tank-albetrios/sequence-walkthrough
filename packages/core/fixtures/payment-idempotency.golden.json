@@ -1,0 +1,2439 @@
+{
+  "fixture": "payment-idempotency.mmd",
+  "annotations": {
+    "lines": [
+      "sequenceDiagram",
+      "    %% @spec walkthrough/2",
+      "    %% @title Payment idempotency",
+      "    %% @trigger The user taps Pay on the checkout page. A double tap, a reload or a retry after a lost response re-enters the same flow with the same key.",
+      "    %% @term idempotency key: a unique id the client sends with a request so the server can recognise a repeat of that exact request and give the same answer without doing the work twice.",
+      "    %% @term idempotent: safe to repeat; doing it twice has the same result as doing it once.",
+      "    %% @term unique index: a database rule that lets a value appear in a column only once; a second insert of the same value fails or inserts nothing.",
+      "    %% @term body hash: a short fingerprint (SHA-256) of the request body, used to notice when the same key is reused with different data.",
+      "    %% @term replay: sending the saved answer of an earlier request again instead of running the request a second time.",
+      "    %% @layer U kind=person The person paying. Taps Pay, and sometimes taps it twice.",
+      "    %% @layer FE kind=client Checkout page in the browser. Creates the Idempotency-Key and keeps it until the payment settles.",
+      "    %% @layer MW kind=middleware Express middleware in front of the payment routes. Makes sure one key means one charge.",
+      "    %% @layer DB kind=db Postgres. The unique index on idempotency_keys.key is the lock that decides who goes first.",
+      "    %% @layer PS kind=service Payment Service. Creates the payment and talks to the provider.",
+      "    %% @layer PSP kind=external External payment provider. Also deduplicates on the key we forward.",
+      "    autonumber",
+      "    actor U as User",
+      "    participant FE as Checkout UI",
+      "    participant MW as Idempotency Middleware",
+      "    participant DB as Database",
+      "    participant PS as Payment Service",
+      "    participant PSP as Payment Provider",
+      "",
+      "    %% @step The user presses Pay. Nothing has been sent yet, so this is the moment to decide which key this attempt uses.",
+      "    U->>FE: Click \"Pay ₹1,499\"",
+      "    %% @step The page looks for a key saved for this cart. Reusing it means a reload or double tap is treated as the same attempt, not a new charge.",
+      "    %% @payload.input sessionStorage[\"pay:cart_77\"] = \"4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10\"",
+      "    %% @uses hook useIdempotencyKey src/checkout/useIdempotencyKey.ts:8 Reads the key for this cart from sessionStorage, or creates a new UUID and saves it.",
+      "    %% @ref src/checkout/pay.ts:31",
+      "    FE->>FE: Reuse key from sessionStorage<br/>or create a new UUID",
+      "    %% @step The key travels in a header so the server can recognise repeats of this exact request.",
+      "    %% @payload.headers Authorization: Bearer eyJhbGciOi…",
+      "    %% @payload.headers Idempotency-Key: 4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10",
+      "    %% @payload.body { \"cartId\": \"cart_77\", \"amount\": 149900, \"currency\": \"INR\" }",
+      "    %% @schema cartId string, required → 422 \"cartId is required\"",
+      "    %% @schema amount integer in minor units, greater than 0 → 422 \"amount must be positive\"",
+      "    %% @schema currency 3-letter ISO code → 422 \"currency must be INR, USD or EUR\"",
+      "    %% @idempotent Repeats with the same key get the first answer back.",
+      "    %% @timeout 10 s on the browser side, then the user may tap again with the same key.",
+      "    %% @ref src/checkout/pay.ts:42",
+      "    FE->>MW: POST /api/v1/payments<br/>Idempotency-Key: 4f9c…",
+      "",
+      "    %% @section Claim the key",
+      "    %% @summary The database, not the server, decides which request owns the key.",
+      "    %% @step After hashing the body, the middleware tries to claim the key. The unique index lets exactly one request insert it; every other request gets 0 rows.",
+      "    %% @payload.sql INSERT INTO idempotency_keys (key, user_id, body_hash, status) VALUES ('4f9c…', 'u_9', 'sha256:5f…', 'running') ON CONFLICT (key) DO NOTHING",
+      "    %% @state before idempotency_keys has no row for key 4f9c…, or a row from an earlier attempt",
+      "    %% @state after one row with status 'running' owned by this request, or nothing changed",
+      "    %% @uses util hashBody src/middleware/hash.ts:5 SHA-256 of the raw request body, so a reused key with a different body can be noticed later.",
+      "    %% @uses env IDEMPOTENCY_TTL_HOURS src/config.ts:14 How long a key row is kept (24 by default) before the cleanup job removes it.",
+      "    %% @ref src/middleware/idempotency.ts:58",
+      "    MW->>DB: INSERT idempotency_keys<br/>ON CONFLICT (key) DO NOTHING",
+      "    %% @step One row inserted means this request owns the key. Zero rows means the key was used before.",
+      "    DB-->>MW: 1 row inserted (0 on conflict)",
+      "    Note over MW,DB: The unique index is the lock",
+      "",
+      "    %% @section Charge once",
+      "    %% @summary The owner of the key charges the card exactly once and saves the answer for everyone else.",
+      "    alt Key claimed (1 row inserted)",
+      "        %% @step This request owns the key, so it is passed on to the real payment handler.",
+      "        %% @payload.body { \"userId\": \"u_9\", \"cartId\": \"cart_77\", \"amount\": 149900, \"currency\": \"INR\" }",
+      "        %% @ref src/middleware/idempotency.ts:66",
+      "        MW->>PS: next() → createPayment()",
+      "        %% @step The key is forwarded to the provider too, so even a retry between us and the provider cannot charge twice.",
+      "        %% @payload.headers Idempotency-Key: 4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10",
+      "        %% @payload.body { \"amount\": 149900, \"currency\": \"inr\", \"source\": \"tok_visa\", \"metadata\": { \"payment_id\": \"pay_456\" } }",
+      "        %% @retry 2 retries on a network error, same key each time, so a retry can never double charge.",
+      "        %% @uses lib psp-sdk src/payments/provider.ts:4 The provider's client library; it adds the auth header and retries on network errors.",
+      "        %% @ref src/payments/provider.ts:22",
+      "        PS->>PSP: POST https://api.psp.example/v1/charges<br/>Idempotency-Key: 4f9c…",
+      "        %% @step The provider confirms the charge and returns its id.",
+      "        %% @payload.body { \"id\": \"ch_789\", \"status\": \"succeeded\", \"amount\": 149900 }",
+      "        PSP-->>PS: 200 OK<br/>ch_789, status: succeeded",
+      "        %% @step The handler answers with the new payment, now marked as paid.",
+      "        %% @payload.body { \"id\": \"pay_456\", \"status\": \"paid\", \"amount\": 149900, \"currency\": \"INR\" }",
+      "        %% @field id pay_456, created by the INSERT INTO payments just before this reply",
+      "        %% @effect PaymentPaid event published for the receipt email worker",
+      "        %% @ref src/payments/routes.ts:37",
+      "        PS-->>MW: 201 Created<br/>pay_456, status: paid",
+      "        %% @step The response is saved against the key, so any later repeat gets the same answer without charging again.",
+      "        %% @payload.sql UPDATE idempotency_keys SET status = 'done', response_code = 201, response_body = '{\"id\":\"pay_456\",…}' WHERE key = '4f9c…'",
+      "        %% @ref src/middleware/idempotency.ts:91",
+      "        MW->>DB: UPDATE idempotency_keys<br/>SET status = done, response = 201",
+      "        %% @step The browser gets the result of the one and only charge.",
+      "        %% @payload.body { \"id\": \"pay_456\", \"status\": \"paid\", \"amount\": 149900, \"currency\": \"INR\" }",
+      "        %% @effect Log line \"payment created\" with payment_id and key, for support searches",
+      "        %% @ref src/middleware/idempotency.ts:97",
+      "        MW-->>FE: 201 Created<br/>pay_456, status: paid",
+      "",
+      "    %% @section Repeats",
+      "    %% @summary A repeat never reaches the handler: it gets the saved answer, a wait, or a refusal.",
+      "    else Key already used (0 rows)",
+      "        %% @step The key exists, so the middleware reads what happened to the first request with it.",
+      "        %% @payload.sql SELECT status, body_hash, response_code, response_body FROM idempotency_keys WHERE key = '4f9c…'",
+      "        %% @ref src/middleware/idempotency.ts:70",
+      "        MW->>DB: SELECT status, body_hash, response<br/>WHERE key = '4f9c…'",
+      "        %% @step The saved row for this key comes back.",
+      "        DB-->>MW: 1 row: status, body_hash, response",
+      "        alt Done, same body (the response was lost)",
+      "            %% @step The browser receives the original answer again, marked as a replay. No second charge happened.",
+      "            %% @payload.headers Idempotent-Replayed: true",
+      "            %% @payload.body { \"id\": \"pay_456\", \"status\": \"paid\", \"amount\": 149900, \"currency\": \"INR\" }",
+      "            %% @ref src/middleware/idempotency.ts:78",
+      "            MW-->>FE: 201 Created<br/>Idempotent-Replayed: true",
+      "        else Still running",
+      "            %% @step The first request is still being processed, so this one is told to wait instead of charging again.",
+      "            %% @payload.headers Retry-After: 1",
+      "            %% @payload.body { \"error\": \"request_in_progress\", \"message\": \"A payment with this key is already being processed.\" }",
+      "            %% @ref src/middleware/idempotency.ts:82",
+      "            MW-->>FE: 409 Conflict<br/>Retry-After: 1",
+      "        else Different body",
+      "            %% @step The key was reused for a different amount or cart. That is a client bug, so the request is refused with a 422 rather than guessed at.",
+      "            %% @payload.body { \"error\": \"idempotency_key_mismatch\", \"message\": \"This key was used with a different request body.\" }",
+      "            %% @ref src/middleware/idempotency.ts:86",
+      "            MW-->>FE: 422 Unprocessable Entity<br/>\"This key was used with a different request body.\"",
+      "        end",
+      "    end",
+      "",
+      "    %% @section Finish",
+      "    %% @summary The key is thrown away once the money has moved, so the next purchase starts fresh.",
+      "    %% @step The payment is settled, so the key is removed. The next checkout starts with a fresh key.",
+      "    %% @uses hook useIdempotencyKey src/checkout/useIdempotencyKey.ts:21 Its clear() removes the key for this cart from sessionStorage.",
+      "    %% @ref src/checkout/pay.ts:57",
+      "    FE->>FE: Clear key from sessionStorage",
+      "    %% @step The user sees one receipt for one charge, however many times they tapped.",
+      "    %% @ref src/checkout/pay.ts:59",
+      "    FE-->>U: Receipt for ₹1,499",
+      ""
+    ],
+    "title": "Payment idempotency",
+    "titleLine": 2,
+    "fmTitle": "",
+    "kwTitle": "",
+    "spec": "walkthrough/2",
+    "mode": "",
+    "scope": "",
+    "trigger": "The user taps Pay on the checkout page. A double tap, a reload or a retry after a lost response re-enters the same flow with the same key.",
+    "summary": [],
+    "terms": [
+      {
+        "term": "idempotency key",
+        "def": "a unique id the client sends with a request so the server can recognise a repeat of that exact request and give the same answer without doing the work twice.",
+        "line": 4
+      },
+      {
+        "term": "idempotent",
+        "def": "safe to repeat; doing it twice has the same result as doing it once.",
+        "line": 5
+      },
+      {
+        "term": "unique index",
+        "def": "a database rule that lets a value appear in a column only once; a second insert of the same value fails or inserts nothing.",
+        "line": 6
+      },
+      {
+        "term": "body hash",
+        "def": "a short fingerprint (SHA-256) of the request body, used to notice when the same key is reused with different data.",
+        "line": 7
+      },
+      {
+        "term": "replay",
+        "def": "sending the saved answer of an earlier request again instead of running the request a second time.",
+        "line": 8
+      }
+    ],
+    "layers": {
+      "U": {
+        "text": "The person paying. Taps Pay, and sometimes taps it twice.",
+        "kind": "person",
+        "line": 9
+      },
+      "FE": {
+        "text": "Checkout page in the browser. Creates the Idempotency-Key and keeps it until the payment settles.",
+        "kind": "client",
+        "line": 10
+      },
+      "MW": {
+        "text": "Express middleware in front of the payment routes. Makes sure one key means one charge.",
+        "kind": "middleware",
+        "line": 11
+      },
+      "DB": {
+        "text": "Postgres. The unique index on idempotency_keys.key is the lock that decides who goes first.",
+        "kind": "db",
+        "line": 12
+      },
+      "PS": {
+        "text": "Payment Service. Creates the payment and talks to the provider.",
+        "kind": "service",
+        "line": 13
+      },
+      "PSP": {
+        "text": "External payment provider. Also deduplicates on the key we forward.",
+        "kind": "external",
+        "line": 14
+      }
+    },
+    "sectionSummaries": {
+      "42": ["The database, not the server, decides which request owns the key."],
+      "56": [
+        "The owner of the key charges the card exactly once and saves the answer for everyone else."
+      ],
+      "89": ["A repeat never reaches the handler: it gets the saved answer, a wait, or a refusal."],
+      "118": ["The key is thrown away once the money has moved, so the next purchase starts fresh."]
+    },
+    "arrows": [
+      {
+        "line": 24,
+        "left": "U->>FE",
+        "text": "Click \"Pay ₹1,499\"",
+        "step": "The user presses Pay. Nothing has been sent yet, so this is the moment to decide which key this attempt uses.",
+        "stepLine": 23,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [23]
+      },
+      {
+        "line": 29,
+        "left": "FE->>FE",
+        "text": "Reuse key from sessionStorage<br/>or create a new UUID",
+        "step": "The page looks for a key saved for this cart. Reusing it means a reload or double tap is treated as the same attempt, not a new charge.",
+        "stepLine": 25,
+        "payloads": [
+          {
+            "part": "input",
+            "text": "sessionStorage[\"pay:cart_77\"] = \"4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10\"",
+            "line": 26
+          }
+        ],
+        "refs": ["src/checkout/pay.ts:31"],
+        "uses": [
+          {
+            "kind": "hook",
+            "name": "useIdempotencyKey",
+            "ref": "src/checkout/useIdempotencyKey.ts:8",
+            "text": "Reads the key for this cart from sessionStorage, or creates a new UUID and saves it.",
+            "line": 27
+          }
+        ],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [25, 26, 27, 28]
+      },
+      {
+        "line": 40,
+        "left": "FE->>MW",
+        "text": "POST /api/v1/payments<br/>Idempotency-Key: 4f9c…",
+        "step": "The key travels in a header so the server can recognise repeats of this exact request.",
+        "stepLine": 30,
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Authorization: Bearer eyJhbGciOi…",
+            "line": 31
+          },
+          {
+            "part": "headers",
+            "text": "Idempotency-Key: 4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10",
+            "line": 32
+          },
+          {
+            "part": "body",
+            "text": "{ \"cartId\": \"cart_77\", \"amount\": 149900, \"currency\": \"INR\" }",
+            "line": 33
+          }
+        ],
+        "refs": ["src/checkout/pay.ts:42"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [
+          {
+            "field": "cartId",
+            "text": "string, required → 422 \"cartId is required\""
+          },
+          {
+            "field": "amount",
+            "text": "integer in minor units, greater than 0 → 422 \"amount must be positive\""
+          },
+          {
+            "field": "currency",
+            "text": "3-letter ISO code → 422 \"currency must be INR, USD or EUR\""
+          }
+        ],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {
+          "idempotent": "Repeats with the same key get the first answer back.",
+          "timeout": "10 s on the browser side, then the user may tap again with the same key."
+        },
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
+      },
+      {
+        "line": 51,
+        "left": "MW->>DB",
+        "text": "INSERT idempotency_keys<br/>ON CONFLICT (key) DO NOTHING",
+        "step": "After hashing the body, the middleware tries to claim the key. The unique index lets exactly one request insert it; every other request gets 0 rows.",
+        "stepLine": 44,
+        "payloads": [
+          {
+            "part": "sql",
+            "text": "INSERT INTO idempotency_keys (key, user_id, body_hash, status) VALUES ('4f9c…', 'u_9', 'sha256:5f…', 'running') ON CONFLICT (key) DO NOTHING",
+            "line": 45
+          }
+        ],
+        "refs": ["src/middleware/idempotency.ts:58"],
+        "uses": [
+          {
+            "kind": "util",
+            "name": "hashBody",
+            "ref": "src/middleware/hash.ts:5",
+            "text": "SHA-256 of the raw request body, so a reused key with a different body can be noticed later.",
+            "line": 48
+          },
+          {
+            "kind": "env",
+            "name": "IDEMPOTENCY_TTL_HOURS",
+            "ref": "src/config.ts:14",
+            "text": "How long a key row is kept (24 by default) before the cleanup job removes it.",
+            "line": 49
+          }
+        ],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "idempotency_keys has no row for key 4f9c…, or a row from an earlier attempt",
+          "after": "one row with status 'running' owned by this request, or nothing changed"
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": "Claim the key",
+        "sectionLine": 42,
+        "annLines": [42, 43, 44, 45, 46, 47, 48, 49, 50]
+      },
+      {
+        "line": 53,
+        "left": "DB-->>MW",
+        "text": "1 row inserted (0 on conflict)",
+        "step": "One row inserted means this request owns the key. Zero rows means the key was used before.",
+        "stepLine": 52,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [52]
+      },
+      {
+        "line": 62,
+        "left": "MW->>PS",
+        "text": "next() → createPayment()",
+        "step": "This request owns the key, so it is passed on to the real payment handler.",
+        "stepLine": 59,
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"userId\": \"u_9\", \"cartId\": \"cart_77\", \"amount\": 149900, \"currency\": \"INR\" }",
+            "line": 60
+          }
+        ],
+        "refs": ["src/middleware/idempotency.ts:66"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": "Charge once",
+        "sectionLine": 56,
+        "annLines": [56, 57, 59, 60, 61]
+      },
+      {
+        "line": 69,
+        "left": "PS->>PSP",
+        "text": "POST https://api.psp.example/v1/charges<br/>Idempotency-Key: 4f9c…",
+        "step": "The key is forwarded to the provider too, so even a retry between us and the provider cannot charge twice.",
+        "stepLine": 63,
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Idempotency-Key: 4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10",
+            "line": 64
+          },
+          {
+            "part": "body",
+            "text": "{ \"amount\": 149900, \"currency\": \"inr\", \"source\": \"tok_visa\", \"metadata\": { \"payment_id\": \"pay_456\" } }",
+            "line": 65
+          }
+        ],
+        "refs": ["src/payments/provider.ts:22"],
+        "uses": [
+          {
+            "kind": "lib",
+            "name": "psp-sdk",
+            "ref": "src/payments/provider.ts:4",
+            "text": "The provider's client library; it adds the auth header and retries on network errors.",
+            "line": 67
+          }
+        ],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {
+          "retry": "2 retries on a network error, same key each time, so a retry can never double charge."
+        },
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [63, 64, 65, 66, 67, 68]
+      },
+      {
+        "line": 72,
+        "left": "PSP-->>PS",
+        "text": "200 OK<br/>ch_789, status: succeeded",
+        "step": "The provider confirms the charge and returns its id.",
+        "stepLine": 70,
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"id\": \"ch_789\", \"status\": \"succeeded\", \"amount\": 149900 }",
+            "line": 71
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [70, 71]
+      },
+      {
+        "line": 78,
+        "left": "PS-->>MW",
+        "text": "201 Created<br/>pay_456, status: paid",
+        "step": "The handler answers with the new payment, now marked as paid.",
+        "stepLine": 73,
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"id\": \"pay_456\", \"status\": \"paid\", \"amount\": 149900, \"currency\": \"INR\" }",
+            "line": 74
+          }
+        ],
+        "refs": ["src/payments/routes.ts:37"],
+        "uses": [],
+        "effects": ["PaymentPaid event published for the receipt email worker"],
+        "fields": [
+          {
+            "name": "id",
+            "text": "pay_456, created by the INSERT INTO payments just before this reply"
+          }
+        ],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [73, 74, 75, 76, 77]
+      },
+      {
+        "line": 82,
+        "left": "MW->>DB",
+        "text": "UPDATE idempotency_keys<br/>SET status = done, response = 201",
+        "step": "The response is saved against the key, so any later repeat gets the same answer without charging again.",
+        "stepLine": 79,
+        "payloads": [
+          {
+            "part": "sql",
+            "text": "UPDATE idempotency_keys SET status = 'done', response_code = 201, response_body = '{\"id\":\"pay_456\",…}' WHERE key = '4f9c…'",
+            "line": 80
+          }
+        ],
+        "refs": ["src/middleware/idempotency.ts:91"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [79, 80, 81]
+      },
+      {
+        "line": 87,
+        "left": "MW-->>FE",
+        "text": "201 Created<br/>pay_456, status: paid",
+        "step": "The browser gets the result of the one and only charge.",
+        "stepLine": 83,
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"id\": \"pay_456\", \"status\": \"paid\", \"amount\": 149900, \"currency\": \"INR\" }",
+            "line": 84
+          }
+        ],
+        "refs": ["src/middleware/idempotency.ts:97"],
+        "uses": [],
+        "effects": ["Log line \"payment created\" with payment_id and key, for support searches"],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [83, 84, 85, 86]
+      },
+      {
+        "line": 95,
+        "left": "MW->>DB",
+        "text": "SELECT status, body_hash, response<br/>WHERE key = '4f9c…'",
+        "step": "The key exists, so the middleware reads what happened to the first request with it.",
+        "stepLine": 92,
+        "payloads": [
+          {
+            "part": "sql",
+            "text": "SELECT status, body_hash, response_code, response_body FROM idempotency_keys WHERE key = '4f9c…'",
+            "line": 93
+          }
+        ],
+        "refs": ["src/middleware/idempotency.ts:70"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": "Repeats",
+        "sectionLine": 89,
+        "annLines": [89, 90, 92, 93, 94]
+      },
+      {
+        "line": 97,
+        "left": "DB-->>MW",
+        "text": "1 row: status, body_hash, response",
+        "step": "The saved row for this key comes back.",
+        "stepLine": 96,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [96]
+      },
+      {
+        "line": 103,
+        "left": "MW-->>FE",
+        "text": "201 Created<br/>Idempotent-Replayed: true",
+        "step": "The browser receives the original answer again, marked as a replay. No second charge happened.",
+        "stepLine": 99,
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Idempotent-Replayed: true",
+            "line": 100
+          },
+          {
+            "part": "body",
+            "text": "{ \"id\": \"pay_456\", \"status\": \"paid\", \"amount\": 149900, \"currency\": \"INR\" }",
+            "line": 101
+          }
+        ],
+        "refs": ["src/middleware/idempotency.ts:78"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [99, 100, 101, 102]
+      },
+      {
+        "line": 109,
+        "left": "MW-->>FE",
+        "text": "409 Conflict<br/>Retry-After: 1",
+        "step": "The first request is still being processed, so this one is told to wait instead of charging again.",
+        "stepLine": 105,
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Retry-After: 1",
+            "line": 106
+          },
+          {
+            "part": "body",
+            "text": "{ \"error\": \"request_in_progress\", \"message\": \"A payment with this key is already being processed.\" }",
+            "line": 107
+          }
+        ],
+        "refs": ["src/middleware/idempotency.ts:82"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [105, 106, 107, 108]
+      },
+      {
+        "line": 114,
+        "left": "MW-->>FE",
+        "text": "422 Unprocessable Entity<br/>\"This key was used with a different request body.\"",
+        "step": "The key was reused for a different amount or cart. That is a client bug, so the request is refused with a 422 rather than guessed at.",
+        "stepLine": 111,
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"error\": \"idempotency_key_mismatch\", \"message\": \"This key was used with a different request body.\" }",
+            "line": 112
+          }
+        ],
+        "refs": ["src/middleware/idempotency.ts:86"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [111, 112, 113]
+      },
+      {
+        "line": 123,
+        "left": "FE->>FE",
+        "text": "Clear key from sessionStorage",
+        "step": "The payment is settled, so the key is removed. The next checkout starts with a fresh key.",
+        "stepLine": 120,
+        "payloads": [],
+        "refs": ["src/checkout/pay.ts:57"],
+        "uses": [
+          {
+            "kind": "hook",
+            "name": "useIdempotencyKey",
+            "ref": "src/checkout/useIdempotencyKey.ts:21",
+            "text": "Its clear() removes the key for this cart from sessionStorage.",
+            "line": 121
+          }
+        ],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": "Finish",
+        "sectionLine": 118,
+        "annLines": [118, 119, 120, 121, 122]
+      },
+      {
+        "line": 126,
+        "left": "FE-->>U",
+        "text": "Receipt for ₹1,499",
+        "step": "The user sees one receipt for one charge, however many times they tapped.",
+        "stepLine": 124,
+        "payloads": [],
+        "refs": ["src/checkout/pay.ts:59"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [124, 125]
+      }
+    ],
+    "lint": [],
+    "diagramType": "sequenceDiagram",
+    "typeLine": 0,
+    "sectionCount": 4,
+    "frontMatterEnd": -1
+  },
+  "mermaid": {
+    "info": {
+      "participants": [
+        {
+          "alias": "U",
+          "name": "User",
+          "type": "actor"
+        },
+        {
+          "alias": "FE",
+          "name": "Checkout UI",
+          "type": "participant"
+        },
+        {
+          "alias": "MW",
+          "name": "Idempotency Middleware",
+          "type": "participant"
+        },
+        {
+          "alias": "DB",
+          "name": "Database",
+          "type": "participant"
+        },
+        {
+          "alias": "PS",
+          "name": "Payment Service",
+          "type": "participant"
+        },
+        {
+          "alias": "PSP",
+          "name": "Payment Provider",
+          "type": "participant"
+        }
+      ],
+      "arrows": [
+        {
+          "from": "U",
+          "to": "FE",
+          "text": "Click \"Pay ₹1,499\"",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "FE",
+          "to": "FE",
+          "text": "Reuse key from sessionStorage<br/>or create a new UUID",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "FE",
+          "to": "MW",
+          "text": "POST /api/v1/payments<br/>Idempotency-Key: 4f9c…",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "MW",
+          "to": "DB",
+          "text": "INSERT idempotency_keys<br/>ON CONFLICT (key) DO NOTHING",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "DB",
+          "to": "MW",
+          "text": "1 row inserted (0 on conflict)",
+          "type": 1,
+          "dotted": true,
+          "branch": []
+        },
+        {
+          "from": "MW",
+          "to": "PS",
+          "text": "next() → createPayment()",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "alt",
+              "label": "Key claimed (1 row inserted)",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "PS",
+          "to": "PSP",
+          "text": "POST https://api.psp.example/v1/charges<br/>Idempotency-Key: 4f9c…",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "alt",
+              "label": "Key claimed (1 row inserted)",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "PSP",
+          "to": "PS",
+          "text": "200 OK<br/>ch_789, status: succeeded",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "alt",
+              "label": "Key claimed (1 row inserted)",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "PS",
+          "to": "MW",
+          "text": "201 Created<br/>pay_456, status: paid",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "alt",
+              "label": "Key claimed (1 row inserted)",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "MW",
+          "to": "DB",
+          "text": "UPDATE idempotency_keys<br/>SET status = done, response = 201",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "alt",
+              "label": "Key claimed (1 row inserted)",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "MW",
+          "to": "FE",
+          "text": "201 Created<br/>pay_456, status: paid",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "alt",
+              "label": "Key claimed (1 row inserted)",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "MW",
+          "to": "DB",
+          "text": "SELECT status, body_hash, response<br/>WHERE key = '4f9c…'",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "else",
+              "label": "Key already used (0 rows)",
+              "first": false
+            }
+          ]
+        },
+        {
+          "from": "DB",
+          "to": "MW",
+          "text": "1 row: status, body_hash, response",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "else",
+              "label": "Key already used (0 rows)",
+              "first": false
+            }
+          ]
+        },
+        {
+          "from": "MW",
+          "to": "FE",
+          "text": "201 Created<br/>Idempotent-Replayed: true",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "else",
+              "label": "Key already used (0 rows)",
+              "first": false
+            },
+            {
+              "id": 2,
+              "kind": "alt",
+              "label": "Done, same body (the response was lost)",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "MW",
+          "to": "FE",
+          "text": "409 Conflict<br/>Retry-After: 1",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "else",
+              "label": "Key already used (0 rows)",
+              "first": false
+            },
+            {
+              "id": 2,
+              "kind": "else",
+              "label": "Still running",
+              "first": false
+            }
+          ]
+        },
+        {
+          "from": "MW",
+          "to": "FE",
+          "text": "422 Unprocessable Entity<br/>\"This key was used with a different request body.\"",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "else",
+              "label": "Key already used (0 rows)",
+              "first": false
+            },
+            {
+              "id": 2,
+              "kind": "else",
+              "label": "Different body",
+              "first": false
+            }
+          ]
+        },
+        {
+          "from": "FE",
+          "to": "FE",
+          "text": "Clear key from sessionStorage",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "FE",
+          "to": "U",
+          "text": "Receipt for ₹1,499",
+          "type": 1,
+          "dotted": true,
+          "branch": []
+        }
+      ],
+      "type": "sequence"
+    }
+  },
+  "flow": {
+    "title": "Payment idempotency",
+    "hasTitle": true,
+    "spec": "walkthrough/2",
+    "isSequence": true,
+    "diagramType": "sequenceDiagram",
+    "mode": "",
+    "proposed": false,
+    "scope": "",
+    "trigger": "The user taps Pay on the checkout page. A double tap, a reload or a retry after a lost response re-enters the same flow with the same key.",
+    "summary": "",
+    "terms": [
+      {
+        "term": "idempotency key",
+        "def": "a unique id the client sends with a request so the server can recognise a repeat of that exact request and give the same answer without doing the work twice.",
+        "line": 4
+      },
+      {
+        "term": "idempotent",
+        "def": "safe to repeat; doing it twice has the same result as doing it once.",
+        "line": 5
+      },
+      {
+        "term": "unique index",
+        "def": "a database rule that lets a value appear in a column only once; a second insert of the same value fails or inserts nothing.",
+        "line": 6
+      },
+      {
+        "term": "body hash",
+        "def": "a short fingerprint (SHA-256) of the request body, used to notice when the same key is reused with different data.",
+        "line": 7
+      },
+      {
+        "term": "replay",
+        "def": "sending the saved answer of an earlier request again instead of running the request a second time.",
+        "line": 8
+      }
+    ],
+    "layers": {
+      "U": {
+        "name": "User",
+        "desc": "The person paying. Taps Pay, and sometimes taps it twice.",
+        "kind": "person",
+        "icon": "👤",
+        "zone": "client"
+      },
+      "FE": {
+        "name": "Checkout UI",
+        "desc": "Checkout page in the browser. Creates the Idempotency-Key and keeps it until the payment settles.",
+        "kind": "client",
+        "icon": "🖥",
+        "zone": "client"
+      },
+      "MW": {
+        "name": "Idempotency Middleware",
+        "desc": "Express middleware in front of the payment routes. Makes sure one key means one charge.",
+        "kind": "middleware",
+        "icon": "⚙",
+        "zone": "ours"
+      },
+      "DB": {
+        "name": "Database",
+        "desc": "Postgres. The unique index on idempotency_keys.key is the lock that decides who goes first.",
+        "kind": "db",
+        "icon": "🗄",
+        "zone": "ours"
+      },
+      "PS": {
+        "name": "Payment Service",
+        "desc": "Payment Service. Creates the payment and talks to the provider.",
+        "kind": "service",
+        "icon": "🧩",
+        "zone": "ours"
+      },
+      "PSP": {
+        "name": "Payment Provider",
+        "desc": "External payment provider. Also deduplicates on the key we forward.",
+        "kind": "external",
+        "icon": "🌐",
+        "zone": "outside"
+      }
+    },
+    "participants": [
+      {
+        "alias": "U",
+        "name": "User",
+        "type": "actor"
+      },
+      {
+        "alias": "FE",
+        "name": "Checkout UI",
+        "type": "participant"
+      },
+      {
+        "alias": "MW",
+        "name": "Idempotency Middleware",
+        "type": "participant"
+      },
+      {
+        "alias": "DB",
+        "name": "Database",
+        "type": "participant"
+      },
+      {
+        "alias": "PS",
+        "name": "Payment Service",
+        "type": "participant"
+      },
+      {
+        "alias": "PSP",
+        "name": "Payment Provider",
+        "type": "participant"
+      }
+    ],
+    "sections": [
+      {
+        "name": "Start",
+        "firstStep": 0,
+        "count": 3,
+        "implicit": true,
+        "line": -1,
+        "summary": "",
+        "hue": 210,
+        "idx": 0
+      },
+      {
+        "name": "Claim the key",
+        "firstStep": 3,
+        "count": 2,
+        "line": 42,
+        "summary": "The database, not the server, decides which request owns the key.",
+        "hue": 150,
+        "idx": 1
+      },
+      {
+        "name": "Charge once",
+        "firstStep": 5,
+        "count": 6,
+        "line": 56,
+        "summary": "The owner of the key charges the card exactly once and saves the answer for everyone else.",
+        "hue": 30,
+        "idx": 2
+      },
+      {
+        "name": "Repeats",
+        "firstStep": 11,
+        "count": 5,
+        "line": 89,
+        "summary": "A repeat never reaches the handler: it gets the saved answer, a wait, or a refusal.",
+        "hue": 280,
+        "idx": 3
+      },
+      {
+        "name": "Finish",
+        "firstStep": 16,
+        "count": 2,
+        "line": 118,
+        "summary": "The key is thrown away once the money has moved, so the next purchase starts fresh.",
+        "hue": 0,
+        "idx": 4
+      }
+    ],
+    "steps": [
+      {
+        "idx": 0,
+        "n": 1,
+        "line": 24,
+        "annLines": [23],
+        "from": "U",
+        "to": "FE",
+        "fromName": "User",
+        "toName": "Checkout UI",
+        "kind": "request",
+        "labelRaw": "Click \"Pay ₹1,499\"",
+        "label": ["Click \"Pay ₹1,499\""],
+        "explain": "The user presses Pay. Nothing has been sent yet, so this is the moment to decide which key this attempt uses.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 0,
+        "branch": [],
+        "key": "U→FE|Click \"Pay ₹1,499\"",
+        "replies": [17],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 1,
+        "n": 2,
+        "line": 29,
+        "annLines": [25, 26, 27, 28],
+        "from": "FE",
+        "to": "FE",
+        "fromName": "Checkout UI",
+        "toName": "Checkout UI",
+        "kind": "self",
+        "labelRaw": "Reuse key from sessionStorage<br/>or create a new UUID",
+        "label": ["Reuse key from sessionStorage", "or create a new UUID"],
+        "explain": "The page looks for a key saved for this cart. Reusing it means a reload or double tap is treated as the same attempt, not a new charge.",
+        "payloads": [
+          {
+            "part": "input",
+            "text": "sessionStorage[\"pay:cart_77\"] = \"4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10\""
+          }
+        ],
+        "payload": "Input: sessionStorage[\"pay:cart_77\"] = \"4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10\"",
+        "refs": ["src/checkout/pay.ts:31"],
+        "uses": [
+          {
+            "kind": "hook",
+            "name": "useIdempotencyKey",
+            "ref": "src/checkout/useIdempotencyKey.ts:8",
+            "text": "Reads the key for this cart from sessionStorage, or creates a new UUID and saves it.",
+            "line": 27
+          }
+        ],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 0,
+        "branch": [],
+        "key": "FE→FE|Reuse key from sessionStorage / or create a new UUID",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 2,
+        "n": 3,
+        "line": 40,
+        "annLines": [30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
+        "from": "FE",
+        "to": "MW",
+        "fromName": "Checkout UI",
+        "toName": "Idempotency Middleware",
+        "kind": "request",
+        "labelRaw": "POST /api/v1/payments<br/>Idempotency-Key: 4f9c…",
+        "label": ["POST /api/v1/payments", "Idempotency-Key: 4f9c…"],
+        "explain": "The key travels in a header so the server can recognise repeats of this exact request.",
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Authorization: Bearer eyJhbGciOi…"
+          },
+          {
+            "part": "headers",
+            "text": "Idempotency-Key: 4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10"
+          },
+          {
+            "part": "body",
+            "text": "{ \"cartId\": \"cart_77\", \"amount\": 149900, \"currency\": \"INR\" }"
+          }
+        ],
+        "payload": "Headers: Authorization: Bearer eyJhbGciOi…\nHeaders: Idempotency-Key: 4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10\nBody: { \"cartId\": \"cart_77\", \"amount\": 149900, \"currency\": \"INR\" }",
+        "refs": ["src/checkout/pay.ts:42"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [
+          {
+            "field": "cartId",
+            "text": "string, required → 422 \"cartId is required\""
+          },
+          {
+            "field": "amount",
+            "text": "integer in minor units, greater than 0 → 422 \"amount must be positive\""
+          },
+          {
+            "field": "currency",
+            "text": "3-letter ISO code → 422 \"currency must be INR, USD or EUR\""
+          }
+        ],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {
+          "idempotent": "Repeats with the same key get the first answer back.",
+          "timeout": "10 s on the browser side, then the user may tap again with the same key."
+        },
+        "unconfirmed": [],
+        "http": {
+          "method": "POST",
+          "path": "/api/v1/payments"
+        },
+        "status": null,
+        "section": 0,
+        "branch": [],
+        "key": "FE→MW|POST /api/v1/payments / Idempotency-Key: 4f9c…",
+        "replies": [10, 13, 14, 15],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 3,
+        "n": 4,
+        "line": 51,
+        "annLines": [42, 43, 44, 45, 46, 47, 48, 49, 50],
+        "from": "MW",
+        "to": "DB",
+        "fromName": "Idempotency Middleware",
+        "toName": "Database",
+        "kind": "request",
+        "labelRaw": "INSERT idempotency_keys<br/>ON CONFLICT (key) DO NOTHING",
+        "label": ["INSERT idempotency_keys", "ON CONFLICT (key) DO NOTHING"],
+        "explain": "After hashing the body, the middleware tries to claim the key. The unique index lets exactly one request insert it; every other request gets 0 rows.",
+        "payloads": [
+          {
+            "part": "sql",
+            "text": "INSERT INTO idempotency_keys (key, user_id, body_hash, status) VALUES ('4f9c…', 'u_9', 'sha256:5f…', 'running') ON CONFLICT (key) DO NOTHING"
+          }
+        ],
+        "payload": "SQL: INSERT INTO idempotency_keys (key, user_id, body_hash, status) VALUES ('4f9c…', 'u_9', 'sha256:5f…', 'running') ON CONFLICT (key) DO NOTHING",
+        "refs": ["src/middleware/idempotency.ts:58"],
+        "uses": [
+          {
+            "kind": "util",
+            "name": "hashBody",
+            "ref": "src/middleware/hash.ts:5",
+            "text": "SHA-256 of the raw request body, so a reused key with a different body can be noticed later.",
+            "line": 48
+          },
+          {
+            "kind": "env",
+            "name": "IDEMPOTENCY_TTL_HOURS",
+            "ref": "src/config.ts:14",
+            "text": "How long a key row is kept (24 by default) before the cleanup job removes it.",
+            "line": 49
+          }
+        ],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "idempotency_keys has no row for key 4f9c…, or a row from an earlier attempt",
+          "after": "one row with status 'running' owned by this request, or nothing changed"
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 1,
+        "branch": [],
+        "key": "MW→DB|INSERT idempotency_keys / ON CONFLICT (key) DO NOTHING",
+        "replies": [4],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 4,
+        "n": 5,
+        "line": 53,
+        "annLines": [52],
+        "from": "DB",
+        "to": "MW",
+        "fromName": "Database",
+        "toName": "Idempotency Middleware",
+        "kind": "reply",
+        "labelRaw": "1 row inserted (0 on conflict)",
+        "label": ["1 row inserted (0 on conflict)"],
+        "explain": "One row inserted means this request owns the key. Zero rows means the key was used before.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 1,
+        "branch": [],
+        "key": "DB→MW|1 row inserted (0 on conflict)",
+        "replies": [],
+        "answers": 3,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 5,
+        "n": 6,
+        "line": 62,
+        "annLines": [56, 57, 59, 60, 61],
+        "from": "MW",
+        "to": "PS",
+        "fromName": "Idempotency Middleware",
+        "toName": "Payment Service",
+        "kind": "request",
+        "labelRaw": "next() → createPayment()",
+        "label": ["next() → createPayment()"],
+        "explain": "This request owns the key, so it is passed on to the real payment handler.",
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"userId\": \"u_9\", \"cartId\": \"cart_77\", \"amount\": 149900, \"currency\": \"INR\" }"
+          }
+        ],
+        "payload": "Body: { \"userId\": \"u_9\", \"cartId\": \"cart_77\", \"amount\": 149900, \"currency\": \"INR\" }",
+        "refs": ["src/middleware/idempotency.ts:66"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 2,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "alt",
+            "label": "Key claimed (1 row inserted)",
+            "first": true
+          }
+        ],
+        "key": "MW→PS|next() → createPayment()",
+        "replies": [8],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 6,
+        "n": 7,
+        "line": 69,
+        "annLines": [63, 64, 65, 66, 67, 68],
+        "from": "PS",
+        "to": "PSP",
+        "fromName": "Payment Service",
+        "toName": "Payment Provider",
+        "kind": "request",
+        "labelRaw": "POST https://api.psp.example/v1/charges<br/>Idempotency-Key: 4f9c…",
+        "label": ["POST https://api.psp.example/v1/charges", "Idempotency-Key: 4f9c…"],
+        "explain": "The key is forwarded to the provider too, so even a retry between us and the provider cannot charge twice.",
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Idempotency-Key: 4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10"
+          },
+          {
+            "part": "body",
+            "text": "{ \"amount\": 149900, \"currency\": \"inr\", \"source\": \"tok_visa\", \"metadata\": { \"payment_id\": \"pay_456\" } }"
+          }
+        ],
+        "payload": "Headers: Idempotency-Key: 4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10\nBody: { \"amount\": 149900, \"currency\": \"inr\", \"source\": \"tok_visa\", \"metadata\": { \"payment_id\": \"pay_456\" } }",
+        "refs": ["src/payments/provider.ts:22"],
+        "uses": [
+          {
+            "kind": "lib",
+            "name": "psp-sdk",
+            "ref": "src/payments/provider.ts:4",
+            "text": "The provider's client library; it adds the auth header and retries on network errors.",
+            "line": 67
+          }
+        ],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {
+          "retry": "2 retries on a network error, same key each time, so a retry can never double charge."
+        },
+        "unconfirmed": [],
+        "http": {
+          "method": "POST",
+          "path": "https://api.psp.example/v1/charges"
+        },
+        "status": null,
+        "section": 2,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "alt",
+            "label": "Key claimed (1 row inserted)",
+            "first": true
+          }
+        ],
+        "key": "PS→PSP|POST https://api.psp.example/v1/charges / Idempotency-Key: 4f9c…",
+        "replies": [7],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 7,
+        "n": 8,
+        "line": 72,
+        "annLines": [70, 71],
+        "from": "PSP",
+        "to": "PS",
+        "fromName": "Payment Provider",
+        "toName": "Payment Service",
+        "kind": "reply",
+        "labelRaw": "200 OK<br/>ch_789, status: succeeded",
+        "label": ["200 OK", "ch_789, status: succeeded"],
+        "explain": "The provider confirms the charge and returns its id.",
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"id\": \"ch_789\", \"status\": \"succeeded\", \"amount\": 149900 }"
+          }
+        ],
+        "payload": "Body: { \"id\": \"ch_789\", \"status\": \"succeeded\", \"amount\": 149900 }",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 200,
+          "reason": "OK"
+        },
+        "section": 2,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "alt",
+            "label": "Key claimed (1 row inserted)",
+            "first": true
+          }
+        ],
+        "key": "PSP→PS|200 OK / ch_789, status: succeeded",
+        "replies": [],
+        "answers": 6,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 8,
+        "n": 9,
+        "line": 78,
+        "annLines": [73, 74, 75, 76, 77],
+        "from": "PS",
+        "to": "MW",
+        "fromName": "Payment Service",
+        "toName": "Idempotency Middleware",
+        "kind": "reply",
+        "labelRaw": "201 Created<br/>pay_456, status: paid",
+        "label": ["201 Created", "pay_456, status: paid"],
+        "explain": "The handler answers with the new payment, now marked as paid.",
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"id\": \"pay_456\", \"status\": \"paid\", \"amount\": 149900, \"currency\": \"INR\" }"
+          }
+        ],
+        "payload": "Body: { \"id\": \"pay_456\", \"status\": \"paid\", \"amount\": 149900, \"currency\": \"INR\" }",
+        "refs": ["src/payments/routes.ts:37"],
+        "uses": [],
+        "effects": ["PaymentPaid event published for the receipt email worker"],
+        "fields": [
+          {
+            "name": "id",
+            "text": "pay_456, created by the INSERT INTO payments just before this reply"
+          }
+        ],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 201,
+          "reason": "Created"
+        },
+        "section": 2,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "alt",
+            "label": "Key claimed (1 row inserted)",
+            "first": true
+          }
+        ],
+        "key": "PS→MW|201 Created / pay_456, status: paid",
+        "replies": [],
+        "answers": 5,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 9,
+        "n": 10,
+        "line": 82,
+        "annLines": [79, 80, 81],
+        "from": "MW",
+        "to": "DB",
+        "fromName": "Idempotency Middleware",
+        "toName": "Database",
+        "kind": "request",
+        "labelRaw": "UPDATE idempotency_keys<br/>SET status = done, response = 201",
+        "label": ["UPDATE idempotency_keys", "SET status = done, response = 201"],
+        "explain": "The response is saved against the key, so any later repeat gets the same answer without charging again.",
+        "payloads": [
+          {
+            "part": "sql",
+            "text": "UPDATE idempotency_keys SET status = 'done', response_code = 201, response_body = '{\"id\":\"pay_456\",…}' WHERE key = '4f9c…'"
+          }
+        ],
+        "payload": "SQL: UPDATE idempotency_keys SET status = 'done', response_code = 201, response_body = '{\"id\":\"pay_456\",…}' WHERE key = '4f9c…'",
+        "refs": ["src/middleware/idempotency.ts:91"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 2,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "alt",
+            "label": "Key claimed (1 row inserted)",
+            "first": true
+          }
+        ],
+        "key": "MW→DB|UPDATE idempotency_keys / SET status = done, response = 201",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 10,
+        "n": 11,
+        "line": 87,
+        "annLines": [83, 84, 85, 86],
+        "from": "MW",
+        "to": "FE",
+        "fromName": "Idempotency Middleware",
+        "toName": "Checkout UI",
+        "kind": "reply",
+        "labelRaw": "201 Created<br/>pay_456, status: paid",
+        "label": ["201 Created", "pay_456, status: paid"],
+        "explain": "The browser gets the result of the one and only charge.",
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"id\": \"pay_456\", \"status\": \"paid\", \"amount\": 149900, \"currency\": \"INR\" }"
+          }
+        ],
+        "payload": "Body: { \"id\": \"pay_456\", \"status\": \"paid\", \"amount\": 149900, \"currency\": \"INR\" }",
+        "refs": ["src/middleware/idempotency.ts:97"],
+        "uses": [],
+        "effects": ["Log line \"payment created\" with payment_id and key, for support searches"],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 201,
+          "reason": "Created"
+        },
+        "section": 2,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "alt",
+            "label": "Key claimed (1 row inserted)",
+            "first": true
+          }
+        ],
+        "key": "MW→FE|201 Created / pay_456, status: paid",
+        "replies": [],
+        "answers": 2,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 11,
+        "n": 12,
+        "line": 95,
+        "annLines": [89, 90, 92, 93, 94],
+        "from": "MW",
+        "to": "DB",
+        "fromName": "Idempotency Middleware",
+        "toName": "Database",
+        "kind": "request",
+        "labelRaw": "SELECT status, body_hash, response<br/>WHERE key = '4f9c…'",
+        "label": ["SELECT status, body_hash, response", "WHERE key = '4f9c…'"],
+        "explain": "The key exists, so the middleware reads what happened to the first request with it.",
+        "payloads": [
+          {
+            "part": "sql",
+            "text": "SELECT status, body_hash, response_code, response_body FROM idempotency_keys WHERE key = '4f9c…'"
+          }
+        ],
+        "payload": "SQL: SELECT status, body_hash, response_code, response_body FROM idempotency_keys WHERE key = '4f9c…'",
+        "refs": ["src/middleware/idempotency.ts:70"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 3,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "else",
+            "label": "Key already used (0 rows)",
+            "first": false
+          }
+        ],
+        "key": "MW→DB|SELECT status, body_hash, response / WHERE key = '4f9c…'",
+        "replies": [12],
+        "answers": -1,
+        "isError": false,
+        "inElse": true
+      },
+      {
+        "idx": 12,
+        "n": 13,
+        "line": 97,
+        "annLines": [96],
+        "from": "DB",
+        "to": "MW",
+        "fromName": "Database",
+        "toName": "Idempotency Middleware",
+        "kind": "reply",
+        "labelRaw": "1 row: status, body_hash, response",
+        "label": ["1 row: status, body_hash, response"],
+        "explain": "The saved row for this key comes back.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 3,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "else",
+            "label": "Key already used (0 rows)",
+            "first": false
+          }
+        ],
+        "key": "DB→MW|1 row: status, body_hash, response",
+        "replies": [],
+        "answers": 11,
+        "isError": false,
+        "inElse": true
+      },
+      {
+        "idx": 13,
+        "n": 14,
+        "line": 103,
+        "annLines": [99, 100, 101, 102],
+        "from": "MW",
+        "to": "FE",
+        "fromName": "Idempotency Middleware",
+        "toName": "Checkout UI",
+        "kind": "reply",
+        "labelRaw": "201 Created<br/>Idempotent-Replayed: true",
+        "label": ["201 Created", "Idempotent-Replayed: true"],
+        "explain": "The browser receives the original answer again, marked as a replay. No second charge happened.",
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Idempotent-Replayed: true"
+          },
+          {
+            "part": "body",
+            "text": "{ \"id\": \"pay_456\", \"status\": \"paid\", \"amount\": 149900, \"currency\": \"INR\" }"
+          }
+        ],
+        "payload": "Headers: Idempotent-Replayed: true\nBody: { \"id\": \"pay_456\", \"status\": \"paid\", \"amount\": 149900, \"currency\": \"INR\" }",
+        "refs": ["src/middleware/idempotency.ts:78"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 201,
+          "reason": "Created"
+        },
+        "section": 3,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "else",
+            "label": "Key already used (0 rows)",
+            "first": false
+          },
+          {
+            "id": 2,
+            "kind": "alt",
+            "label": "Done, same body (the response was lost)",
+            "first": true
+          }
+        ],
+        "key": "MW→FE|201 Created / Idempotent-Replayed: true",
+        "replies": [],
+        "answers": 2,
+        "isError": false,
+        "inElse": true
+      },
+      {
+        "idx": 14,
+        "n": 15,
+        "line": 109,
+        "annLines": [105, 106, 107, 108],
+        "from": "MW",
+        "to": "FE",
+        "fromName": "Idempotency Middleware",
+        "toName": "Checkout UI",
+        "kind": "reply",
+        "labelRaw": "409 Conflict<br/>Retry-After: 1",
+        "label": ["409 Conflict", "Retry-After: 1"],
+        "explain": "The first request is still being processed, so this one is told to wait instead of charging again.",
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Retry-After: 1"
+          },
+          {
+            "part": "body",
+            "text": "{ \"error\": \"request_in_progress\", \"message\": \"A payment with this key is already being processed.\" }"
+          }
+        ],
+        "payload": "Headers: Retry-After: 1\nBody: { \"error\": \"request_in_progress\", \"message\": \"A payment with this key is already being processed.\" }",
+        "refs": ["src/middleware/idempotency.ts:82"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 409,
+          "reason": "Conflict"
+        },
+        "section": 3,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "else",
+            "label": "Key already used (0 rows)",
+            "first": false
+          },
+          {
+            "id": 2,
+            "kind": "else",
+            "label": "Still running",
+            "first": false
+          }
+        ],
+        "key": "MW→FE|409 Conflict / Retry-After: 1",
+        "replies": [],
+        "answers": 2,
+        "isError": true,
+        "inElse": true
+      },
+      {
+        "idx": 15,
+        "n": 16,
+        "line": 114,
+        "annLines": [111, 112, 113],
+        "from": "MW",
+        "to": "FE",
+        "fromName": "Idempotency Middleware",
+        "toName": "Checkout UI",
+        "kind": "reply",
+        "labelRaw": "422 Unprocessable Entity<br/>\"This key was used with a different request body.\"",
+        "label": [
+          "422 Unprocessable Entity",
+          "\"This key was used with a different request body.\""
+        ],
+        "explain": "The key was reused for a different amount or cart. That is a client bug, so the request is refused with a 422 rather than guessed at.",
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"error\": \"idempotency_key_mismatch\", \"message\": \"This key was used with a different request body.\" }"
+          }
+        ],
+        "payload": "Body: { \"error\": \"idempotency_key_mismatch\", \"message\": \"This key was used with a different request body.\" }",
+        "refs": ["src/middleware/idempotency.ts:86"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 422,
+          "reason": "Unprocessable Entity"
+        },
+        "section": 3,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "else",
+            "label": "Key already used (0 rows)",
+            "first": false
+          },
+          {
+            "id": 2,
+            "kind": "else",
+            "label": "Different body",
+            "first": false
+          }
+        ],
+        "key": "MW→FE|422 Unprocessable Entity / \"This key was used with a different request body.\"",
+        "replies": [],
+        "answers": 2,
+        "isError": true,
+        "inElse": true
+      },
+      {
+        "idx": 16,
+        "n": 17,
+        "line": 123,
+        "annLines": [118, 119, 120, 121, 122],
+        "from": "FE",
+        "to": "FE",
+        "fromName": "Checkout UI",
+        "toName": "Checkout UI",
+        "kind": "self",
+        "labelRaw": "Clear key from sessionStorage",
+        "label": ["Clear key from sessionStorage"],
+        "explain": "The payment is settled, so the key is removed. The next checkout starts with a fresh key.",
+        "payloads": [],
+        "payload": "",
+        "refs": ["src/checkout/pay.ts:57"],
+        "uses": [
+          {
+            "kind": "hook",
+            "name": "useIdempotencyKey",
+            "ref": "src/checkout/useIdempotencyKey.ts:21",
+            "text": "Its clear() removes the key for this cart from sessionStorage.",
+            "line": 121
+          }
+        ],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 4,
+        "branch": [],
+        "key": "FE→FE|Clear key from sessionStorage",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 17,
+        "n": 18,
+        "line": 126,
+        "annLines": [124, 125],
+        "from": "FE",
+        "to": "U",
+        "fromName": "Checkout UI",
+        "toName": "User",
+        "kind": "reply",
+        "labelRaw": "Receipt for ₹1,499",
+        "label": ["Receipt for ₹1,499"],
+        "explain": "The user sees one receipt for one charge, however many times they tapped.",
+        "payloads": [],
+        "payload": "",
+        "refs": ["src/checkout/pay.ts:59"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 4,
+        "branch": [],
+        "key": "FE→U|Receipt for ₹1,499",
+        "replies": [],
+        "answers": 0,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "lint": [],
+    "mismatch": false,
+    "uses": [
+      {
+        "kind": "env",
+        "name": "IDEMPOTENCY_TTL_HOURS",
+        "ref": "src/config.ts:14",
+        "text": "How long a key row is kept (24 by default) before the cleanup job removes it.",
+        "steps": [3]
+      },
+      {
+        "kind": "hook",
+        "name": "useIdempotencyKey",
+        "ref": "src/checkout/useIdempotencyKey.ts:8",
+        "text": "Reads the key for this cart from sessionStorage, or creates a new UUID and saves it.",
+        "steps": [1, 16]
+      },
+      {
+        "kind": "lib",
+        "name": "psp-sdk",
+        "ref": "src/payments/provider.ts:4",
+        "text": "The provider's client library; it adds the auth header and retries on network errors.",
+        "steps": [6]
+      },
+      {
+        "kind": "util",
+        "name": "hashBody",
+        "ref": "src/middleware/hash.ts:5",
+        "text": "SHA-256 of the raw request body, so a reused key with a different body can be noticed later.",
+        "steps": [3]
+      }
+    ],
+    "effects": [
+      {
+        "text": "PaymentPaid event published for the receipt email worker",
+        "step": 8
+      },
+      {
+        "text": "Log line \"payment created\" with payment_id and key, for support searches",
+        "step": 10
+      }
+    ],
+    "data": [
+      {
+        "table": "idempotency_keys",
+        "ops": ["INSERT", "UPDATE", "SELECT"],
+        "steps": [3, 9, 11]
+      }
+    ],
+    "endings": [
+      {
+        "idx": 10,
+        "n": 11,
+        "line": 87,
+        "annLines": [83, 84, 85, 86],
+        "from": "MW",
+        "to": "FE",
+        "fromName": "Idempotency Middleware",
+        "toName": "Checkout UI",
+        "kind": "reply",
+        "labelRaw": "201 Created<br/>pay_456, status: paid",
+        "label": ["201 Created", "pay_456, status: paid"],
+        "explain": "The browser gets the result of the one and only charge.",
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"id\": \"pay_456\", \"status\": \"paid\", \"amount\": 149900, \"currency\": \"INR\" }"
+          }
+        ],
+        "payload": "Body: { \"id\": \"pay_456\", \"status\": \"paid\", \"amount\": 149900, \"currency\": \"INR\" }",
+        "refs": ["src/middleware/idempotency.ts:97"],
+        "uses": [],
+        "effects": ["Log line \"payment created\" with payment_id and key, for support searches"],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 201,
+          "reason": "Created"
+        },
+        "section": 2,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "alt",
+            "label": "Key claimed (1 row inserted)",
+            "first": true
+          }
+        ],
+        "key": "MW→FE|201 Created / pay_456, status: paid",
+        "replies": [],
+        "answers": 2,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 13,
+        "n": 14,
+        "line": 103,
+        "annLines": [99, 100, 101, 102],
+        "from": "MW",
+        "to": "FE",
+        "fromName": "Idempotency Middleware",
+        "toName": "Checkout UI",
+        "kind": "reply",
+        "labelRaw": "201 Created<br/>Idempotent-Replayed: true",
+        "label": ["201 Created", "Idempotent-Replayed: true"],
+        "explain": "The browser receives the original answer again, marked as a replay. No second charge happened.",
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Idempotent-Replayed: true"
+          },
+          {
+            "part": "body",
+            "text": "{ \"id\": \"pay_456\", \"status\": \"paid\", \"amount\": 149900, \"currency\": \"INR\" }"
+          }
+        ],
+        "payload": "Headers: Idempotent-Replayed: true\nBody: { \"id\": \"pay_456\", \"status\": \"paid\", \"amount\": 149900, \"currency\": \"INR\" }",
+        "refs": ["src/middleware/idempotency.ts:78"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 201,
+          "reason": "Created"
+        },
+        "section": 3,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "else",
+            "label": "Key already used (0 rows)",
+            "first": false
+          },
+          {
+            "id": 2,
+            "kind": "alt",
+            "label": "Done, same body (the response was lost)",
+            "first": true
+          }
+        ],
+        "key": "MW→FE|201 Created / Idempotent-Replayed: true",
+        "replies": [],
+        "answers": 2,
+        "isError": false,
+        "inElse": true
+      },
+      {
+        "idx": 14,
+        "n": 15,
+        "line": 109,
+        "annLines": [105, 106, 107, 108],
+        "from": "MW",
+        "to": "FE",
+        "fromName": "Idempotency Middleware",
+        "toName": "Checkout UI",
+        "kind": "reply",
+        "labelRaw": "409 Conflict<br/>Retry-After: 1",
+        "label": ["409 Conflict", "Retry-After: 1"],
+        "explain": "The first request is still being processed, so this one is told to wait instead of charging again.",
+        "payloads": [
+          {
+            "part": "headers",
+            "text": "Retry-After: 1"
+          },
+          {
+            "part": "body",
+            "text": "{ \"error\": \"request_in_progress\", \"message\": \"A payment with this key is already being processed.\" }"
+          }
+        ],
+        "payload": "Headers: Retry-After: 1\nBody: { \"error\": \"request_in_progress\", \"message\": \"A payment with this key is already being processed.\" }",
+        "refs": ["src/middleware/idempotency.ts:82"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 409,
+          "reason": "Conflict"
+        },
+        "section": 3,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "else",
+            "label": "Key already used (0 rows)",
+            "first": false
+          },
+          {
+            "id": 2,
+            "kind": "else",
+            "label": "Still running",
+            "first": false
+          }
+        ],
+        "key": "MW→FE|409 Conflict / Retry-After: 1",
+        "replies": [],
+        "answers": 2,
+        "isError": true,
+        "inElse": true
+      },
+      {
+        "idx": 15,
+        "n": 16,
+        "line": 114,
+        "annLines": [111, 112, 113],
+        "from": "MW",
+        "to": "FE",
+        "fromName": "Idempotency Middleware",
+        "toName": "Checkout UI",
+        "kind": "reply",
+        "labelRaw": "422 Unprocessable Entity<br/>\"This key was used with a different request body.\"",
+        "label": [
+          "422 Unprocessable Entity",
+          "\"This key was used with a different request body.\""
+        ],
+        "explain": "The key was reused for a different amount or cart. That is a client bug, so the request is refused with a 422 rather than guessed at.",
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{ \"error\": \"idempotency_key_mismatch\", \"message\": \"This key was used with a different request body.\" }"
+          }
+        ],
+        "payload": "Body: { \"error\": \"idempotency_key_mismatch\", \"message\": \"This key was used with a different request body.\" }",
+        "refs": ["src/middleware/idempotency.ts:86"],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 422,
+          "reason": "Unprocessable Entity"
+        },
+        "section": 3,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "else",
+            "label": "Key already used (0 rows)",
+            "first": false
+          },
+          {
+            "id": 2,
+            "kind": "else",
+            "label": "Different body",
+            "first": false
+          }
+        ],
+        "key": "MW→FE|422 Unprocessable Entity / \"This key was used with a different request body.\"",
+        "replies": [],
+        "answers": 2,
+        "isError": true,
+        "inElse": true
+      }
+    ],
+    "unconfirmed": 0,
+    "boundaries": [
+      {
+        "left": "FE",
+        "right": "MW",
+        "from": "client",
+        "to": "ours"
+      },
+      {
+        "left": "PS",
+        "right": "PSP",
+        "from": "ours",
+        "to": "outside"
+      }
+    ],
+    "main": 2
+  }
+}

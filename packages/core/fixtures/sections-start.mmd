@@ -1,0 +1,46 @@
+sequenceDiagram
+    %% @spec walkthrough/2
+    %% @title Implicit start chapter
+    %% @summary The whole flow in one line.
+    %% @layer U kind=person Person
+    %% @layer W kind=client Web app
+    %% @layer S kind=service Service
+    %% @layer Q kind=queue Queue
+    %% @layer K kind=worker Worker
+    actor U as Person
+    participant W as Web app
+    participant S as Service
+    participant Q as Queue
+    participant K as Worker
+    %% @step Before any chapter.
+    U->>W: Open page
+    %% @step Still before any chapter.
+    W-->>U: Page shown
+    %% @section Submit
+    %% @summary The person submits the form.
+    %% @step Sends the form.
+    %% @payload.body {"email": "a@b.c"}
+    %% @effect Audit log line written
+    %% @uses util slugify src/util/slug.ts:3 Makes a URL-safe id.
+    %% @uses config MAX_SIZE src/config.ts:9 Upper limit for uploads.
+    %% @uses util slugify src/util/slug.ts:3 Makes a URL-safe id from the title.
+    W->>S: POST /forms
+    %% @step Puts a job on the queue.
+    %% @async
+    %% @payload.event {"type": "form.submitted", "id": 12}
+    S->>Q: publish form.submitted
+    %% @step Accepts right away.
+    %% @field id from the insert in step 3
+    S-->>W: 202 Accepted
+    %% @section Background
+    %% @summary A worker handles the job later.
+    %% @step Takes the job.
+    %% @retry 3 times with backoff
+    %% @timeout 30 s
+    Q->>K: form.submitted
+    %% @step Sends the email.
+    %% @effect Email sent to a@b.c
+    %% @unconfirmed Which template is used
+    %% @state before job pending
+    %% @state after job done
+    K->>K: send email

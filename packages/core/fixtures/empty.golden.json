@@ -1,0 +1,52 @@
+{
+  "fixture": "empty.mmd",
+  "annotations": {
+    "lines": ["", ""],
+    "title": "",
+    "titleLine": -1,
+    "fmTitle": "",
+    "kwTitle": "",
+    "spec": "",
+    "mode": "",
+    "scope": "",
+    "trigger": "",
+    "summary": [],
+    "terms": [],
+    "layers": {},
+    "sectionSummaries": {},
+    "arrows": [],
+    "lint": [],
+    "diagramType": "",
+    "typeLine": -1,
+    "sectionCount": 0,
+    "frontMatterEnd": -1
+  },
+  "mermaid": {
+    "error": "No diagram type detected matching given configuration for text: "
+  },
+  "flow": {
+    "title": "Sequence diagram",
+    "hasTitle": false,
+    "spec": "",
+    "isSequence": false,
+    "diagramType": "unknown",
+    "mode": "",
+    "proposed": false,
+    "scope": "",
+    "trigger": "",
+    "summary": "",
+    "terms": [],
+    "layers": {},
+    "participants": [],
+    "sections": [],
+    "steps": [],
+    "lint": [],
+    "mismatch": false,
+    "uses": [],
+    "effects": [],
+    "data": [],
+    "endings": [],
+    "unconfirmed": 0,
+    "boundaries": []
+  }
+}

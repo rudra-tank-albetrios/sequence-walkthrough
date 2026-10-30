@@ -1,0 +1,453 @@
+{
+  "fixture": "no-annotations.mmd",
+  "annotations": {
+    "lines": [
+      "sequenceDiagram",
+      "    title Plain Mermaid",
+      "    Alice->>Bob: Hello Bob, how are you?",
+      "    Bob-->>Alice: I am good thanks!",
+      "    Bob->>Charlie: And you?",
+      "    Charlie-->>Bob: Fine",
+      ""
+    ],
+    "title": "",
+    "titleLine": -1,
+    "fmTitle": "",
+    "kwTitle": "Plain Mermaid",
+    "spec": "",
+    "mode": "",
+    "scope": "",
+    "trigger": "",
+    "summary": [],
+    "terms": [],
+    "layers": {},
+    "sectionSummaries": {},
+    "arrows": [
+      {
+        "line": 2,
+        "left": "Alice->>Bob",
+        "text": "Hello Bob, how are you?",
+        "step": "",
+        "stepLine": -1,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": []
+      },
+      {
+        "line": 3,
+        "left": "Bob-->>Alice",
+        "text": "I am good thanks!",
+        "step": "",
+        "stepLine": -1,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": []
+      },
+      {
+        "line": 4,
+        "left": "Bob->>Charlie",
+        "text": "And you?",
+        "step": "",
+        "stepLine": -1,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": []
+      },
+      {
+        "line": 5,
+        "left": "Charlie-->>Bob",
+        "text": "Fine",
+        "step": "",
+        "stepLine": -1,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": []
+      }
+    ],
+    "lint": [],
+    "diagramType": "sequenceDiagram",
+    "typeLine": 0,
+    "sectionCount": 0,
+    "frontMatterEnd": -1
+  },
+  "mermaid": {
+    "info": {
+      "participants": [
+        {
+          "alias": "Alice",
+          "name": "Alice",
+          "type": "participant"
+        },
+        {
+          "alias": "Bob",
+          "name": "Bob",
+          "type": "participant"
+        },
+        {
+          "alias": "Charlie",
+          "name": "Charlie",
+          "type": "participant"
+        }
+      ],
+      "arrows": [
+        {
+          "from": "Alice",
+          "to": "Bob",
+          "text": "Hello Bob, how are you?",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "Bob",
+          "to": "Alice",
+          "text": "I am good thanks!",
+          "type": 1,
+          "dotted": true,
+          "branch": []
+        },
+        {
+          "from": "Bob",
+          "to": "Charlie",
+          "text": "And you?",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "Charlie",
+          "to": "Bob",
+          "text": "Fine",
+          "type": 1,
+          "dotted": true,
+          "branch": []
+        }
+      ],
+      "type": "sequence"
+    }
+  },
+  "flow": {
+    "title": "Plain Mermaid",
+    "hasTitle": false,
+    "spec": "",
+    "isSequence": true,
+    "diagramType": "sequenceDiagram",
+    "mode": "",
+    "proposed": false,
+    "scope": "",
+    "trigger": "",
+    "summary": "",
+    "terms": [],
+    "layers": {
+      "Alice": {
+        "name": "Alice",
+        "desc": "",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "Bob": {
+        "name": "Bob",
+        "desc": "",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      },
+      "Charlie": {
+        "name": "Charlie",
+        "desc": "",
+        "kind": "",
+        "icon": "",
+        "zone": ""
+      }
+    },
+    "participants": [
+      {
+        "alias": "Alice",
+        "name": "Alice",
+        "type": "participant"
+      },
+      {
+        "alias": "Bob",
+        "name": "Bob",
+        "type": "participant"
+      },
+      {
+        "alias": "Charlie",
+        "name": "Charlie",
+        "type": "participant"
+      }
+    ],
+    "sections": [],
+    "steps": [
+      {
+        "idx": 0,
+        "n": 1,
+        "line": 2,
+        "annLines": [],
+        "from": "Alice",
+        "to": "Bob",
+        "fromName": "Alice",
+        "toName": "Bob",
+        "kind": "request",
+        "labelRaw": "Hello Bob, how are you?",
+        "label": ["Hello Bob, how are you?"],
+        "explain": "",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "Alice→Bob|Hello Bob, how are you?",
+        "replies": [1],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 1,
+        "n": 2,
+        "line": 3,
+        "annLines": [],
+        "from": "Bob",
+        "to": "Alice",
+        "fromName": "Bob",
+        "toName": "Alice",
+        "kind": "reply",
+        "labelRaw": "I am good thanks!",
+        "label": ["I am good thanks!"],
+        "explain": "",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "Bob→Alice|I am good thanks!",
+        "replies": [],
+        "answers": 0,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 2,
+        "n": 3,
+        "line": 4,
+        "annLines": [],
+        "from": "Bob",
+        "to": "Charlie",
+        "fromName": "Bob",
+        "toName": "Charlie",
+        "kind": "request",
+        "labelRaw": "And you?",
+        "label": ["And you?"],
+        "explain": "",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "Bob→Charlie|And you?",
+        "replies": [3],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 3,
+        "n": 4,
+        "line": 5,
+        "annLines": [],
+        "from": "Charlie",
+        "to": "Bob",
+        "fromName": "Charlie",
+        "toName": "Bob",
+        "kind": "reply",
+        "labelRaw": "Fine",
+        "label": ["Fine"],
+        "explain": "",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "Charlie→Bob|Fine",
+        "replies": [],
+        "answers": 2,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "lint": [
+      {
+        "line": 0,
+        "msg": "Add %% @title <flow name> so the flow has a name",
+        "code": "no-title"
+      },
+      {
+        "line": 2,
+        "msg": "Step 1 (Alice → Bob) has no @step",
+        "code": "no-step",
+        "step": 0
+      },
+      {
+        "line": 3,
+        "msg": "Step 2 (Bob → Alice) has no @step",
+        "code": "no-step",
+        "step": 1
+      },
+      {
+        "line": 4,
+        "msg": "Step 3 (Bob → Charlie) has no @step",
+        "code": "no-step",
+        "step": 2
+      },
+      {
+        "line": 5,
+        "msg": "Step 4 (Charlie → Bob) has no @step",
+        "code": "no-step",
+        "step": 3
+      }
+    ],
+    "mismatch": false,
+    "uses": [],
+    "effects": [],
+    "data": [],
+    "endings": [
+      {
+        "idx": 1,
+        "n": 2,
+        "line": 3,
+        "annLines": [],
+        "from": "Bob",
+        "to": "Alice",
+        "fromName": "Bob",
+        "toName": "Alice",
+        "kind": "reply",
+        "labelRaw": "I am good thanks!",
+        "label": ["I am good thanks!"],
+        "explain": "",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": -1,
+        "branch": [],
+        "key": "Bob→Alice|I am good thanks!",
+        "replies": [],
+        "answers": 0,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "unconfirmed": 0,
+    "boundaries": [],
+    "main": 0
+  }
+}

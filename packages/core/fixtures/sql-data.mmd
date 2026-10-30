@@ -1,0 +1,38 @@
+sequenceDiagram
+    %% @spec walkthrough/2
+    %% @title Data touched and payload diff
+    %% @layer C kind=controller Controller
+    %% @layer S kind=service Service
+    %% @layer R kind=repository Repository
+    %% @layer D kind=db Database
+    participant C as Controller
+    participant S as Service
+    participant R as Repository
+    participant D as Database
+    %% @step Hands the request on.
+    %% @payload.body {"name": "Ada", "email": "ada@example.com", "role": "admin"}
+    C->>S: createUser(dto)
+    %% @step Checks for an existing email.
+    %% @payload.sql SELECT id FROM users WHERE email = $1
+    S->>R: findByEmail
+    %% @step Runs the query.
+    R->>D: SELECT id FROM users WHERE email = 'ada@example.com'
+    %% @step No row.
+    D-->>R: 0 rows
+    %% @step Inserts the user and a profile.
+    %% @payload.sql INSERT INTO users (name, email) VALUES ($1, $2)
+    %% @payload.sql INSERT INTO profiles (user_id) VALUES ($1)
+    S->>R: insert
+    %% @step Writes both rows in one transaction.
+    R->>D: INSERT INTO users ... then INSERT INTO profiles ...
+    %% @step Rows written.
+    D-->>R: 2 rows
+    %% @step Returns the new user.
+    %% @payload.body {"id": 9, "name": "Ada", "email": "ada@example.com"}
+    S-->>C: user
+    %% @step Joins across tables for the report.
+    S->>D: SELECT u.name, p.bio FROM users u JOIN profiles p ON p.user_id = u.id
+    %% @step Updates a counter and deletes a token.
+    %% @payload.sql UPDATE stats SET users = users + 1
+    %% @payload.sql DELETE FROM invite_tokens WHERE email = $1
+    S->>D: UPDATE stats SET users = users + 1

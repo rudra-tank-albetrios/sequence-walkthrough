@@ -1,0 +1,7 @@
+sequenceDiagram
+    %% @title Semicolon in a label
+    participant A
+    participant B
+    %% @step This label has a semicolon, which Mermaid rejects.
+    A->>B: retry; wait
+    B-->>A: ok

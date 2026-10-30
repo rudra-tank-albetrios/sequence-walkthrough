@@ -1,0 +1,884 @@
+{
+  "fixture": "sections-start.mmd",
+  "annotations": {
+    "lines": [
+      "sequenceDiagram",
+      "    %% @spec walkthrough/2",
+      "    %% @title Implicit start chapter",
+      "    %% @summary The whole flow in one line.",
+      "    %% @layer U kind=person Person",
+      "    %% @layer W kind=client Web app",
+      "    %% @layer S kind=service Service",
+      "    %% @layer Q kind=queue Queue",
+      "    %% @layer K kind=worker Worker",
+      "    actor U as Person",
+      "    participant W as Web app",
+      "    participant S as Service",
+      "    participant Q as Queue",
+      "    participant K as Worker",
+      "    %% @step Before any chapter.",
+      "    U->>W: Open page",
+      "    %% @step Still before any chapter.",
+      "    W-->>U: Page shown",
+      "    %% @section Submit",
+      "    %% @summary The person submits the form.",
+      "    %% @step Sends the form.",
+      "    %% @payload.body {\"email\": \"a@b.c\"}",
+      "    %% @effect Audit log line written",
+      "    %% @uses util slugify src/util/slug.ts:3 Makes a URL-safe id.",
+      "    %% @uses config MAX_SIZE src/config.ts:9 Upper limit for uploads.",
+      "    %% @uses util slugify src/util/slug.ts:3 Makes a URL-safe id from the title.",
+      "    W->>S: POST /forms",
+      "    %% @step Puts a job on the queue.",
+      "    %% @async",
+      "    %% @payload.event {\"type\": \"form.submitted\", \"id\": 12}",
+      "    S->>Q: publish form.submitted",
+      "    %% @step Accepts right away.",
+      "    %% @field id from the insert in step 3",
+      "    S-->>W: 202 Accepted",
+      "    %% @section Background",
+      "    %% @summary A worker handles the job later.",
+      "    %% @step Takes the job.",
+      "    %% @retry 3 times with backoff",
+      "    %% @timeout 30 s",
+      "    Q->>K: form.submitted",
+      "    %% @step Sends the email.",
+      "    %% @effect Email sent to a@b.c",
+      "    %% @unconfirmed Which template is used",
+      "    %% @state before job pending",
+      "    %% @state after job done",
+      "    K->>K: send email",
+      ""
+    ],
+    "title": "Implicit start chapter",
+    "titleLine": 2,
+    "fmTitle": "",
+    "kwTitle": "",
+    "spec": "walkthrough/2",
+    "mode": "",
+    "scope": "",
+    "trigger": "",
+    "summary": ["The whole flow in one line."],
+    "terms": [],
+    "layers": {
+      "U": {
+        "text": "Person",
+        "kind": "person",
+        "line": 4
+      },
+      "W": {
+        "text": "Web app",
+        "kind": "client",
+        "line": 5
+      },
+      "S": {
+        "text": "Service",
+        "kind": "service",
+        "line": 6
+      },
+      "Q": {
+        "text": "Queue",
+        "kind": "queue",
+        "line": 7
+      },
+      "K": {
+        "text": "Worker",
+        "kind": "worker",
+        "line": 8
+      }
+    },
+    "sectionSummaries": {
+      "18": ["The person submits the form."],
+      "34": ["A worker handles the job later."]
+    },
+    "arrows": [
+      {
+        "line": 15,
+        "left": "U->>W",
+        "text": "Open page",
+        "step": "Before any chapter.",
+        "stepLine": 14,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [14]
+      },
+      {
+        "line": 17,
+        "left": "W-->>U",
+        "text": "Page shown",
+        "step": "Still before any chapter.",
+        "stepLine": 16,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [16]
+      },
+      {
+        "line": 26,
+        "left": "W->>S",
+        "text": "POST /forms",
+        "step": "Sends the form.",
+        "stepLine": 20,
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{\"email\": \"a@b.c\"}",
+            "line": 21
+          }
+        ],
+        "refs": [],
+        "uses": [
+          {
+            "kind": "util",
+            "name": "slugify",
+            "ref": "src/util/slug.ts:3",
+            "text": "Makes a URL-safe id.",
+            "line": 23
+          },
+          {
+            "kind": "config",
+            "name": "MAX_SIZE",
+            "ref": "src/config.ts:9",
+            "text": "Upper limit for uploads.",
+            "line": 24
+          },
+          {
+            "kind": "util",
+            "name": "slugify",
+            "ref": "src/util/slug.ts:3",
+            "text": "Makes a URL-safe id from the title.",
+            "line": 25
+          }
+        ],
+        "effects": ["Audit log line written"],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": "Submit",
+        "sectionLine": 18,
+        "annLines": [18, 19, 20, 21, 22, 23, 24, 25]
+      },
+      {
+        "line": 30,
+        "left": "S->>Q",
+        "text": "publish form.submitted",
+        "step": "Puts a job on the queue.",
+        "stepLine": 27,
+        "payloads": [
+          {
+            "part": "event",
+            "text": "{\"type\": \"form.submitted\", \"id\": 12}",
+            "line": 29
+          }
+        ],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {
+          "async": true
+        },
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [27, 28, 29]
+      },
+      {
+        "line": 33,
+        "left": "S-->>W",
+        "text": "202 Accepted",
+        "step": "Accepts right away.",
+        "stepLine": 31,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [
+          {
+            "name": "id",
+            "text": "from the insert in step 3"
+          }
+        ],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [31, 32]
+      },
+      {
+        "line": 39,
+        "left": "Q->>K",
+        "text": "form.submitted",
+        "step": "Takes the job.",
+        "stepLine": 36,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {
+          "retry": "3 times with backoff",
+          "timeout": "30 s"
+        },
+        "unconfirmed": [],
+        "section": "Background",
+        "sectionLine": 34,
+        "annLines": [34, 35, 36, 37, 38]
+      },
+      {
+        "line": 45,
+        "left": "K->>K",
+        "text": "send email",
+        "step": "Sends the email.",
+        "stepLine": 40,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": ["Email sent to a@b.c"],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "job pending",
+          "after": "job done"
+        },
+        "flags": {},
+        "unconfirmed": ["Which template is used"],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [40, 41, 42, 43, 44]
+      }
+    ],
+    "lint": [],
+    "diagramType": "sequenceDiagram",
+    "typeLine": 0,
+    "sectionCount": 2,
+    "frontMatterEnd": -1
+  },
+  "mermaid": {
+    "info": {
+      "participants": [
+        {
+          "alias": "U",
+          "name": "Person",
+          "type": "actor"
+        },
+        {
+          "alias": "W",
+          "name": "Web app",
+          "type": "participant"
+        },
+        {
+          "alias": "S",
+          "name": "Service",
+          "type": "participant"
+        },
+        {
+          "alias": "Q",
+          "name": "Queue",
+          "type": "participant"
+        },
+        {
+          "alias": "K",
+          "name": "Worker",
+          "type": "participant"
+        }
+      ],
+      "arrows": [
+        {
+          "from": "U",
+          "to": "W",
+          "text": "Open page",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "W",
+          "to": "U",
+          "text": "Page shown",
+          "type": 1,
+          "dotted": true,
+          "branch": []
+        },
+        {
+          "from": "W",
+          "to": "S",
+          "text": "POST /forms",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "S",
+          "to": "Q",
+          "text": "publish form.submitted",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "S",
+          "to": "W",
+          "text": "202 Accepted",
+          "type": 1,
+          "dotted": true,
+          "branch": []
+        },
+        {
+          "from": "Q",
+          "to": "K",
+          "text": "form.submitted",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "K",
+          "to": "K",
+          "text": "send email",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        }
+      ],
+      "type": "sequence"
+    }
+  },
+  "flow": {
+    "title": "Implicit start chapter",
+    "hasTitle": true,
+    "spec": "walkthrough/2",
+    "isSequence": true,
+    "diagramType": "sequenceDiagram",
+    "mode": "",
+    "proposed": false,
+    "scope": "",
+    "trigger": "",
+    "summary": "The whole flow in one line.",
+    "terms": [],
+    "layers": {
+      "U": {
+        "name": "Person",
+        "desc": "Person",
+        "kind": "person",
+        "icon": "👤",
+        "zone": "client"
+      },
+      "W": {
+        "name": "Web app",
+        "desc": "Web app",
+        "kind": "client",
+        "icon": "🖥",
+        "zone": "client"
+      },
+      "S": {
+        "name": "Service",
+        "desc": "Service",
+        "kind": "service",
+        "icon": "🧩",
+        "zone": "ours"
+      },
+      "Q": {
+        "name": "Queue",
+        "desc": "Queue",
+        "kind": "queue",
+        "icon": "📨",
+        "zone": "ours"
+      },
+      "K": {
+        "name": "Worker",
+        "desc": "Worker",
+        "kind": "worker",
+        "icon": "🛠",
+        "zone": "ours"
+      }
+    },
+    "participants": [
+      {
+        "alias": "U",
+        "name": "Person",
+        "type": "actor"
+      },
+      {
+        "alias": "W",
+        "name": "Web app",
+        "type": "participant"
+      },
+      {
+        "alias": "S",
+        "name": "Service",
+        "type": "participant"
+      },
+      {
+        "alias": "Q",
+        "name": "Queue",
+        "type": "participant"
+      },
+      {
+        "alias": "K",
+        "name": "Worker",
+        "type": "participant"
+      }
+    ],
+    "sections": [
+      {
+        "name": "Start",
+        "firstStep": 0,
+        "count": 2,
+        "implicit": true,
+        "line": -1,
+        "summary": "",
+        "hue": 210,
+        "idx": 0
+      },
+      {
+        "name": "Submit",
+        "firstStep": 2,
+        "count": 3,
+        "line": 18,
+        "summary": "The person submits the form.",
+        "hue": 150,
+        "idx": 1
+      },
+      {
+        "name": "Background",
+        "firstStep": 5,
+        "count": 2,
+        "line": 34,
+        "summary": "A worker handles the job later.",
+        "hue": 30,
+        "idx": 2
+      }
+    ],
+    "steps": [
+      {
+        "idx": 0,
+        "n": 1,
+        "line": 15,
+        "annLines": [14],
+        "from": "U",
+        "to": "W",
+        "fromName": "Person",
+        "toName": "Web app",
+        "kind": "request",
+        "labelRaw": "Open page",
+        "label": ["Open page"],
+        "explain": "Before any chapter.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 0,
+        "branch": [],
+        "key": "U→W|Open page",
+        "replies": [1],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 1,
+        "n": 2,
+        "line": 17,
+        "annLines": [16],
+        "from": "W",
+        "to": "U",
+        "fromName": "Web app",
+        "toName": "Person",
+        "kind": "reply",
+        "labelRaw": "Page shown",
+        "label": ["Page shown"],
+        "explain": "Still before any chapter.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 0,
+        "branch": [],
+        "key": "W→U|Page shown",
+        "replies": [],
+        "answers": 0,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 2,
+        "n": 3,
+        "line": 26,
+        "annLines": [18, 19, 20, 21, 22, 23, 24, 25],
+        "from": "W",
+        "to": "S",
+        "fromName": "Web app",
+        "toName": "Service",
+        "kind": "request",
+        "labelRaw": "POST /forms",
+        "label": ["POST /forms"],
+        "explain": "Sends the form.",
+        "payloads": [
+          {
+            "part": "body",
+            "text": "{\"email\": \"a@b.c\"}"
+          }
+        ],
+        "payload": "Body: {\"email\": \"a@b.c\"}",
+        "refs": [],
+        "uses": [
+          {
+            "kind": "util",
+            "name": "slugify",
+            "ref": "src/util/slug.ts:3",
+            "text": "Makes a URL-safe id.",
+            "line": 23
+          },
+          {
+            "kind": "config",
+            "name": "MAX_SIZE",
+            "ref": "src/config.ts:9",
+            "text": "Upper limit for uploads.",
+            "line": 24
+          },
+          {
+            "kind": "util",
+            "name": "slugify",
+            "ref": "src/util/slug.ts:3",
+            "text": "Makes a URL-safe id from the title.",
+            "line": 25
+          }
+        ],
+        "effects": ["Audit log line written"],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": {
+          "method": "POST",
+          "path": "/forms"
+        },
+        "status": null,
+        "section": 1,
+        "branch": [],
+        "key": "W→S|POST /forms",
+        "replies": [4],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 3,
+        "n": 4,
+        "line": 30,
+        "annLines": [27, 28, 29],
+        "from": "S",
+        "to": "Q",
+        "fromName": "Service",
+        "toName": "Queue",
+        "kind": "request",
+        "labelRaw": "publish form.submitted",
+        "label": ["publish form.submitted"],
+        "explain": "Puts a job on the queue.",
+        "payloads": [
+          {
+            "part": "event",
+            "text": "{\"type\": \"form.submitted\", \"id\": 12}"
+          }
+        ],
+        "payload": "Event: {\"type\": \"form.submitted\", \"id\": 12}",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {
+          "async": true
+        },
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 1,
+        "branch": [],
+        "key": "S→Q|publish form.submitted",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 4,
+        "n": 5,
+        "line": 33,
+        "annLines": [31, 32],
+        "from": "S",
+        "to": "W",
+        "fromName": "Service",
+        "toName": "Web app",
+        "kind": "reply",
+        "labelRaw": "202 Accepted",
+        "label": ["202 Accepted"],
+        "explain": "Accepts right away.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [
+          {
+            "name": "id",
+            "text": "from the insert in step 3"
+          }
+        ],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 202,
+          "reason": "Accepted"
+        },
+        "section": 1,
+        "branch": [],
+        "key": "S→W|202 Accepted",
+        "replies": [],
+        "answers": 2,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 5,
+        "n": 6,
+        "line": 39,
+        "annLines": [34, 35, 36, 37, 38],
+        "from": "Q",
+        "to": "K",
+        "fromName": "Queue",
+        "toName": "Worker",
+        "kind": "request",
+        "labelRaw": "form.submitted",
+        "label": ["form.submitted"],
+        "explain": "Takes the job.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {
+          "retry": "3 times with backoff",
+          "timeout": "30 s"
+        },
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 2,
+        "branch": [],
+        "key": "Q→K|form.submitted",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 6,
+        "n": 7,
+        "line": 45,
+        "annLines": [40, 41, 42, 43, 44],
+        "from": "K",
+        "to": "K",
+        "fromName": "Worker",
+        "toName": "Worker",
+        "kind": "self",
+        "labelRaw": "send email",
+        "label": ["send email"],
+        "explain": "Sends the email.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": ["Email sent to a@b.c"],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "job pending",
+          "after": "job done"
+        },
+        "flags": {},
+        "unconfirmed": ["Which template is used"],
+        "http": null,
+        "status": null,
+        "section": 2,
+        "branch": [],
+        "key": "K→K|send email",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "lint": [],
+    "mismatch": false,
+    "uses": [
+      {
+        "kind": "config",
+        "name": "MAX_SIZE",
+        "ref": "src/config.ts:9",
+        "text": "Upper limit for uploads.",
+        "steps": [2]
+      },
+      {
+        "kind": "util",
+        "name": "slugify",
+        "ref": "src/util/slug.ts:3",
+        "text": "Makes a URL-safe id from the title.",
+        "steps": [2, 2]
+      }
+    ],
+    "effects": [
+      {
+        "text": "Audit log line written",
+        "step": 2
+      },
+      {
+        "text": "Email sent to a@b.c",
+        "step": 6
+      }
+    ],
+    "data": [],
+    "endings": [
+      {
+        "idx": 4,
+        "n": 5,
+        "line": 33,
+        "annLines": [31, 32],
+        "from": "S",
+        "to": "W",
+        "fromName": "Service",
+        "toName": "Web app",
+        "kind": "reply",
+        "labelRaw": "202 Accepted",
+        "label": ["202 Accepted"],
+        "explain": "Accepts right away.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [
+          {
+            "name": "id",
+            "text": "from the insert in step 3"
+          }
+        ],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 202,
+          "reason": "Accepted"
+        },
+        "section": 1,
+        "branch": [],
+        "key": "S→W|202 Accepted",
+        "replies": [],
+        "answers": 2,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "unconfirmed": 1,
+    "boundaries": [
+      {
+        "left": "W",
+        "right": "S",
+        "from": "client",
+        "to": "ours"
+      }
+    ],
+    "main": 2
+  }
+}

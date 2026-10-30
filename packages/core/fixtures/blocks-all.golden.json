@@ -1,0 +1,1860 @@
+{
+  "fixture": "blocks-all.mmd",
+  "annotations": {
+    "lines": [
+      "---",
+      "title: Front matter title",
+      "config:",
+      "  theme: neutral",
+      "---",
+      "%%{init: {\"sequence\": {\"mirrorActors\": false}}}%%",
+      "sequenceDiagram",
+      "    %% @spec walkthrough/2",
+      "    %% @title Every block kind",
+      "    %% @trigger A test runner starts the flow.",
+      "    %% @summary Whole-flow summary written before any chapter.",
+      "    %% @layer U kind=person The tester.",
+      "    %% @layer A kind=client The client app.",
+      "    %% @layer B kind=service The service.",
+      "    %% @layer C kind=db The database.",
+      "    %% @layer X kind=external Outside system.",
+      "    autonumber",
+      "    title Keyword title",
+      "    actor U as Tester",
+      "    box rgb(230, 240, 255) Our systems",
+      "        participant A as App",
+      "        participant B as Service",
+      "    end",
+      "    participant C as Database",
+      "    %% plain comment line",
+      "    %% @section Start of work",
+      "    %% @summary Chapter summary line one.",
+      "    %% @summary Chapter summary line two.",
+      "    %% @step The tester clicks start.",
+      "    U->>A: Start",
+      "    Note over A,B: A note between participants",
+      "    Note right of A: A note on the right",
+      "    Note left of U: A note on the left",
+      "    %% @step The app opens a loop of retries.",
+      "    loop Every 5 seconds",
+      "        %% @step Polls the service.",
+      "        A->>+B: GET /status",
+      "        %% @step Service answers with the current state.",
+      "        B-->>-A: 200 OK {\"state\": \"waiting\"}",
+      "    end",
+      "    %% @section Decisions",
+      "    %% @step The service checks the record.",
+      "    alt Record exists",
+      "        %% @step Reads it.",
+      "        B->>C: SELECT * FROM records WHERE id = 1",
+      "        %% @step Returns one row.",
+      "        C-->>B: row",
+      "    else Record missing",
+      "        %% @step Creates it.",
+      "        B->>C: INSERT INTO records (id) VALUES (1)",
+      "        %% @step Confirms the insert.",
+      "        C-->>B: 1 row",
+      "    end",
+      "    opt Cache warm",
+      "        %% @step Warms the cache.",
+      "        B->>B: warm cache",
+      "    end",
+      "    par Fetch prices",
+      "        %% @step Asks the outside system for prices.",
+      "        B->>X: GET /prices",
+      "        %% @step Prices come back.",
+      "        X-->>B: 200 OK",
+      "    and Fetch stock",
+      "        %% @step Asks for stock.",
+      "        B->>X: GET /stock",
+      "        %% @step Stock comes back.",
+      "        X-->>B: 200 OK",
+      "    end",
+      "    critical Save everything",
+      "        %% @step Writes the result.",
+      "        B->>C: UPDATE records SET done = true",
+      "    option Database down",
+      "        %% @step Logs the failure.",
+      "        B->>B: log failure",
+      "    option Timeout",
+      "        %% @step Gives up after the timeout.",
+      "        B->>B: give up",
+      "    end",
+      "    break Budget exceeded",
+      "        %% @step Stops early.",
+      "        B-->>A: 402 Payment Required",
+      "    end",
+      "    rect rgb(255, 245, 230)",
+      "        activate A",
+      "        %% @step Shows the result.",
+      "        A->>U: Show result",
+      "        deactivate A",
+      "    end",
+      "    %% @step The service tells the app it is done.",
+      "    B-->>A: 200 OK {\"state\": \"done\"}",
+      ""
+    ],
+    "title": "Every block kind",
+    "titleLine": 8,
+    "fmTitle": "Front matter title",
+    "kwTitle": "Keyword title",
+    "spec": "walkthrough/2",
+    "mode": "",
+    "scope": "",
+    "trigger": "A test runner starts the flow.",
+    "summary": ["Whole-flow summary written before any chapter."],
+    "terms": [],
+    "layers": {
+      "U": {
+        "text": "The tester.",
+        "kind": "person",
+        "line": 11
+      },
+      "A": {
+        "text": "The client app.",
+        "kind": "client",
+        "line": 12
+      },
+      "B": {
+        "text": "The service.",
+        "kind": "service",
+        "line": 13
+      },
+      "C": {
+        "text": "The database.",
+        "kind": "db",
+        "line": 14
+      },
+      "X": {
+        "text": "Outside system.",
+        "kind": "external",
+        "line": 15
+      }
+    },
+    "sectionSummaries": {
+      "25": ["Chapter summary line one.", "Chapter summary line two."]
+    },
+    "arrows": [
+      {
+        "line": 29,
+        "left": "U->>A",
+        "text": "Start",
+        "step": "The tester clicks start.",
+        "stepLine": 28,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": "Start of work",
+        "sectionLine": 25,
+        "annLines": [25, 26, 27, 28]
+      },
+      {
+        "line": 36,
+        "left": "A->>+B",
+        "text": "GET /status",
+        "step": "The app opens a loop of retries. Polls the service.",
+        "stepLine": 33,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [33, 35]
+      },
+      {
+        "line": 38,
+        "left": "B-->>-A",
+        "text": "200 OK {\"state\": \"waiting\"}",
+        "step": "Service answers with the current state.",
+        "stepLine": 37,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [37]
+      },
+      {
+        "line": 44,
+        "left": "B->>C",
+        "text": "SELECT * FROM records WHERE id = 1",
+        "step": "The service checks the record. Reads it.",
+        "stepLine": 41,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": "Decisions",
+        "sectionLine": 40,
+        "annLines": [40, 41, 43]
+      },
+      {
+        "line": 46,
+        "left": "C-->>B",
+        "text": "row",
+        "step": "Returns one row.",
+        "stepLine": 45,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [45]
+      },
+      {
+        "line": 49,
+        "left": "B->>C",
+        "text": "INSERT INTO records (id) VALUES (1)",
+        "step": "Creates it.",
+        "stepLine": 48,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [48]
+      },
+      {
+        "line": 51,
+        "left": "C-->>B",
+        "text": "1 row",
+        "step": "Confirms the insert.",
+        "stepLine": 50,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [50]
+      },
+      {
+        "line": 55,
+        "left": "B->>B",
+        "text": "warm cache",
+        "step": "Warms the cache.",
+        "stepLine": 54,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [54]
+      },
+      {
+        "line": 59,
+        "left": "B->>X",
+        "text": "GET /prices",
+        "step": "Asks the outside system for prices.",
+        "stepLine": 58,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [58]
+      },
+      {
+        "line": 61,
+        "left": "X-->>B",
+        "text": "200 OK",
+        "step": "Prices come back.",
+        "stepLine": 60,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [60]
+      },
+      {
+        "line": 64,
+        "left": "B->>X",
+        "text": "GET /stock",
+        "step": "Asks for stock.",
+        "stepLine": 63,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [63]
+      },
+      {
+        "line": 66,
+        "left": "X-->>B",
+        "text": "200 OK",
+        "step": "Stock comes back.",
+        "stepLine": 65,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [65]
+      },
+      {
+        "line": 70,
+        "left": "B->>C",
+        "text": "UPDATE records SET done = true",
+        "step": "Writes the result.",
+        "stepLine": 69,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [69]
+      },
+      {
+        "line": 73,
+        "left": "B->>B",
+        "text": "log failure",
+        "step": "Logs the failure.",
+        "stepLine": 72,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [72]
+      },
+      {
+        "line": 76,
+        "left": "B->>B",
+        "text": "give up",
+        "step": "Gives up after the timeout.",
+        "stepLine": 75,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [75]
+      },
+      {
+        "line": 80,
+        "left": "B-->>A",
+        "text": "402 Payment Required",
+        "step": "Stops early.",
+        "stepLine": 79,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [79]
+      },
+      {
+        "line": 85,
+        "left": "A->>U",
+        "text": "Show result",
+        "step": "Shows the result.",
+        "stepLine": 84,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [84]
+      },
+      {
+        "line": 89,
+        "left": "B-->>A",
+        "text": "200 OK {\"state\": \"done\"}",
+        "step": "The service tells the app it is done.",
+        "stepLine": 88,
+        "payloads": [],
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "section": null,
+        "sectionLine": -1,
+        "annLines": [88]
+      }
+    ],
+    "lint": [],
+    "diagramType": "sequenceDiagram",
+    "typeLine": 6,
+    "sectionCount": 2,
+    "frontMatterEnd": 4
+  },
+  "mermaid": {
+    "info": {
+      "participants": [
+        {
+          "alias": "U",
+          "name": "Tester",
+          "type": "actor"
+        },
+        {
+          "alias": "A",
+          "name": "App",
+          "type": "participant"
+        },
+        {
+          "alias": "B",
+          "name": "Service",
+          "type": "participant"
+        },
+        {
+          "alias": "C",
+          "name": "Database",
+          "type": "participant"
+        },
+        {
+          "alias": "X",
+          "name": "X",
+          "type": "participant"
+        }
+      ],
+      "arrows": [
+        {
+          "from": "U",
+          "to": "A",
+          "text": "Start",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "A",
+          "to": "B",
+          "text": "GET /status",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "loop",
+              "label": "Every 5 seconds",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "B",
+          "to": "A",
+          "text": "200 OK {\"state\": \"waiting\"}",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 1,
+              "kind": "loop",
+              "label": "Every 5 seconds",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "B",
+          "to": "C",
+          "text": "SELECT * FROM records WHERE id = 1",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 2,
+              "kind": "alt",
+              "label": "Record exists",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "C",
+          "to": "B",
+          "text": "row",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 2,
+              "kind": "alt",
+              "label": "Record exists",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "B",
+          "to": "C",
+          "text": "INSERT INTO records (id) VALUES (1)",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 2,
+              "kind": "else",
+              "label": "Record missing",
+              "first": false
+            }
+          ]
+        },
+        {
+          "from": "C",
+          "to": "B",
+          "text": "1 row",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 2,
+              "kind": "else",
+              "label": "Record missing",
+              "first": false
+            }
+          ]
+        },
+        {
+          "from": "B",
+          "to": "B",
+          "text": "warm cache",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 3,
+              "kind": "opt",
+              "label": "Cache warm",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "B",
+          "to": "X",
+          "text": "GET /prices",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 4,
+              "kind": "par",
+              "label": "Fetch prices",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "X",
+          "to": "B",
+          "text": "200 OK",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 4,
+              "kind": "par",
+              "label": "Fetch prices",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "B",
+          "to": "X",
+          "text": "GET /stock",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 4,
+              "kind": "and",
+              "label": "Fetch stock",
+              "first": false
+            }
+          ]
+        },
+        {
+          "from": "X",
+          "to": "B",
+          "text": "200 OK",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 4,
+              "kind": "and",
+              "label": "Fetch stock",
+              "first": false
+            }
+          ]
+        },
+        {
+          "from": "B",
+          "to": "C",
+          "text": "UPDATE records SET done = true",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 5,
+              "kind": "critical",
+              "label": "Save everything",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "B",
+          "to": "B",
+          "text": "log failure",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 5,
+              "kind": "option",
+              "label": "Database down",
+              "first": false
+            }
+          ]
+        },
+        {
+          "from": "B",
+          "to": "B",
+          "text": "give up",
+          "type": 0,
+          "dotted": false,
+          "branch": [
+            {
+              "id": 5,
+              "kind": "option",
+              "label": "Timeout",
+              "first": false
+            }
+          ]
+        },
+        {
+          "from": "B",
+          "to": "A",
+          "text": "402 Payment Required",
+          "type": 1,
+          "dotted": true,
+          "branch": [
+            {
+              "id": 6,
+              "kind": "break",
+              "label": "Budget exceeded",
+              "first": true
+            }
+          ]
+        },
+        {
+          "from": "A",
+          "to": "U",
+          "text": "Show result",
+          "type": 0,
+          "dotted": false,
+          "branch": []
+        },
+        {
+          "from": "B",
+          "to": "A",
+          "text": "200 OK {\"state\": \"done\"}",
+          "type": 1,
+          "dotted": true,
+          "branch": []
+        }
+      ],
+      "type": "sequence"
+    }
+  },
+  "flow": {
+    "title": "Every block kind",
+    "hasTitle": true,
+    "spec": "walkthrough/2",
+    "isSequence": true,
+    "diagramType": "sequenceDiagram",
+    "mode": "",
+    "proposed": false,
+    "scope": "",
+    "trigger": "A test runner starts the flow.",
+    "summary": "Whole-flow summary written before any chapter.",
+    "terms": [],
+    "layers": {
+      "U": {
+        "name": "Tester",
+        "desc": "The tester.",
+        "kind": "person",
+        "icon": "👤",
+        "zone": "client"
+      },
+      "A": {
+        "name": "App",
+        "desc": "The client app.",
+        "kind": "client",
+        "icon": "🖥",
+        "zone": "client"
+      },
+      "B": {
+        "name": "Service",
+        "desc": "The service.",
+        "kind": "service",
+        "icon": "🧩",
+        "zone": "ours"
+      },
+      "C": {
+        "name": "Database",
+        "desc": "The database.",
+        "kind": "db",
+        "icon": "🗄",
+        "zone": "ours"
+      },
+      "X": {
+        "name": "X",
+        "desc": "Outside system.",
+        "kind": "external",
+        "icon": "🌐",
+        "zone": "outside"
+      }
+    },
+    "participants": [
+      {
+        "alias": "U",
+        "name": "Tester",
+        "type": "actor"
+      },
+      {
+        "alias": "A",
+        "name": "App",
+        "type": "participant"
+      },
+      {
+        "alias": "B",
+        "name": "Service",
+        "type": "participant"
+      },
+      {
+        "alias": "C",
+        "name": "Database",
+        "type": "participant"
+      },
+      {
+        "alias": "X",
+        "name": "X",
+        "type": "participant"
+      }
+    ],
+    "sections": [
+      {
+        "name": "Start of work",
+        "firstStep": 0,
+        "count": 3,
+        "line": 25,
+        "summary": "Chapter summary line one.\nChapter summary line two.",
+        "hue": 210,
+        "idx": 0
+      },
+      {
+        "name": "Decisions",
+        "firstStep": 3,
+        "count": 15,
+        "line": 40,
+        "summary": "",
+        "hue": 150,
+        "idx": 1
+      }
+    ],
+    "steps": [
+      {
+        "idx": 0,
+        "n": 1,
+        "line": 29,
+        "annLines": [25, 26, 27, 28],
+        "from": "U",
+        "to": "A",
+        "fromName": "Tester",
+        "toName": "App",
+        "kind": "request",
+        "labelRaw": "Start",
+        "label": ["Start"],
+        "explain": "The tester clicks start.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 0,
+        "branch": [],
+        "key": "U→A|Start",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 1,
+        "n": 2,
+        "line": 36,
+        "annLines": [33, 35],
+        "from": "A",
+        "to": "B",
+        "fromName": "App",
+        "toName": "Service",
+        "kind": "request",
+        "labelRaw": "GET /status",
+        "label": ["GET /status"],
+        "explain": "The app opens a loop of retries. Polls the service.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": {
+          "method": "GET",
+          "path": "/status"
+        },
+        "status": null,
+        "section": 0,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "loop",
+            "label": "Every 5 seconds",
+            "first": true
+          }
+        ],
+        "key": "A→B|GET /status",
+        "replies": [2, 15, 17],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 2,
+        "n": 3,
+        "line": 38,
+        "annLines": [37],
+        "from": "B",
+        "to": "A",
+        "fromName": "Service",
+        "toName": "App",
+        "kind": "reply",
+        "labelRaw": "200 OK {\"state\": \"waiting\"}",
+        "label": ["200 OK {\"state\": \"waiting\"}"],
+        "explain": "Service answers with the current state.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 200,
+          "reason": "OK {\"state\": \"waiting\"}"
+        },
+        "section": 0,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "loop",
+            "label": "Every 5 seconds",
+            "first": true
+          }
+        ],
+        "key": "B→A|200 OK {\"state\": \"waiting\"}",
+        "replies": [],
+        "answers": 1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 3,
+        "n": 4,
+        "line": 44,
+        "annLines": [40, 41, 43],
+        "from": "B",
+        "to": "C",
+        "fromName": "Service",
+        "toName": "Database",
+        "kind": "request",
+        "labelRaw": "SELECT * FROM records WHERE id = 1",
+        "label": ["SELECT * FROM records WHERE id = 1"],
+        "explain": "The service checks the record. Reads it.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 1,
+        "branch": [
+          {
+            "id": 2,
+            "kind": "alt",
+            "label": "Record exists",
+            "first": true
+          }
+        ],
+        "key": "B→C|SELECT * FROM records WHERE id = 1",
+        "replies": [4],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 4,
+        "n": 5,
+        "line": 46,
+        "annLines": [45],
+        "from": "C",
+        "to": "B",
+        "fromName": "Database",
+        "toName": "Service",
+        "kind": "reply",
+        "labelRaw": "row",
+        "label": ["row"],
+        "explain": "Returns one row.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 1,
+        "branch": [
+          {
+            "id": 2,
+            "kind": "alt",
+            "label": "Record exists",
+            "first": true
+          }
+        ],
+        "key": "C→B|row",
+        "replies": [],
+        "answers": 3,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 5,
+        "n": 6,
+        "line": 49,
+        "annLines": [48],
+        "from": "B",
+        "to": "C",
+        "fromName": "Service",
+        "toName": "Database",
+        "kind": "request",
+        "labelRaw": "INSERT INTO records (id) VALUES (1)",
+        "label": ["INSERT INTO records (id) VALUES (1)"],
+        "explain": "Creates it.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 1,
+        "branch": [
+          {
+            "id": 2,
+            "kind": "else",
+            "label": "Record missing",
+            "first": false
+          }
+        ],
+        "key": "B→C|INSERT INTO records (id) VALUES (1)",
+        "replies": [6],
+        "answers": -1,
+        "isError": false,
+        "inElse": true
+      },
+      {
+        "idx": 6,
+        "n": 7,
+        "line": 51,
+        "annLines": [50],
+        "from": "C",
+        "to": "B",
+        "fromName": "Database",
+        "toName": "Service",
+        "kind": "reply",
+        "labelRaw": "1 row",
+        "label": ["1 row"],
+        "explain": "Confirms the insert.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 1,
+        "branch": [
+          {
+            "id": 2,
+            "kind": "else",
+            "label": "Record missing",
+            "first": false
+          }
+        ],
+        "key": "C→B|1 row",
+        "replies": [],
+        "answers": 5,
+        "isError": false,
+        "inElse": true
+      },
+      {
+        "idx": 7,
+        "n": 8,
+        "line": 55,
+        "annLines": [54],
+        "from": "B",
+        "to": "B",
+        "fromName": "Service",
+        "toName": "Service",
+        "kind": "self",
+        "labelRaw": "warm cache",
+        "label": ["warm cache"],
+        "explain": "Warms the cache.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 1,
+        "branch": [
+          {
+            "id": 3,
+            "kind": "opt",
+            "label": "Cache warm",
+            "first": true
+          }
+        ],
+        "key": "B→B|warm cache",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 8,
+        "n": 9,
+        "line": 59,
+        "annLines": [58],
+        "from": "B",
+        "to": "X",
+        "fromName": "Service",
+        "toName": "X",
+        "kind": "request",
+        "labelRaw": "GET /prices",
+        "label": ["GET /prices"],
+        "explain": "Asks the outside system for prices.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": {
+          "method": "GET",
+          "path": "/prices"
+        },
+        "status": null,
+        "section": 1,
+        "branch": [
+          {
+            "id": 4,
+            "kind": "par",
+            "label": "Fetch prices",
+            "first": true
+          }
+        ],
+        "key": "B→X|GET /prices",
+        "replies": [9],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 9,
+        "n": 10,
+        "line": 61,
+        "annLines": [60],
+        "from": "X",
+        "to": "B",
+        "fromName": "X",
+        "toName": "Service",
+        "kind": "reply",
+        "labelRaw": "200 OK",
+        "label": ["200 OK"],
+        "explain": "Prices come back.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 200,
+          "reason": "OK"
+        },
+        "section": 1,
+        "branch": [
+          {
+            "id": 4,
+            "kind": "par",
+            "label": "Fetch prices",
+            "first": true
+          }
+        ],
+        "key": "X→B|200 OK",
+        "replies": [],
+        "answers": 8,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 10,
+        "n": 11,
+        "line": 64,
+        "annLines": [63],
+        "from": "B",
+        "to": "X",
+        "fromName": "Service",
+        "toName": "X",
+        "kind": "request",
+        "labelRaw": "GET /stock",
+        "label": ["GET /stock"],
+        "explain": "Asks for stock.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": {
+          "method": "GET",
+          "path": "/stock"
+        },
+        "status": null,
+        "section": 1,
+        "branch": [
+          {
+            "id": 4,
+            "kind": "and",
+            "label": "Fetch stock",
+            "first": false
+          }
+        ],
+        "key": "B→X|GET /stock",
+        "replies": [11],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 11,
+        "n": 12,
+        "line": 66,
+        "annLines": [65],
+        "from": "X",
+        "to": "B",
+        "fromName": "X",
+        "toName": "Service",
+        "kind": "reply",
+        "labelRaw": "200 OK",
+        "label": ["200 OK"],
+        "explain": "Stock comes back.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 200,
+          "reason": "OK"
+        },
+        "section": 1,
+        "branch": [
+          {
+            "id": 4,
+            "kind": "and",
+            "label": "Fetch stock",
+            "first": false
+          }
+        ],
+        "key": "X→B|200 OK#2",
+        "replies": [],
+        "answers": 10,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 12,
+        "n": 13,
+        "line": 70,
+        "annLines": [69],
+        "from": "B",
+        "to": "C",
+        "fromName": "Service",
+        "toName": "Database",
+        "kind": "request",
+        "labelRaw": "UPDATE records SET done = true",
+        "label": ["UPDATE records SET done = true"],
+        "explain": "Writes the result.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 1,
+        "branch": [
+          {
+            "id": 5,
+            "kind": "critical",
+            "label": "Save everything",
+            "first": true
+          }
+        ],
+        "key": "B→C|UPDATE records SET done = true",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 13,
+        "n": 14,
+        "line": 73,
+        "annLines": [72],
+        "from": "B",
+        "to": "B",
+        "fromName": "Service",
+        "toName": "Service",
+        "kind": "self",
+        "labelRaw": "log failure",
+        "label": ["log failure"],
+        "explain": "Logs the failure.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 1,
+        "branch": [
+          {
+            "id": 5,
+            "kind": "option",
+            "label": "Database down",
+            "first": false
+          }
+        ],
+        "key": "B→B|log failure",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 14,
+        "n": 15,
+        "line": 76,
+        "annLines": [75],
+        "from": "B",
+        "to": "B",
+        "fromName": "Service",
+        "toName": "Service",
+        "kind": "self",
+        "labelRaw": "give up",
+        "label": ["give up"],
+        "explain": "Gives up after the timeout.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 1,
+        "branch": [
+          {
+            "id": 5,
+            "kind": "option",
+            "label": "Timeout",
+            "first": false
+          }
+        ],
+        "key": "B→B|give up",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 15,
+        "n": 16,
+        "line": 80,
+        "annLines": [79],
+        "from": "B",
+        "to": "A",
+        "fromName": "Service",
+        "toName": "App",
+        "kind": "reply",
+        "labelRaw": "402 Payment Required",
+        "label": ["402 Payment Required"],
+        "explain": "Stops early.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 402,
+          "reason": "Payment Required"
+        },
+        "section": 1,
+        "branch": [
+          {
+            "id": 6,
+            "kind": "break",
+            "label": "Budget exceeded",
+            "first": true
+          }
+        ],
+        "key": "B→A|402 Payment Required",
+        "replies": [],
+        "answers": 1,
+        "isError": true,
+        "inElse": false
+      },
+      {
+        "idx": 16,
+        "n": 17,
+        "line": 85,
+        "annLines": [84],
+        "from": "A",
+        "to": "U",
+        "fromName": "App",
+        "toName": "Tester",
+        "kind": "request",
+        "labelRaw": "Show result",
+        "label": ["Show result"],
+        "explain": "Shows the result.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": null,
+        "section": 1,
+        "branch": [],
+        "key": "A→U|Show result",
+        "replies": [],
+        "answers": -1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 17,
+        "n": 18,
+        "line": 89,
+        "annLines": [88],
+        "from": "B",
+        "to": "A",
+        "fromName": "Service",
+        "toName": "App",
+        "kind": "reply",
+        "labelRaw": "200 OK {\"state\": \"done\"}",
+        "label": ["200 OK {\"state\": \"done\"}"],
+        "explain": "The service tells the app it is done.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 200,
+          "reason": "OK {\"state\": \"done\"}"
+        },
+        "section": 1,
+        "branch": [],
+        "key": "B→A|200 OK {\"state\": \"done\"}",
+        "replies": [],
+        "answers": 1,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "lint": [],
+    "mismatch": false,
+    "uses": [],
+    "effects": [],
+    "data": [
+      {
+        "table": "records",
+        "ops": ["SELECT", "INSERT", "UPDATE"],
+        "steps": [3, 5, 12]
+      }
+    ],
+    "endings": [
+      {
+        "idx": 2,
+        "n": 3,
+        "line": 38,
+        "annLines": [37],
+        "from": "B",
+        "to": "A",
+        "fromName": "Service",
+        "toName": "App",
+        "kind": "reply",
+        "labelRaw": "200 OK {\"state\": \"waiting\"}",
+        "label": ["200 OK {\"state\": \"waiting\"}"],
+        "explain": "Service answers with the current state.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 200,
+          "reason": "OK {\"state\": \"waiting\"}"
+        },
+        "section": 0,
+        "branch": [
+          {
+            "id": 1,
+            "kind": "loop",
+            "label": "Every 5 seconds",
+            "first": true
+          }
+        ],
+        "key": "B→A|200 OK {\"state\": \"waiting\"}",
+        "replies": [],
+        "answers": 1,
+        "isError": false,
+        "inElse": false
+      },
+      {
+        "idx": 15,
+        "n": 16,
+        "line": 80,
+        "annLines": [79],
+        "from": "B",
+        "to": "A",
+        "fromName": "Service",
+        "toName": "App",
+        "kind": "reply",
+        "labelRaw": "402 Payment Required",
+        "label": ["402 Payment Required"],
+        "explain": "Stops early.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 402,
+          "reason": "Payment Required"
+        },
+        "section": 1,
+        "branch": [
+          {
+            "id": 6,
+            "kind": "break",
+            "label": "Budget exceeded",
+            "first": true
+          }
+        ],
+        "key": "B→A|402 Payment Required",
+        "replies": [],
+        "answers": 1,
+        "isError": true,
+        "inElse": false
+      },
+      {
+        "idx": 17,
+        "n": 18,
+        "line": 89,
+        "annLines": [88],
+        "from": "B",
+        "to": "A",
+        "fromName": "Service",
+        "toName": "App",
+        "kind": "reply",
+        "labelRaw": "200 OK {\"state\": \"done\"}",
+        "label": ["200 OK {\"state\": \"done\"}"],
+        "explain": "The service tells the app it is done.",
+        "payloads": [],
+        "payload": "",
+        "refs": [],
+        "uses": [],
+        "effects": [],
+        "fields": [],
+        "schema": [],
+        "state": {
+          "before": "",
+          "after": ""
+        },
+        "flags": {},
+        "unconfirmed": [],
+        "http": null,
+        "status": {
+          "code": 200,
+          "reason": "OK {\"state\": \"done\"}"
+        },
+        "section": 1,
+        "branch": [],
+        "key": "B→A|200 OK {\"state\": \"done\"}",
+        "replies": [],
+        "answers": 1,
+        "isError": false,
+        "inElse": false
+      }
+    ],
+    "unconfirmed": 0,
+    "boundaries": [
+      {
+        "left": "A",
+        "right": "B",
+        "from": "client",
+        "to": "ours"
+      },
+      {
+        "left": "C",
+        "right": "X",
+        "from": "ours",
+        "to": "outside"
+      }
+    ],
+    "main": 1
+  }
+}

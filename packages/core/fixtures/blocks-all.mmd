@@ -1,0 +1,90 @@
+---
+title: Front matter title
+config:
+  theme: neutral
+---
+%%{init: {"sequence": {"mirrorActors": false}}}%%
+sequenceDiagram
+    %% @spec walkthrough/2
+    %% @title Every block kind
+    %% @trigger A test runner starts the flow.
+    %% @summary Whole-flow summary written before any chapter.
+    %% @layer U kind=person The tester.
+    %% @layer A kind=client The client app.
+    %% @layer B kind=service The service.
+    %% @layer C kind=db The database.
+    %% @layer X kind=external Outside system.
+    autonumber
+    title Keyword title
+    actor U as Tester
+    box rgb(230, 240, 255) Our systems
+        participant A as App
+        participant B as Service
+    end
+    participant C as Database
+    %% plain comment line
+    %% @section Start of work
+    %% @summary Chapter summary line one.
+    %% @summary Chapter summary line two.
+    %% @step The tester clicks start.
+    U->>A: Start
+    Note over A,B: A note between participants
+    Note right of A: A note on the right
+    Note left of U: A note on the left
+    %% @step The app opens a loop of retries.
+    loop Every 5 seconds
+        %% @step Polls the service.
+        A->>+B: GET /status
+        %% @step Service answers with the current state.
+        B-->>-A: 200 OK {"state": "waiting"}
+    end
+    %% @section Decisions
+    %% @step The service checks the record.
+    alt Record exists
+        %% @step Reads it.
+        B->>C: SELECT * FROM records WHERE id = 1
+        %% @step Returns one row.
+        C-->>B: row
+    else Record missing
+        %% @step Creates it.
+        B->>C: INSERT INTO records (id) VALUES (1)
+        %% @step Confirms the insert.
+        C-->>B: 1 row
+    end
+    opt Cache warm
+        %% @step Warms the cache.
+        B->>B: warm cache
+    end
+    par Fetch prices
+        %% @step Asks the outside system for prices.
+        B->>X: GET /prices
+        %% @step Prices come back.
+        X-->>B: 200 OK
+    and Fetch stock
+        %% @step Asks for stock.
+        B->>X: GET /stock
+        %% @step Stock comes back.
+        X-->>B: 200 OK
+    end
+    critical Save everything
+        %% @step Writes the result.
+        B->>C: UPDATE records SET done = true
+    option Database down
+        %% @step Logs the failure.
+        B->>B: log failure
+    option Timeout
+        %% @step Gives up after the timeout.
+        B->>B: give up
+    end
+    break Budget exceeded
+        %% @step Stops early.
+        B-->>A: 402 Payment Required
+    end
+    rect rgb(255, 245, 230)
+        activate A
+        %% @step Shows the result.
+        A->>U: Show result
+        deactivate A
+    end
+    %% @step The service tells the app it is done.
+    B-->>A: 200 OK {"state": "done"}

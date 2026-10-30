@@ -1,0 +1,253 @@
+sequenceDiagram
+    %% @spec walkthrough/2
+    %% @title Place an order
+    %% @trigger The shopper presses "Place order" on the checkout page of the demo store.
+    %% @scope From the click to the confirmation email. Signing in and browsing products are outside this flow.
+    %% @summary One request crosses every backend layer once. Stock is held in Redis before the order is saved, and the confirmation email is sent later by a worker.
+    %% @term hold: a short-lived Redis key that keeps stock aside for one order until the hold expires.
+    %% @term minor units: money kept as whole paise or cents (₹6197.00 is 619700), so sums never lose fractions.
+    %% @term DTO: data transfer object, the typed shape a request body or a reply must have.
+    %% @term bearer token: a secret string sent as "Authorization: Bearer <token>" that stands for a signed-in session.
+    %% @layer U kind=person The shopper, signed in as ada@example.com.
+    %% @layer PG kind=client Pages: the checkout page, which reads the cart and runs the submit.
+    %% @layer CMP kind=client Components: pure functions that render the cart summary and the confirmation.
+    %% @layer ST kind=client Store: the observable cart state with items, address and status.
+    %% @layer API kind=client API Client: builds the HTTP request and maps each status code to a typed result.
+    %% @layer APP kind=app App: wires the in-memory infrastructure and hands every request to the router.
+    %% @layer RT kind=router Routes: POST /api/orders with its middleware chain and controller.
+    %% @layer MW kind=middleware Middleware: requestId on every request and requireUser on this route.
+    %% @layer VAL kind=validator Validator: checks the body field by field and shapes it into the DTO.
+    %% @layer CTL kind=controller Controller: calls the service and picks the status code.
+    %% @layer SVC kind=service Service: prices the items, holds stock, saves the order and announces it.
+    %% @layer REPO kind=repository Repository: inserts the order and its items in one transaction.
+    %% @layer DB kind=db Database: in-memory tables orders, order_items, products and sessions.
+    %% @layer SER kind=serializer Serializer: the public order shape, without internal ids.
+    %% @layer DTO kind=dto DTO: PlaceOrderDto going in, OrderResponseDto coming out.
+    %% @layer RD kind=cache Redis: stock counters and per-order holds with a TTL.
+    %% @layer EB kind=eventbus Event Bus: fans out order.placed to whoever subscribed.
+    %% @layer Q kind=queue Mail Queue: confirmation jobs waiting for the worker.
+    %% @layer WK kind=worker Mail Worker: takes one job and sends the email.
+    %% @layer MAIL kind=external Mail: the mail service, an in-memory stand-in here.
+    autonumber
+    actor U as Shopper
+    participant PG as Pages
+    participant CMP as Components
+    participant ST as Store
+    participant API as API Client
+    participant APP as App
+    participant RT as Routes
+    participant MW as Middleware
+    participant VAL as Validator
+    participant CTL as Controller
+    participant SVC as Service
+    participant REPO as Repository
+    participant DB as Database
+    participant SER as Serializer
+    participant DTO as DTO
+    participant RD as Redis
+    participant EB as Event Bus
+    participant Q as Mail Queue
+    participant WK as Mail Worker
+    participant MAIL as Mail
+
+    %% @section Check the request
+    %% @summary The click becomes an HTTP request, and the sign-in and the body are checked before any work starts.
+    %% @step The shopper submits the checkout form, and the page starts the submit.
+    %% @uses hook useCart src/frontend/hooks/useCart.ts:14 Adds and removes items and totals the cart before checkout.
+    %% @ref src/frontend/pages/CheckoutPage.ts:44
+    U->>PG: Click "Place order"
+    %% @step The page takes the cart items and the shipping address out of the store and marks the status as submitting.
+    %% @payload.result { "items": [{ "productId": "p_1", "quantity": 1 }, { "productId": "p_2", "quantity": 2 }], "address": { "line1": "1 Lovelace Lane", "city": "Pune", "postcode": "411001" } }
+    %% @ref src/frontend/pages/CheckoutPage.ts:45
+    PG->>ST: getState() and setState(submitting)
+    %% @step The page hands the body and the session token to the API client.
+    %% @ref src/frontend/pages/CheckoutPage.ts:47
+    PG->>API: placeOrder(body, token)
+    %% @step The client posts the order as JSON with the bearer token in a header.
+    %% @payload.headers Authorization: Bearer demo-token
+    %% @payload.headers Content-Type: application/json
+    %% @payload.body { "items": [{ "productId": "p_1", "quantity": 1 }, { "productId": "p_2", "quantity": 2 }], "shippingAddress": { "line1": "1 Lovelace Lane", "city": "Pune", "postcode": "411001" } }
+    %% @ref src/frontend/api/client.ts:50
+    API->>APP: POST /api/orders
+    %% @step The app catches any unexpected error and otherwise lets the router match the method and path.
+    %% @ref src/backend/app/app.ts:81
+    APP->>RT: dispatch(request)
+    %% @step The route runs its chain in order: the request id middleware, then the sign-in check, then the validator, then the controller.
+    %% @ref src/backend/routes/orders.routes.ts:15
+    RT->>MW: requestId, then requireUser
+    %% @step The middleware reads the bearer token from the Authorization header and looks the session up.
+    %% @payload.sql -- an in-memory table, doing the job of: SELECT user_id, email FROM sessions WHERE id = 'demo-token'
+    %% @ref src/backend/middleware/auth.middleware.ts:12
+    %% @ref src/backend/app/app.ts:73
+    MW->>DB: sessions.findById("demo-token")
+    %% @step The session row names the user, and the middleware puts them on the request context.
+    %% @payload.result { "id": "u_1", "email": "ada@example.com" }
+    %% @ref src/backend/app/app.ts:73
+    DB-->>MW: { userId: "u_1", email: "ada@example.com" }
+    alt Signed in
+        %% @step With a user on the context the chain moves on to the validator.
+        %% @ref src/backend/middleware/auth.middleware.ts:16-17
+        MW->>VAL: next() → placeOrderValidator
+    else No or unknown token
+        %% @step Without a valid bearer token the chain stops in the middleware, and the shopper gets a plain message.
+        %% @payload.body { "error": "Sign in to place an order" }
+        %% @ref src/backend/middleware/auth.middleware.ts:15
+        APP-->>API: 401 Unauthorized
+    end
+    %% @step The validator parses the JSON body and checks every field, collecting all problems at once instead of stopping at the first.
+    %% @schema items non-empty array → 422 "must be a non-empty array"
+    %% @schema items.<i>.productId non-empty string → 422 "must be a non-empty string"
+    %% @schema items.<i>.quantity whole number greater than 0 → 422 "must be a whole number greater than 0"
+    %% @schema shippingAddress.line1 non-empty string → 422 "must be a non-empty string"
+    %% @schema shippingAddress.city non-empty string → 422 "must be a non-empty string"
+    %% @schema shippingAddress.postcode non-empty string → 422 "must be a non-empty string"
+    %% @ref src/backend/validators/placeOrder.validator.ts:61
+    VAL->>VAL: validatePlaceOrder(body)
+    alt Valid body
+        %% @step The checked values become the typed DTO that the rest of the backend trusts.
+        %% @payload.result { "items": [{ "productId": "p_1", "quantity": 1 }, { "productId": "p_2", "quantity": 2 }], "shippingAddress": { "line1": "1 Lovelace Lane", "city": "Pune", "postcode": "411001" } }
+        %% @ref src/backend/dto/placeOrder.dto.ts:15
+        %% @ref src/backend/validators/placeOrder.validator.ts:64
+        VAL->>DTO: PlaceOrderDto
+        %% @step The validator calls the next handler, the controller, with the user and the DTO on the context.
+        %% @ref src/backend/validators/placeOrder.validator.ts:65
+        VAL->>CTL: next() → placeOrder(ctx)
+    else Invalid body
+        %% @step A bad body ends the request with the full list of field problems, so the form can mark every one.
+        %% @payload.body { "error": "Order details are invalid", "fields": { "items.0.quantity": "must be a whole number greater than 0", "shippingAddress.city": "must be a non-empty string" } }
+        %% @ref src/backend/validators/placeOrder.validator.ts:63
+        APP-->>API: 422 Unprocessable Entity
+    end
+
+    %% @section Reserve stock
+    %% @summary Every line is priced, then its stock is held in Redis so two shoppers cannot buy the last item.
+    %% @step The controller asks the service to place the order and will turn its outcome into a status code.
+    %% @ref src/backend/controllers/orders.controller.ts:21
+    CTL->>SVC: placeOrder(user, dto)
+    %% @step Each line is priced from the products table. An unknown product id ends in a 404.
+    %% @uses util sumLines src/backend/utils/money.ts:24 Adds up unit price times quantity in minor units.
+    %% @ref src/backend/services/orders.service.ts:96
+    SVC->>REPO: findById(productId) for each line
+    %% @step The product rows give the names and unit prices the order will carry.
+    %% @payload.result { "id": "p_1", "name": "Mechanical keyboard", "unitPrice": 499900, "stock": 10 }
+    %% @ref src/backend/repositories/products.repository.ts:12
+    REPO-->>SVC: product rows
+    %% @step For each line the service moves units from the stock counter into a hold key with a TTL, so a crash or an abandoned order gives the stock back on its own.
+    %% @payload.input stock:p_1 = 10 → DECRBY 1, then SET hold:<orderId>:p_1 1 EX 900
+    %% @uses config RESERVATION_TTL_SECONDS src/backend/config/config.ts:18 How long a hold lasts before the cron returns the stock (900 s).
+    %% @uses cron releaseExpiredReservations src/backend/cron/releaseExpiredReservations.cron.ts:13 Runs every second and returns expired holds to the stock counter.
+    %% @ref src/backend/services/orders.service.ts:111
+    %% @ref src/backend/infra/memoryRedis.ts:57
+    SVC->>RD: reserve(stock:p_1, hold:<orderId>:p_1, 1, 900)
+    alt Stock held
+        %% @step The counter had enough units, so the hold exists now and the next line is tried.
+        %% @state before stock:p_1 = 10, no hold
+        %% @state after stock:p_1 = 9, hold:<orderId>:p_1 = 1 for 900 s
+        %% @ref src/backend/infra/memoryRedis.ts:62
+        RD-->>SVC: true
+    else Stock short
+        %% @step The counter was below the quantity, so nothing changed in Redis.
+        %% @ref src/backend/infra/memoryRedis.ts:59
+        RD-->>SVC: false
+        %% @step The service gives earlier holds of this order back and stops with OutOfStockError.
+        %% @effect Earlier holds of this order are released
+        %% @ref src/backend/services/orders.service.ts:114
+        SVC-->>CTL: OutOfStockError
+        %% @step The controller maps the error to a conflict, naming the product so the page can show which line failed.
+        %% @payload.body { "error": "\"Limited edition poster\" is out of stock", "productId": "p_3" }
+        %% @ref src/backend/controllers/orders.controller.ts:25
+        APP-->>API: 409 Conflict
+    end
+
+    %% @section Save the order
+    %% @summary The order and its lines are written in one transaction, and the event that triggers the email is published.
+    %% @step With every line held, the service builds the order record and asks the repository to save it with its items.
+    %% @payload.input { "id": "<uuid>", "orderNumber": "SW-1001", "userId": "u_1", "status": "placed", "currency": "INR", "total": 619700, "shippingAddress": { "line1": "1 Lovelace Lane", "city": "Pune", "postcode": "411001" }, "placedAt": "2026-01-01T00:00:00.000Z" }
+    %% @field orderNumber from the repository's counter, SW-1001 for the first order
+    %% @field total from sumLines over the priced items, in minor units
+    %% @ref src/backend/services/orders.service.ts:84
+    SVC->>REPO: insert(order, items)
+    %% @step The repository writes the order row and one row per line inside a single transaction, so a failure leaves no half-saved order.
+    %% @payload.sql -- in-memory tables, doing the job of: INSERT INTO orders (id, order_number, user_id, status, currency, total, shipping_address, placed_at) VALUES (...)
+    %% @payload.sql -- then, in the same transaction: INSERT INTO order_items (id, order_id, product_id, name, unit_price, quantity) VALUES (...)
+    %% @state before stock held in Redis, no order row
+    %% @state after one orders row and two order_items rows
+    %% @ref src/backend/repositories/orders.repository.ts:19
+    REPO->>DB: transaction: insert orders, insert order_items
+    %% @step The saved rows come back as written.
+    %% @ref src/backend/infra/memoryDb.ts:11
+    DB-->>REPO: rows
+    %% @step The repository returns the order with its items.
+    %% @ref src/backend/repositories/orders.repository.ts:18
+    REPO-->>SVC: { order, items }
+    %% @step The service announces the order. Nothing in this request waits for the email, so the reply is not slowed down.
+    %% @async The subscriber only queues a job, the email is sent later
+    %% @payload.event { "type": "order.placed", "orderId": "<uuid>", "orderNumber": "SW-1001", "email": "ada@example.com", "total": 619700, "currency": "INR" }
+    %% @effect A confirmation job is queued for the mail worker
+    %% @ref src/backend/services/orders.service.ts:85
+    SVC->>EB: publish order.placed
+    %% @step The service returns the saved order to the controller.
+    %% @ref src/backend/services/orders.service.ts:93
+    SVC-->>CTL: { order, items }
+
+    %% @section Reply
+    %% @summary The order is serialised into its public shape, the shopper sees the confirmation.
+    %% @step The controller asks the serializer for the public shape of the order.
+    %% @ref src/backend/controllers/orders.controller.ts:22
+    CTL->>SER: serializeOrder(placed)
+    %% @step The serializer builds the response DTO: order number, items, total in minor units and as text, address and time. Internal ids and the user id stay out.
+    %% @ref src/backend/serializers/order.serializer.ts:6
+    %% @ref src/backend/dto/placeOrder.dto.ts:30
+    SER->>DTO: OrderResponseDto
+    %% @step The public order comes back to the controller.
+    %% @payload.result { "orderNumber": "SW-1001", "status": "placed", "currency": "INR", "items": [{ "productId": "p_1", "name": "Mechanical keyboard", "quantity": 1, "unitPrice": 499900, "lineTotal": 499900 }, { "productId": "p_2", "name": "USB-C cable", "quantity": 2, "unitPrice": 59900, "lineTotal": 119800 }], "total": 619700, "totalDisplay": "₹6197.00", "shippingAddress": { "line1": "1 Lovelace Lane", "city": "Pune", "postcode": "411001" }, "placedAt": "2026-01-01T00:00:00.000Z" }
+    %% @ref src/backend/serializers/order.serializer.ts:6
+    SER-->>CTL: public order
+    %% @step The controller answers 201 with the public order. On the way out the request id middleware adds the X-Request-Id header.
+    %% @payload.headers X-Request-Id: 7f3c…
+    %% @payload.body { "orderNumber": "SW-1001", "status": "placed", "currency": "INR", "items": [{ "productId": "p_1", "name": "Mechanical keyboard", "quantity": 1, "unitPrice": 499900, "lineTotal": 499900 }, { "productId": "p_2", "name": "USB-C cable", "quantity": 2, "unitPrice": 59900, "lineTotal": 119800 }], "total": 619700, "totalDisplay": "₹6197.00", "shippingAddress": { "line1": "1 Lovelace Lane", "city": "Pune", "postcode": "411001" }, "placedAt": "2026-01-01T00:00:00.000Z" }
+    %% @ref src/backend/controllers/orders.controller.ts:22
+    %% @ref src/backend/middleware/requestId.middleware.ts:10
+    APP-->>API: 201 Created
+    %% @step The client turns the status code into a typed result, so the page never looks at raw HTTP.
+    %% @payload.result { "kind": "placed", "order": { "orderNumber": "SW-1001", "total": 619700 } }
+    %% @ref src/frontend/api/client.ts:26
+    API-->>PG: { kind: "placed", order }
+    %% @step The page stores the placed order and empties the cart.
+    %% @state before status submitting, two items in the cart
+    %% @state after status placed with the order, cart empty
+    %% @ref src/frontend/pages/CheckoutPage.ts:55
+    PG->>ST: setState({ status: placed, items: [] })
+    %% @step The page asks the component for the confirmation markup.
+    %% @ref src/frontend/components/OrderConfirmation.ts:5
+    PG->>CMP: renderOrderConfirmation(order)
+    %% @step The component returns the thank-you block with the order number and the total.
+    %% @ref src/frontend/components/OrderConfirmation.ts:11
+    CMP-->>PG: <h2>Thank you! Order SW-1001 is placed.</h2>
+    %% @step The shopper sees the confirmation.
+    %% @ref src/frontend/pages/CheckoutPage.ts:28
+    PG-->>U: Confirmation page
+
+    %% @section Send the email
+    %% @summary Background work: the event becomes a queued job, the worker picks it up and the email goes out.
+    %% @step The app subscribed to order.placed at start-up. Its handler turns the event into a small job and queues it.
+    %% @async Runs when the event is published, outside the request
+    %% @payload.event { "to": "ada@example.com", "orderNumber": "SW-1001", "total": 619700, "currency": "INR" }
+    %% @ref src/backend/app/app.ts:56
+    %% @ref src/backend/workers/orderConfirmation.worker.ts:16
+    EB->>Q: enqueue(confirmationJob)
+    %% @step The worker runs every second and takes one job off the queue.
+    %% @ref src/backend/workers/orderConfirmation.worker.ts:38
+    WK->>Q: dequeue()
+    %% @step The queue hands over the oldest job, or nothing when it is empty.
+    %% @ref src/backend/infra/memoryQueue.ts:10
+    Q-->>WK: job
+    %% @step The worker formats the total and sends the confirmation email.
+    %% @uses util formatMoney src/backend/utils/money.ts:16 Turns 619700 INR into ₹6197.00.
+    %% @payload.body To: ada@example.com, Subject: Sequence Walkthrough Demo Store: order SW-1001 confirmed, Text: Thanks for your order SW-1001. Total: ₹6197.00. We will ship it soon.
+    %% @effect Confirmation email sent to ada@example.com
+    %% @ref src/backend/workers/orderConfirmation.worker.ts:41
+    WK->>MAIL: send(to, subject, text)
+    %% @step The mail service confirms the send. In the demo it keeps the mail in memory and prints it.
+    %% @ref src/backend/infra/mailer.ts:19
+    MAIL-->>WK: sent
