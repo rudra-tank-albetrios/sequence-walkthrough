@@ -1,0 +1,16 @@
+{
+  "name": "@swv/tool-kit",
+  "version": "3.0.0-dev",
+  "private": true,
+  "description": "Small helpers shared by the command-line tools in tools/.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  }
+}

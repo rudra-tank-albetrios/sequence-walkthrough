@@ -1,8 +1,22 @@
-# Build output: run `python build.py` to recreate it
+# Build output
 dist/
+dist-single/
 dist-claude/
+coverage/
 
-# Python
+# Dependencies
+node_modules/
+
+# Test output
+playwright-report/
+test-results/
+blob-report/
+
+# Local tool state, never committed
+.serena/
+*.tsbuildinfo
+
+# Python (version 2 build, removed in phase 4)
 __pycache__/
 *.pyc
 

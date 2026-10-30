@@ -1,0 +1,19 @@
+{
+  "name": "@swv/ai",
+  "version": "3.0.0-dev",
+  "private": true,
+  "description": "Model clients, usage tracking, auto-switch, answer cache, prompts and reply schemas.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@swv/core": "*"
+  }
+}

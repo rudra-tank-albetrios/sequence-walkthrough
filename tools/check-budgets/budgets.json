@@ -1,0 +1,10 @@
+{
+  "budgets": [
+    {
+      "name": "First-load JavaScript of the web app, gzipped, without Mermaid",
+      "kind": "first-load-js",
+      "html": "apps/web/dist/index.html",
+      "maxBytesGzip": 204800
+    }
+  ]
+}

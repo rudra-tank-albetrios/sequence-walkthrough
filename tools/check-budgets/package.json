@@ -1,0 +1,13 @@
+{
+  "name": "@swv/check-budgets",
+  "version": "3.0.0-dev",
+  "private": true,
+  "description": "Fails when a measured size budget from docs/IMPLEMENTATION-PLAN.md section 5 is broken.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@swv/tool-kit": "*"
+  }
+}

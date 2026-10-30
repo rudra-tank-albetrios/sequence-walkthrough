@@ -1,0 +1,16 @@
+{
+  "name": "@swv/core",
+  "version": "3.0.0-dev",
+  "private": true,
+  "description": "Parser, flow model, lint and review rules for walkthrough diagrams. No browser or React code.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  }
+}
