@@ -14,7 +14,7 @@ const el = {};
   'gutter', 'edHl', 'code', 'edStatus', 'lintList', 'tableView', 'tvBody', 'tvScroll', 'tv', 'chapters', 'followStrip', 'bmBtn',
   'cards', 'cardPrev', 'cardCur', 'cardNext', 'prevBtn', 'nextBtn', 'live', 'zoomPct', 'wheelBtn', 'themeSel', 'themeSel2',
   'viewDiagram', 'viewTable', 'findPop', 'findInput', 'findCount', 'exportBtn', 'exportMenu', 'moreBtn', 'moreMenu', 'gridBtn',
-  'wbar', 'edgeTop', 'edgeBottom', 'edgeLeft', 'progress', 'pathSel', 'behindBtn', 'presentCard',
+  'wbar', 'wbResize', 'edgeTop', 'edgeBottom', 'edgeLeft', 'progress', 'pathSel', 'behindBtn', 'presentCard',
   'insightBtn', 'insightPanel', 'insightTabs', 'insightBody', 'insightClose',
 ].forEach((id) => { el[id] = document.getElementById(id); });
 
@@ -675,17 +675,54 @@ const Hl = {
   },
 };
 
-/* ===================== Tooltip (layer descriptions) ===================== */
+/* ===================== Tooltip: layer descriptions and step summaries ===================== */
 const Tip = {
+  key: '',
   show(alias, x, y) {
     const l = S.flow?.layers[alias];
     if (!l) return;
-    el.tip.innerHTML = `<b>${l.icon ? l.icon + ' ' : ''}${esc(l.name)}${l.kind ? ` <span class="tip-kind">${esc(l.kind)}</span>` : ''}</b>${l.desc ? esc(l.desc) : '<span style="opacity:.7">No @layer description yet</span>'}<div style="opacity:.7;margin-top:4px">Click to show only its arrows</div>`;
+    if (this.key !== 'a:' + alias) {
+      el.tip.innerHTML = `<b>${l.icon ? l.icon + ' ' : ''}${esc(l.name)}${l.kind ? ` <span class="tip-kind">${esc(l.kind)}</span>` : ''}</b>${l.desc ? esc(l.desc) : '<span style="opacity:.7">No @layer description yet</span>'}<div class="tip-foot">Click to show only its arrows</div>`;
+      this.key = 'a:' + alias;
+    }
+    this.place(x, y);
+  },
+  /** Hovering an arrow: what the label does not say, so the step bar is only needed for the full detail. */
+  step(i, x, y) {
+    const s = S.flow?.steps[i];
+    if (!s) return;
+    if (this.key !== 's:' + i) { el.tip.innerHTML = stepTipHTML(s); this.key = 's:' + i; }
+    this.place(x, y);
+  },
+  place(x, y) {
     el.tip.hidden = false;
     const r = el.canvas.getBoundingClientRect();
     const tw = el.tip.offsetWidth, th = el.tip.offsetHeight;
-    el.tip.style.left = clamp(x - r.left + 12, 8, r.width - tw - 8) + 'px';
-    el.tip.style.top = clamp(y - r.top + 14, 8, r.height - th - 8) + 'px';
+    el.tip.style.left = clamp(x - r.left + 14, 8, r.width - tw - 8) + 'px';
+    el.tip.style.top = clamp(y - r.top + 16, 8, r.height - th - 8) + 'px';
   },
-  hide() { if (!el.tip.hidden) el.tip.hidden = true; },
+  hide() { if (!el.tip.hidden) el.tip.hidden = true; this.key = ''; },
 };
+const cut = (t, n) => { t = String(t || '').replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n - 1).trimEnd() + '…' : t; };
+function stepTipHTML(s) {
+  const f = S.flow;
+  const sec = f.sections[s.section];
+  const rows = [];
+  rows.push(`<div class="tip-h"><b>Step ${s.n}</b>${sec ? ` <span class="tip-ch" style="--ch:${sec.hue}">${esc(sec.name)}</span>` : ''} <span class="tip-kind">${s.kind}</span><span class="tip-route">${esc(route(s))}</span></div>`);
+  rows.push(`<div class="tip-does">${s.explain ? esc(cut(s.explain, 240)) : '<span style="opacity:.7">No explanation yet</span>'}</div>`);
+  if (s.status && STATUS_TEXT[s.status.code]) rows.push(`<div class="tip-row"><b class="s-${statusClass(s)}">${s.status.code}</b> ${esc(STATUS_TEXT[s.status.code])}</div>`);
+  if (s.kind === 'request' && s.replies.length) rows.push(`<div class="tip-row"><b>Replies</b> ${s.replies.map((j) => `${esc(f.steps[j].label[0])} (step ${j + 1})`).join(' · ')}</div>`);
+  if (s.kind === 'reply' && s.answers >= 0) rows.push(`<div class="tip-row"><b>Answers</b> step ${s.answers + 1}: ${esc(f.steps[s.answers].label[0])}</div>`);
+  for (const p of s.payloads.slice(0, 3)) rows.push(`<div class="tip-row"><b>${esc(PART_LABEL[p.part] || p.part)}</b> <span class="mono">${esc(cut(p.text, 110))}</span></div>`);
+  if (s.payloads.length > 3) rows.push(`<div class="tip-row" style="opacity:.7">+ ${s.payloads.length - 3} more payload part${s.payloads.length - 3 === 1 ? '' : 's'}</div>`);
+  if (s.uses.length) rows.push(`<div class="tip-row"><b>Also involved</b> ${s.uses.map((u) => `${esc(u.kind)} ${esc(u.name)}`).join(', ')}</div>`);
+  if (s.effects.length) rows.push(`<div class="tip-row"><b>Effects</b> ${esc(cut(s.effects.join('; '), 140))}</div>`);
+  const flags = FLAG_TAGS.filter((k) => s.flags[k]).map((k) => (typeof s.flags[k] === 'string' ? `${k}: ${cut(s.flags[k], 60)}` : k));
+  if (flags.length) rows.push(`<div class="tip-row"><b>Chips</b> ${esc(flags.join(' · '))}</div>`);
+  if (s.unconfirmed.length) rows.push(`<div class="tip-row tip-unc"><b>Unconfirmed</b> ${esc(cut(s.unconfirmed.join('; '), 140))}</div>`);
+  if (s.refs.length) rows.push(`<div class="tip-row"><b>Code</b> <span class="mono">${s.refs.map(esc).join(' ')}</span></div>`);
+  const e = Notes.entry(s);
+  if (e?.note) rows.push(`<div class="tip-row"><b>Your note</b> ${esc(cut(e.note, 120))}</div>`);
+  rows.push(`<div class="tip-foot">Click the arrow for the full card${s.idx === S.cur ? ' (current step)' : ''}</div>`);
+  return rows.join('');
+}

@@ -64,9 +64,10 @@ The page loads Mermaid from a CDN, so the first open needs an internet connectio
 
 New here? Click **How it works** in the header (on a phone: **⋯ → How it works**). It explains the viewer and how to set up and use the skill in a few key points, and has a button to download the skill.
 
-1. Paste Mermaid `sequenceDiagram` code into the code panel. Open it with **C** or the tab on the left edge. You can also use **Export → Paste a link or code…**, or **Open a file…** (`.mmd`, `.md`, `.txt`).
-2. Press **→** to go through the flow one arrow at a time. Each step shows its card, highlights the arrow and moves the camera to it.
-3. Fold the header, step bar or code panel away with the small tabs on the screen edges. The same tab brings each part back.
+1. Paste Mermaid `sequenceDiagram` code into the code panel. Open it with the **Code** button or **C**; the tab on the panel's right edge closes it. You can also use **Export → Paste a link or code…**, or **Open a file…** (`.mmd`, `.md`, `.txt`).
+2. Press **→**, or roll the mouse wheel over the step bar, to go through the flow one arrow at a time. Each step shows its card, highlights the arrow and moves the camera to it.
+3. Hover any arrow for its summary: the explanation, the status code's meaning, the payload parts, the side parts, chips and code references, in a translucent tooltip. Click the arrow for the full card.
+4. Drag the top edge of the step bar to change its height (double-click the edge to reset). Fold the header or the step bar away with the small tabs on the screen edges; the same tab brings each part back.
 
 ### What a card shows
 
@@ -110,6 +111,9 @@ Each `@section` chapter gets a fixed pastel colour. The current chapter is drawn
 | `B` / `N` | Bookmark / note on the current step |
 | `/` | Find |
 | `?` | All shortcuts |
+| Wheel over the step bar | Previous / next step |
+| Drag the step bar's top edge | Change its height |
+| Hover an arrow | Its summary; click it for the full card |
 | Double-click a word | Follow that value through the flow |
 | Click an underlined word | Its definition |
 | Click a participant | Show only that participant's arrows |

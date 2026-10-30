@@ -165,8 +165,9 @@ const Modal = {
       ['T', 'Diagram ↔ Table'], ['I', 'Insight panel: layers, endpoints, errors, side parts, glossary, data'], ['A', 'Ask AI about the current step'],
       ['H', 'Hide controls'], ['P', 'Presenter mode: one big card, controls hidden'], ['C', 'Open / close the code panel'], ['B / N', 'Bookmark / note on the current step'],
       ['/', 'Find'], ['?', 'This help'], ['Esc', 'Close menu → find → Ask → note → Follow → spotlight → path filter → hide mode → Insight → code panel → overview'],
-      ['Ctrl + wheel', 'Zoom at the pointer (or pinch)'], ['Drag', 'Move the diagram'], ['Click an arrow', 'Jump to that step'],
-      ['Edge tabs', 'Fold the header (top), step bar (bottom) or code (left) away; the tab stays on the edge to bring it back'],
+      ['Ctrl + wheel', 'Zoom at the pointer (or pinch)'], ['Drag', 'Move the diagram'], ['Hover an arrow', 'Its summary: explanation, status, payload, side parts, code'], ['Click an arrow', 'Jump to that step'],
+      ['Wheel over the step bar', 'Previous / next step (a long card scrolls first)'], ['Drag the step bar\'s top edge', 'Change its height; double-click the edge to reset'],
+      ['Edge tabs', 'Fold the header (top) or the step bar (bottom) away; the tab stays on the edge to bring it back. The tab on the code panel\'s edge closes it'],
       ['Double-click a word', 'Follow that value through the flow'], ['Click an underlined word', 'Its definition from the glossary'], ['Click a name', 'Show only that participant\'s arrows'],
     ];
     this.open(`<h2>Shortcuts</h2>
@@ -246,6 +247,47 @@ const Modal = {
         try { await Exporter.pdf(opts); } catch (err) { Shell.toast('Could not make the PDF: ' + (err.message || err)); }
       };
     });
+  },
+};
+
+/* ===================== Step bar height: drag the handle on its top edge ===================== */
+const BarSize = {
+  min: 90,
+  apply(h) {
+    if (h) { el.wbar.style.setProperty('--card-h', h + 'px'); el.wbar.classList.add('sized'); }
+    else { el.wbar.style.removeProperty('--card-h'); el.wbar.classList.remove('sized'); }
+    requestAnimationFrame(() => { Camera.clampPos(); Camera.apply(); });
+  },
+  init() {
+    const hd = el.wbResize;
+    let drag = null;
+    hd.addEventListener('pointerdown', (ev) => {
+      if (ev.button !== 0 && ev.pointerType === 'mouse') return;
+      drag = { y: ev.clientY, h: el.cardCur.getBoundingClientRect().height };
+      try { hd.setPointerCapture(ev.pointerId); } catch { /* pointer already gone */ }
+      document.body.classList.add('resizing');
+      ev.preventDefault();
+    });
+    hd.addEventListener('pointermove', (ev) => {
+      if (!drag) return;
+      const h = Math.round(clamp(drag.h + (drag.y - ev.clientY), this.min, window.innerHeight * 0.75));
+      S.settings.cardH = h;
+      this.apply(h);
+    });
+    const end = () => { if (!drag) return; drag = null; document.body.classList.remove('resizing'); saveSettings(); };
+    hd.addEventListener('pointerup', end);
+    hd.addEventListener('pointercancel', end);
+    hd.addEventListener('dblclick', () => { delete S.settings.cardH; saveSettings(); this.apply(0); Shell.toast('Step bar height reset'); });
+    hd.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown') return;
+      const cur = S.settings.cardH || el.cardCur.getBoundingClientRect().height;
+      S.settings.cardH = Math.round(clamp(cur + (ev.key === 'ArrowUp' ? 20 : -20), this.min, window.innerHeight * 0.75));
+      saveSettings();
+      this.apply(S.settings.cardH);
+      ev.preventDefault();
+    });
+    hd.tabIndex = 0;
+    if (S.settings.cardH) this.apply(S.settings.cardH);
   },
 };
 
@@ -381,6 +423,7 @@ ${el.code.value}
     if (!el.speedSel.value) { el.speedSel.value = '3000'; S.settings.speed = 3000; }
     for (const part of ['top', 'bar']) if (S.settings.fold?.[part]) Shell.setFold(part, true);
     Editor.init();
+    BarSize.init();
     bindUI();
     // Initial code: link fragment, then autosave, then the example flow.
     // The fragment may hold `z.<code>`, `pako:<mermaid.live state>` and `step=N`, joined with `&`.
@@ -549,6 +592,31 @@ function bindUI() {
     if (t) Follow.start(t.dataset.tok);
   });
   el.cardCur.addEventListener('submit', (ev) => Ask.submit(ev));
+  // The wheel over the step bar moves to the previous or next step. The centre card scrolls its own
+  // content first when it overflows; inputs and the chapter row's sideways scroll are left alone.
+  let wheelAcc = 0, wheelLast = 0, wheelTimer = 0;
+  el.wbar.addEventListener('wheel', (ev) => {
+    const t = ev.target;
+    if (t.closest('textarea, input, select')) return;
+    const vertical = Math.abs(ev.deltaY) >= Math.abs(ev.deltaX);
+    const d = vertical ? ev.deltaY : ev.deltaX;
+    const card = t.closest('#cardCur');
+    if (card && vertical) {
+      const canDown = card.scrollTop + card.clientHeight < card.scrollHeight - 1, canUp = card.scrollTop > 0;
+      if ((d > 0 && canDown) || (d < 0 && canUp)) return;
+    }
+    if (!vertical && t.closest('.chapters')) return;
+    ev.preventDefault();
+    clearTimeout(wheelTimer);
+    wheelTimer = setTimeout(() => { wheelAcc = 0; }, 250);
+    wheelAcc += d;
+    const now = performance.now();
+    if (Math.abs(wheelAcc) < 40 || now - wheelLast < 160) return;
+    wheelLast = now;
+    const dir = wheelAcc > 0 ? 1 : -1;
+    wheelAcc = 0;
+    if (dir > 0) Walk.next(); else Walk.prev();
+  }, { passive: false });
   el.bmBtn.addEventListener('click', () => (BmPop.node ? BmPop.close() : BmPop.open()));
   document.addEventListener('click', (ev) => {
     if (BmPop.node && BmPop.node.contains(ev.target)) { BmPop.click(ev); return; }
@@ -630,8 +698,12 @@ function bindCanvas() {
   });
   c.addEventListener('pointermove', (ev) => {
     if (!pts.has(ev.pointerId)) {
+      if (ev.pointerType !== 'mouse') { Tip.hide(); return; }
       const a = ev.target.closest?.('.swv-actor');
-      if (a && ev.pointerType === 'mouse') Tip.show(a.getAttribute('data-alias'), ev.clientX, ev.clientY); else Tip.hide();
+      const h = !a && ev.target.closest?.('[data-step]');
+      if (a) Tip.show(a.getAttribute('data-alias'), ev.clientX, ev.clientY);
+      else if (h && S.flow?.isSequence) Tip.step(+h.getAttribute('data-step'), ev.clientX, ev.clientY);
+      else Tip.hide();
       return;
     }
     pts.set(ev.pointerId, local(ev));
@@ -662,6 +734,7 @@ function bindCanvas() {
   c.addEventListener('pointerup', end);
   c.addEventListener('pointercancel', end);
   c.addEventListener('pointerleave', () => Tip.hide());
+  c.addEventListener('pointerdown', () => Tip.hide());
   c.addEventListener('wheel', (ev) => {
     if (ev.target.closest('.cv-controls')) return;
     ev.preventDefault();
