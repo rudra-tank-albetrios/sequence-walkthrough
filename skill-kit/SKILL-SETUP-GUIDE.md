@@ -1,6 +1,6 @@
 # sequence-walkthrough skill: setup guide
 
-The skill teaches Claude to write Mermaid sequence diagrams in the annotated `walkthrough/1` format: every arrow gets a plain-language `%% @step` card, with chapters (`@section`), layer descriptions (`@layer`), example payloads (`@payload`) and code links (`@ref`). Paste the result into the Sequence Walkthrough Viewer to step through it card by card. The diagram still renders unchanged on mermaid.live, GitHub and anywhere else Mermaid runs.
+The skill teaches Claude to write Mermaid sequence diagrams in the annotated `walkthrough/2` format: every arrow gets a plain-language `%% @step` card, with chapters (`@section`, `@summary`), layer descriptions (`@layer … kind=`), payload parts (`@payload.headers`, `@payload.body`, `@payload.sql` …), code links (`@ref`), side parts such as hooks and crons (`@uses`), effects, a glossary (`@term`) and more. Every API call shows its method and path, every reply its status code and message. Paste the result into the Sequence Walkthrough Viewer to step through it card by card. The diagram still renders unchanged on mermaid.live, GitHub and anywhere else Mermaid runs.
 
 - **Skill name:** `sequence-walkthrough`
 - **Slash command (Claude Code / Agent SDK):** `/sequence-walkthrough`
@@ -21,9 +21,9 @@ Inside the skill folder:
 sequence-walkthrough/
 ├── SKILL.md                       instructions Claude reads when the skill triggers
 ├── references/
-│   ├── annotation-spec.md         the full walkthrough/1 format
-│   ├── writing-guide.md           how to write good step cards
-│   └── layer-naming.md            how to name and describe layers
+│   ├── annotation-spec.md         the full walkthrough/2 format
+│   ├── writing-guide.md           how to write each tag; Explain vs Easy, Proposed and Scoped flows
+│   └── layer-naming.md            aliases, kinds and zones; layers vs side parts
 ├── examples/
 │   ├── oauth-login.mmd
 │   └── payment-idempotency.mmd

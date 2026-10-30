@@ -240,12 +240,14 @@ const Exporter = {
     document.body.appendChild(a); a.click(); a.remove();
   },
   async liveCopy() { await Files.copy(await Codec.liveLink(el.code.value), 'Copied the mermaid.live link'); },
-  async share() {
-    const frag = '#z.' + Codec.b64url(await Codec.deflate(el.code.value));
+  async share(withStep) {
+    let frag = '#z.' + Codec.b64url(await Codec.deflate(el.code.value));
+    if (withStep && S.cur >= 0) frag += '&step=' + (S.cur + 1);
+    const what = withStep && S.cur >= 0 ? `a viewer link that opens on step ${S.cur + 1}` : 'a viewer link with the code inside';
     if (window.claude) {
-      await Files.copy(frag, 'Copied the code fragment. Add it to the end of this page\'s link to share this diagram.');
+      await Files.copy(frag, `Copied the code fragment for ${what}. Add it to the end of this page's link.`);
     } else {
-      await Files.copy(location.href.split('#')[0] + frag, 'Copied a viewer link with the code inside');
+      await Files.copy(location.href.split('#')[0] + frag, 'Copied ' + what);
     }
   },
 

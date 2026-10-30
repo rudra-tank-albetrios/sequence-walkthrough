@@ -1,6 +1,12 @@
 # Feature ideas: understand a whole project from its flows
 
-Goal: the `sequence-walkthrough` skill plus the viewer should let a newcomer understand *everything* about how a project works, one step at a time: which API is called, what is sent, what comes back, which hidden parts (hooks, crons, middleware) take part, and what every word means.
+Goal: the `sequence-walkthrough` skill plus the viewer should let a newcomer understand *everything* about how a project works, one step at a time: which API is called, what is sent, what comes back, which hidden parts (hooks, crons) take part, and what every word means.
+
+## Status (version 2.0, 2026-10-30)
+
+**Built in this version:** everything in section 1 (payload parts, request ↔ reply pairing, reply catalog, status explainer, field provenance, `@uses` strip and Behind drawer, `@trigger`, `@effect`, Ask AI with two modes and a 60-word contract, provider settings for Groq / Gemini / OpenRouter / Cerebras / Mistral / Ollama / custom / Claude artifact, answers saved to the step's note, `@term` glossary with the AI fallback, chapter bands with start and end markers, one colour per chapter everywhere, segmented progress bar, chapter lock, `@summary`), and from section 2: payload diff, `@field` links, `@schema`, `@state`, data touched, branch explorer (happy path / errors / one branch), endings summary, async and resilience chips, error catalog, layer panel, layer kinds with icons, trust boundaries, deep link to a step, presenter mode. Also `@mode proposed`, `@scope`, `@unconfirmed`, and the skill's four modes (Explain, Proposed, Scoped, Easy) with the verify pass and the token budget.
+
+**Still open:** mini-map, request/reply hover arcs on the lifeline, value timeline, code peek and files panel with editor links, quiz mode, progress tracking, study-guide PDF, read aloud, Full ↔ Easy toggle, flow library, flow links, project map, endpoint index across flows, compare two versions, team comments (needs a backend), WebLLM as a no-key provider, framework detection and the endpoint inventory in the skill. **Middleware is always a layer** (its own participant), never a side part.
 
 Legend · 🏷 new tag (spec + skill + validator) · 👁 viewer only · 🤖 skill only · ⚡ quick win
 

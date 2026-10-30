@@ -10,17 +10,25 @@ const Table = {
     let lastSec = -2;
     el.tvBody.innerHTML = f.steps.map((s) => {
       if (Spot.alias && s.from !== Spot.alias && s.to !== Spot.alias) return '';
+      if (!Path.visible(s)) return '';
       const newSec = s.section !== lastSec;
       lastSec = s.section;
+      const sec = f.sections[s.section];
       const e = Notes.entry(s) || {};
       const cls = [s.idx === S.cur ? 'cur' : '', follow.has(s.idx) ? 'follow' : '', find.has(s.idx) ? 'findhit' : '', hasCh && newSec ? 'chap-start' : ''].filter(Boolean).join(' ');
-      return `<tr data-step="${s.idx}" class="${cls}" ${s.idx === S.cur ? 'aria-current="step"' : ''}>
+      const behind = [
+        ...s.uses.map((u) => `<span class="chip kd" title="${esc(u.text)}">${esc(u.kind)} ${esc(u.name)}</span>`),
+        ...s.effects.map((t) => `<span class="chip ef">${esc(t)}</span>`),
+        ...s.unconfirmed.map((t) => `<span class="chip unc" title="${esc(t)}">unconfirmed</span>`),
+      ].join(' ');
+      return `<tr data-step="${s.idx}" class="${cls}" ${sec ? `style="--ch:${sec.hue}"` : ''} ${s.idx === S.cur ? 'aria-current="step"' : ''}>
         <td class="n" data-l="Step">${s.n}</td>
-        ${hasCh ? `<td class="ch" data-l="Chapter">${newSec ? esc(f.sections[s.section]?.name || '') : ''}</td>` : ''}
+        ${hasCh ? `<td class="ch" data-l="Chapter">${newSec ? `<span class="dot" aria-hidden="true"></span>${esc(sec?.name || '')}` : ''}</td>` : ''}
         <td class="rt" data-l="From → To">${esc(route(s))} <span class="chip k-${s.kind}">${s.kind}</span></td>
-        <td class="sends" data-l="Sends">${s.label.map(esc).join('<br>')}</td>
+        <td class="sends" data-l="Sends">${s.label.map((l, i) => (i === 0 && s.status ? `<span class="status s-${statusClass(s)}">${esc(s.status.code)}</span> ${esc(l.replace(/^\d{3}\s*/, ''))}` : esc(l))).join('<br>')}</td>
         <td class="does" data-l="Does">${s.explain ? esc(s.explain) : '<span class="none">No explanation</span>'}</td>
         <td data-l="Branch">${s.branch.map((b) => `<span class="chip br"><b>${esc(b.kind)}</b> ${esc(b.label)}</span>`).join('')}</td>
+        <td data-l="Behind">${behind}</td>
         <td data-l="Ref">${s.refs.map((r) => `<span class="ref">${esc(r).replace(/\//g, '/<wbr>')}</span>`).join(' ')}</td>
         <td data-l="Note">${e.star ? '★ ' : ''}${esc(e.note || '')}</td>
       </tr>`;
@@ -37,11 +45,12 @@ const Table = {
   },
   rows(includeNotes) {
     const f = S.flow;
-    const head = ['Step', 'Chapter', 'From', 'To', 'Kind', 'Sends', 'Does', 'Branch', 'Payload', 'Ref'];
+    const head = ['Step', 'Chapter', 'From', 'To', 'Kind', 'Status', 'Sends', 'Does', 'Branch', 'Payload', 'Also involved', 'Effects', 'Unconfirmed', 'Ref'];
     if (includeNotes) head.push('Bookmarked', 'Note');
     const rows = f.steps.map((s) => {
-      const r = [s.n, f.sections[s.section]?.name || '', s.fromName, s.toName, s.kind, s.label.join(' / '), s.explain,
-        s.branch.map((b) => `${b.kind} ${b.label}`.trim()).join(' > '), s.payload, s.refs.join(' ')];
+      const r = [s.n, f.sections[s.section]?.name || '', s.fromName, s.toName, s.kind, s.status ? s.status.code : '', s.label.join(' / '), s.explain,
+        s.branch.map((b) => `${b.kind} ${b.label}`.trim()).join(' > '), s.payload,
+        s.uses.map((u) => `${u.kind} ${u.name}${u.ref ? ' (' + u.ref + ')' : ''}`).join('; '), s.effects.join('; '), s.unconfirmed.join('; '), s.refs.join(' ')];
       if (includeNotes) { const e = Notes.entry(s) || {}; r.push(e.star ? 'yes' : '', e.note || ''); }
       return r;
     });
@@ -55,21 +64,27 @@ const Table = {
   markdown(includeNotes) {
     const f = S.flow;
     const cell = (v) => String(v ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
-    const cols = ['#', 'From → To', 'Sends', 'Does', 'Branch', 'Ref'];
+    const cols = ['#', 'From → To', 'Sends', 'Does', 'Branch', 'Also involved', 'Ref'];
     if (includeNotes) cols.push('Note');
     const row = (s) => {
       const e = Notes.entry(s) || {};
-      const r = [s.n, route(s), '`' + s.label.join(' / ').replace(/`/g, "'") + '`', s.explain || '_No explanation_', s.branch.map((b) => `${b.kind} ${b.label}`.trim()).join(' > '), s.refs.join(' ')];
+      const also = [...s.uses.map((u) => `${u.kind} ${u.name}`), ...s.effects.map((t) => 'effect: ' + t), ...s.unconfirmed.map((t) => 'unconfirmed: ' + t)].join('; ');
+      const r = [s.n, route(s), '`' + s.label.join(' / ').replace(/`/g, "'") + '`', s.explain || '_No explanation_', s.branch.map((b) => `${b.kind} ${b.label}`.trim()).join(' > '), also, s.refs.join(' ')];
       if (includeNotes) r.push((e.star ? '★ ' : '') + (e.note || ''));
       return '| ' + r.map(cell).join(' | ') + ' |';
     };
     const table = (steps) => ['| ' + cols.join(' | ') + ' |', '|' + cols.map(() => ' --- ').join('|') + '|', ...steps.map(row)].join('\n');
     let md = `# ${f.title}\n\n${f.steps.length} steps, ${f.participants.length} layers.\n\n`;
+    if (f.trigger) md += `**Starts when:** ${f.trigger}\n\n`;
+    if (f.scope) md += `**Scope:** ${f.scope}\n\n`;
+    if (f.proposed) md += `**Proposed design:** this flow does not exist in the code yet.\n\n`;
     if (f.sections.length) {
       for (const [i, sec] of f.sections.entries()) {
-        md += `## ${i + 1}. ${sec.name}\n\n${table(f.steps.filter((s) => s.section === i))}\n\n`;
+        md += `## ${i + 1}. ${sec.name}\n\n${sec.summary ? sec.summary + '\n\n' : ''}${table(f.steps.filter((s) => s.section === i))}\n\n`;
       }
     } else md += table(f.steps) + '\n';
+    if (f.uses.length) md += `\n## Behind the scenes\n\n${f.uses.map((u) => `- **${u.kind}** \`${u.name}\`${u.ref ? ` (${u.ref})` : ''}: ${u.text || ''} (steps ${u.steps.map((i) => i + 1).join(', ')})`).join('\n')}\n`;
+    if (f.terms.length) md += `\n## Glossary\n\n${f.terms.map((t) => `- **${t.term}**: ${t.def}`).join('\n')}\n`;
     return md;
   },
 };
@@ -123,8 +138,15 @@ const Editor = {
     const cur = this.curLines();
     const err = S.error?.line ?? -1;
     const warn = new Set((S.flow?.lint || []).map((l) => l.line));
+    // Chapter colour stripe in the gutter: every line that belongs to a step takes its chapter's hue.
+    const hue = new Map();
+    for (const s of S.flow?.steps || []) {
+      const sec = S.flow.sections[s.section];
+      if (!sec) continue;
+      for (const l of [s.line, ...s.annLines]) if (l >= 0) hue.set(l, sec.hue);
+    }
     el.edHl.innerHTML = lines.map((l, i) => `<span class="l${cur.has(i) ? ' cur' : ''}${i === err ? ' err' : ''}">${colorLine(l) || ' '}</span>`).join('') + '<span class="l"> </span>';
-    el.gutter.innerHTML = lines.map((_, i) => `<div class="${i === err ? 'g-err' : cur.has(i) ? 'g-cur' : warn.has(i) ? 'g-warn' : ''}">${i + 1}</div>`).join('') + '<div></div><div></div>';
+    el.gutter.innerHTML = lines.map((_, i) => `<div class="${i === err ? 'g-err' : cur.has(i) ? 'g-cur' : warn.has(i) ? 'g-warn' : ''}${hue.has(i) ? ' g-ch' : ''}"${hue.has(i) ? ` style="--ch:${hue.get(i)}"` : ''}>${i + 1}</div>`).join('') + '<div></div><div></div>';
     this.syncScroll();
   },
   curLines() {
@@ -169,7 +191,7 @@ const Editor = {
 
 const KW_COLOR = /^(\s*)(sequenceDiagram|participant|actor|note\s+(?:over|left of|right of)|note|loop|alt|else|opt|par_over|par|and|critical|option|break|rect|end|activate|deactivate|autonumber|box|create\s+participant|create\s+actor|create|destroy|title|links?|properties|details|accTitle|accDescr)\b(.*)$/i;
 function colorLine(l) {
-  let m = l.match(/^(\s*)(%%\s*@[A-Za-z]+)(.*)$/);
+  let m = l.match(/^(\s*)(%%\s*@[A-Za-z]+(?:\.[A-Za-z]+)?)(.*)$/);
   if (m) return esc(m[1]) + `<span class="t-tag">${esc(m[2])}</span><span class="t-tagtx">${esc(m[3])}</span>`;
   if (/^\s*%%/.test(l)) return `<span class="t-cm">${esc(l)}</span>`;
   m = l.match(KW_COLOR);

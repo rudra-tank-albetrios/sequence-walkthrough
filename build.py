@@ -21,7 +21,7 @@ ROOT = pathlib.Path(__file__).resolve().parent
 SRC = ROOT / "src"
 DIST = ROOT / "dist"
 ARTIFACT = ROOT / "dist-claude"
-JS_ORDER = ["core.js", "render.js", "walk.js", "views.js", "export.js", "shell.js"]
+JS_ORDER = ["core.js", "render.js", "walk.js", "views.js", "insight.js", "ask.js", "export.js", "shell.js"]
 # src/fonts holds Google Fonts' CSS for Recursive (wght 300-1000, MONO 0-1) and its four woff2 subsets.
 # They are inlined as data: URIs: the hosted page may not fetch() font files, and exports need the bytes.
 FONT_SUBSETS = ["cyrillic-ext", "vietnamese", "latin-ext", "latin"]

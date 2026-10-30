@@ -3,6 +3,7 @@
     <div class="tb-left">
       <span class="logo" aria-hidden="true">&#9670;</span>
       <h1 class="flow-name" id="flowName">Sequence diagram</h1>
+      <span class="chip unc" id="flowBadge" hidden title="This flow is a proposed design: it does not exist in the code yet">proposed</span>
       <span class="flow-meta" id="flowMeta"></span>
     </div>
     <div class="tb-right">
@@ -49,6 +50,10 @@
           <button type="button" role="menuitem" data-act="live-open">Open in mermaid.live <span class="hint">new tab</span></button>
           <button type="button" role="menuitem" data-act="live-copy">Copy mermaid.live link</button>
           <button type="button" role="menuitem" data-act="share">Copy viewer link <span class="hint">code in URL</span></button>
+          <button type="button" role="menuitem" data-act="share-step">Copy link to this step <span class="hint">opens on the step</span></button>
+          <hr>
+          <div class="menu-h">Ask AI</div>
+          <button type="button" role="menuitem" data-act="ai">Provider and key&hellip; <span class="hint">free tiers, Ollama, Claude</span></button>
           <hr>
           <div class="menu-h">Skill for Claude</div>
           <button type="button" role="menuitem" data-act="skill">Download the skill <span class="hint">.zip with setup guide</span></button>
@@ -64,6 +69,8 @@
         <div class="menu" id="moreMenu" role="menu" hidden>
           <button type="button" role="menuitem" data-more="guide">How it works</button>
           <button type="button" role="menuitem" data-more="view">Switch to table view</button>
+          <button type="button" role="menuitem" data-more="insight">Insight panel</button>
+          <button type="button" role="menuitem" data-more="ai">Ask AI settings</button>
           <button type="button" role="menuitem" data-more="find">Find</button>
           <button type="button" role="menuitem" data-more="fit">Fit width</button>
           <button type="button" role="menuitem" data-more="fitall">Fit all</button>
@@ -99,11 +106,19 @@
             <option value="1000">1 s</option><option value="2000">2 s</option><option value="3000" selected>3 s</option><option value="4000">4 s</option><option value="5000">5 s</option>
           </select>
           <button type="button" class="btn" id="dimBtn" aria-pressed="false" title="Fade the other arrows"><span aria-hidden="true">&#9680;</span> <span class="lbl">Dim others</span></button>
+          <button type="button" class="btn" id="bandBtn" aria-pressed="true" title="Colour band behind the current chapter"><span aria-hidden="true">&#9645;</span> <span class="lbl">Chapter band</span></button>
+          <button type="button" class="btn" id="insightBtn" aria-pressed="false" title="Insight panel: layers, endpoints, errors, side parts, glossary, data (I)"><span aria-hidden="true">&#9776;</span> <span class="lbl">Insight</span></button>
           <button type="button" class="btn" id="hideBtn" title="Hide controls (H)"><span aria-hidden="true">&#9974;</span> <span class="lbl">Hide</span></button>
         </div>
       </div>
       <div class="tooltip" id="tip" role="tooltip" hidden></div>
     </div>
+    <div class="present-card" id="presentCard" hidden aria-live="polite"></div>
+    <aside class="insight" id="insightPanel" hidden aria-label="Insight">
+      <div class="in-head"><h2>Insight</h2><button type="button" class="btn icon ghost" id="insightClose" aria-label="Close the Insight panel">&times;</button></div>
+      <div class="in-tabs" id="insightTabs" role="tablist"></div>
+      <div class="in-body" id="insightBody"></div>
+    </aside>
     <button type="button" class="btn show-ctrls" id="showCtrls" hidden>Show controls &middot; <span class="kbd">Esc</span></button>
     <!-- Edge tabs: fold the header, the step bar or the code panel away; the same tab stays at the edge to bring it back -->
     <button type="button" class="edge edge-top" id="edgeTop" aria-controls="topbar" aria-expanded="true" aria-label="Hide the header" title="Hide the header"><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 5 5 1 9 5"/></svg></button>
@@ -135,7 +150,7 @@
     <section class="table-view" id="tableView" hidden aria-label="Step table">
       <div class="tv-scroll" id="tvScroll">
         <table class="tv" id="tv">
-          <thead><tr><th scope="col">#</th><th scope="col" class="th-ch">Chapter</th><th scope="col">From &rarr; To</th><th scope="col">Sends</th><th scope="col">Does</th><th scope="col">Branch</th><th scope="col">Ref</th><th scope="col">&#9733; Note</th></tr></thead>
+          <thead><tr><th scope="col">#</th><th scope="col" class="th-ch">Chapter</th><th scope="col">From &rarr; To</th><th scope="col">Sends</th><th scope="col">Does</th><th scope="col">Branch</th><th scope="col">Behind</th><th scope="col">Ref</th><th scope="col">&#9733; Note</th></tr></thead>
           <tbody id="tvBody"></tbody>
         </table>
       </div>
@@ -152,8 +167,11 @@
     <div class="wb-top">
       <nav class="chapters" id="chapters" aria-label="Chapters" hidden></nav>
       <div class="follow-strip" id="followStrip" hidden></div>
+      <select class="tb-sel path-sel" id="pathSel" aria-label="Which path to walk" title="Walk every step, the happy path only, the errors only, or one branch" hidden></select>
+      <button type="button" class="btn ghost behind-btn" id="behindBtn" aria-haspopup="dialog" aria-expanded="false" title="Hooks, crons, utilities, config and side effects that take part without being a layer" hidden>&#9881; Behind</button>
       <button type="button" class="btn ghost bm-btn" id="bmBtn" aria-haspopup="dialog" aria-expanded="false" title="Bookmarks and notes">&#9733; 0</button>
     </div>
+    <div class="progress" id="progress" role="progressbar" aria-label="Progress" hidden></div>
     <div class="cards" id="cards">
       <button type="button" class="nav-btn" id="prevBtn" aria-label="Previous step">&#9664;</button>
       <div class="card side" id="cardPrev" role="button" tabindex="-1"></div>

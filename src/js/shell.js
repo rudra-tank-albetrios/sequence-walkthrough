@@ -38,6 +38,8 @@ const Shell = {
     }
     if (Ctx.node) { Ctx.close(); closed = true; }
     if (BmPop.node) { BmPop.close(); closed = true; }
+    if (BehindPop.node) { BehindPop.close(); closed = true; }
+    if (TermPop.node) { TermPop.close(); closed = true; }
     if (el.exportBtn.hidden) { // the export menu was opened from the narrow-screen menu
       el.exportBtn.hidden = false;
       el.exportMenu.removeAttribute('style');
@@ -59,6 +61,7 @@ const Shell = {
       S.enteredFs = false;
       document.exitFullscreen?.().catch(() => {});
     }
+    if (!on && Presenter.on) { Presenter.on = false; document.body.classList.remove('presenter'); Presenter.render(); }
     requestAnimationFrame(() => { Camera.clampPos(); Camera.apply(); });
     el.canvas.focus({ preventScroll: true });
     this.announce(on ? 'Controls hidden. Press Escape to show them.' : 'Controls shown');
@@ -103,15 +106,18 @@ const Shell = {
     if (v === 'table') { Table.render(); Table.markCurrent(); }
     else if (S.cur >= 0) Camera.followStep(S.flow.steps[S.cur], 0);
   },
-  /** Esc closes the first of: menu, note box, Follow, spotlight, hide mode, code panel, table (mobile), then back to overview. */
+  /** Esc closes the first of: menu, find, Ask panel, note box, Follow, spotlight, path filter, hide mode, Insight, code panel, table (mobile), then back to overview. */
   escape() {
     if (Modal.node) { Modal.close(); return; }
     if (this.closeMenus()) return;
     if (!el.findPop.hidden) { Find.close(); return; }
+    if (Ask.open) { Ask.close(); return; }
     if (S.noteOpen) { Walk.toggleNote(false); return; }
     if (Follow.tok) { Follow.clear(); return; }
     if (Spot.alias) { Spot.clear(); return; }
+    if (Path.mode !== 'all') { Path.set('all'); return; }
     if (S.hide) { this.setHide(false); return; }
+    if (S.insightOpen) { Insight.toggle(false); return; }
     if (S.codeOpen) { this.setCode(false); return; }
     if (S.view === 'table' && isNarrow()) { this.setView('diagram'); return; }
     if (S.playing) { Play.stop(); return; }
@@ -145,20 +151,28 @@ const Modal = {
       const ta = m.querySelector('#mText'); ta.focus(); ta.select();
     });
   },
+  /** A one-field editor; calls back with the new text on Save. */
+  prompt(title, value, onSave) {
+    this.open(`<h2>${esc(title)}</h2><textarea id="mText" autofocus>${esc(value)}</textarea><div class="foot"><button type="button" class="btn" data-close>Cancel</button><button type="button" class="btn primary" data-save>Save</button></div>`, (m) => {
+      m.querySelector('[data-close]').onclick = () => this.close();
+      m.querySelector('[data-save]').onclick = () => { const v = m.querySelector('#mText').value; this.close(); onSave(v); };
+    });
+  },
   help() {
     const keys = [
-      ['← →', 'Previous / next step'], ['Home / End', 'First / last step'], ['[ ]', 'Previous / next chapter'],
+      ['← →', 'Previous / next step (skips steps hidden by the path filter)'], ['Home / End', 'First / last step'], ['[ ]', 'Previous / next chapter'], ['K', 'Lock the arrow keys inside the current chapter'],
       ['Space', 'Play / pause'], ['↑ ↓', 'Scroll'], ['+ −', 'Zoom in / out'], ['0', 'Fit width'], ['F', 'Fit all'],
-      ['T', 'Diagram ↔ Table'], ['H', 'Hide controls'], ['C', 'Open / close the code panel'], ['B / N', 'Bookmark / note on the current step'],
-      ['/', 'Find'], ['?', 'This help'], ['Esc', 'Close menu → note → Follow → hide mode → code panel → overview'],
+      ['T', 'Diagram ↔ Table'], ['I', 'Insight panel: layers, endpoints, errors, side parts, glossary, data'], ['A', 'Ask AI about the current step'],
+      ['H', 'Hide controls'], ['P', 'Presenter mode: one big card, controls hidden'], ['C', 'Open / close the code panel'], ['B / N', 'Bookmark / note on the current step'],
+      ['/', 'Find'], ['?', 'This help'], ['Esc', 'Close menu → find → Ask → note → Follow → spotlight → path filter → hide mode → Insight → code panel → overview'],
       ['Ctrl + wheel', 'Zoom at the pointer (or pinch)'], ['Drag', 'Move the diagram'], ['Click an arrow', 'Jump to that step'],
       ['Edge tabs', 'Fold the header (top), step bar (bottom) or code (left) away; the tab stays on the edge to bring it back'],
-      ['Double-click a word', 'Follow that value through the flow'], ['Click a name', 'Show only that participant\'s arrows'],
+      ['Double-click a word', 'Follow that value through the flow'], ['Click an underlined word', 'Its definition from the glossary'], ['Click a name', 'Show only that participant\'s arrows'],
     ];
     this.open(`<h2>Shortcuts</h2>
       <table>${keys.map(([k, v]) => `<tr><td><span class="kbd">${esc(k)}</span></td><td>${esc(v)}</td></tr>`).join('')}</table>
-      <p class="muted" style="margin-top:12px">Annotations are Mermaid comments: <span class="mono">%% @title</span>, <span class="mono">@layer</span>, <span class="mono">@section</span>, <span class="mono">@step</span>, <span class="mono">@payload</span>, <span class="mono">@ref</span> (spec ${VERSION.spec}). Notes and bookmarks stay in this browser.</p>
-      <p class="muted">Mermaid ${VERSION.mermaid}${window.mermaid?.version ? '' : ''}. mermaid.live may run a different version.</p>
+      <p class="muted" style="margin-top:12px">Annotations are Mermaid comments (spec ${VERSION.spec}): <span class="mono">%% @title</span>, <span class="mono">@layer</span>, <span class="mono">@trigger</span>, <span class="mono">@term</span>, <span class="mono">@section</span>, <span class="mono">@summary</span>, <span class="mono">@step</span>, <span class="mono">@payload.body</span>, <span class="mono">@ref</span>, <span class="mono">@uses</span>, <span class="mono">@effect</span>, <span class="mono">@field</span>, <span class="mono">@schema</span>, <span class="mono">@state</span>, <span class="mono">@unconfirmed</span> and the chips <span class="mono">@async @retry @timeout @idempotent</span>. Notes, bookmarks, saved terms and AI keys stay in this browser.</p>
+      <p class="muted">Mermaid ${VERSION.mermaid}. mermaid.live may run a different version.</p>
       <div class="foot"><button type="button" class="btn primary" data-close>Close</button></div>`, (m) => { m.querySelector('[data-close]').onclick = () => this.close(); });
   },
   /** Key points on the viewer and the sequence-walkthrough skill, with the skill download. */
@@ -169,11 +183,16 @@ const Modal = {
       <h3>The viewer</h3>
       <ul class="points">
         <li>Paste Mermaid ${m('sequenceDiagram')} code in the code panel (${k('C')}), or use Export &rarr; Paste a link or code / Open a file.</li>
-        <li>Every arrow is a step. Its card comes from the ${m('%% @step')} comment above it; ${m('@section')} starts a chapter, ${m('@layer')} explains a participant.</li>
-        <li>Walk with ${k('&larr;')} ${k('&rarr;')}, jump chapters with ${k('[')} ${k(']')}, double-click a word to follow a value, ${k('N')} adds a note.</li>
+        <li>Every arrow is a step. Its card comes from the ${m('%% @step')} comment above it, with the request's method and path, the reply's status code and message, and the payload parts (${m('@payload.headers')}, ${m('.body')}, ${m('.sql')}&hellip;).</li>
+        <li>A request card lists its replies with their status codes; a reply card links back to its request. Hover a status code for its general meaning.</li>
+        <li>Chapters (${m('@section')}) get their own colour: a light band behind the chapter's arrows with start and end markers, the progress bar and the code gutter. ${k('K')} keeps the arrow keys inside a chapter.</li>
+        <li><b>Path</b> in the step bar shows the happy path only, the errors only, or one ${m('alt')} branch. <b>Behind</b> lists the hooks, crons, utilities and config (${m('@uses')}) and side effects (${m('@effect')}) that take part without being a layer.</li>
+        <li>${k('I')} opens the Insight panel: layers, every endpoint with its replies, the error catalog, side parts, the glossary (${m('@term')}) and the tables touched.</li>
+        <li>${k('A')} asks an AI about the current step or any word, in under 60 words. You choose a free provider and the answer is saved to the step's note. Underlined words open their definition.</li>
+        <li>Walk with ${k('&larr;')} ${k('&rarr;')}, jump chapters with ${k('[')} ${k(']')}, double-click a word to follow a value, ${k('N')} adds a note, ${k('P')} is presenter mode.</li>
         <li>Arrows without an explanation are listed in the code panel. <b>Copy fix-prompt</b> hands them to Claude.</li>
-        <li>Export PDF, PNG, SVG or a step table. <b>Copy viewer link</b> shares this diagram: the code is inside the link.</li>
-        <li>Nothing is uploaded. Diagrams, notes and bookmarks stay in this browser.</li>
+        <li>Export PDF, PNG, SVG or a step table. <b>Copy viewer link</b> shares this diagram with the code inside the link; <b>Copy link to this step</b> opens on the current step.</li>
+        <li>Nothing is uploaded by the viewer itself. Diagrams, notes, bookmarks, saved terms and AI keys stay in this browser; an AI question goes only to the provider you picked.</li>
       </ul>
       <h3>Set up the Claude skill (once)</h3>
       <ul class="points">
@@ -184,8 +203,8 @@ const Modal = {
       </ul>
       <h3>Use the skill</h3>
       <ul class="points">
-        <li>Ask Claude: &ldquo;Make a walkthrough diagram of the login flow in ./src&rdquo;. Add &ldquo;in easy language&rdquo; for only the key steps. In Claude Code you can also type ${m('/sequence-walkthrough')}.</li>
-        <li>Claude replies with the code only, no file. Every call shows its method and path, every reply its status code, with payloads. Paste it here and step through it.</li>
+        <li>Ask Claude: &ldquo;Make a walkthrough diagram of the login flow in ./src&rdquo;. Say &ldquo;in easy language&rdquo; for beginner wording with the same layers and steps, &ldquo;only the part after the service layer&rdquo; for a scoped cut, or &ldquo;how would I add X, give me the flow&rdquo; for a proposed design. In Claude Code you can also type ${m('/sequence-walkthrough')}.</li>
+        <li>Claude replies with the code only, no file. Every call shows its method and path, every reply its status code and message, with payload parts, side parts, a glossary and code links. Paste it here and step through it.</li>
         <li>Warnings in the code panel? Copy fix-prompt, paste it to Claude, paste the answer back. Notes stay on steps that didn't change.</li>
       </ul>
       <div class="foot">
@@ -238,10 +257,11 @@ const Ctx = {
     const n = document.createElement('div');
     n.className = 'ctx';
     n.setAttribute('role', 'menu');
-    n.innerHTML = `<button type="button" role="menuitem">Follow “${esc(word)}”</button>`;
-    n.style.left = Math.min(x, window.innerWidth - 220) + 'px';
-    n.style.top = Math.min(y, window.innerHeight - 50) + 'px';
-    n.querySelector('button').onclick = () => { this.close(); Follow.start(word); };
+    n.innerHTML = `<button type="button" role="menuitem" data-follow>Follow “${esc(word)}”</button><button type="button" role="menuitem" data-ask>Ask AI: what is “${esc(word)}”?</button>`;
+    n.style.left = Math.min(x, window.innerWidth - 260) + 'px';
+    n.style.top = Math.min(y, window.innerHeight - 80) + 'px';
+    n.querySelector('[data-follow]').onclick = () => { this.close(); Follow.start(word); };
+    n.querySelector('[data-ask]').onclick = () => { this.close(); Ask.term(word); };
     document.body.appendChild(n);
     this.node = n;
     n.querySelector('button').focus();
@@ -256,30 +276,36 @@ const App = {
   afterRender(first) {
     const f = S.flow;
     el.flowName.textContent = f.title;
+    el.flowBadge.hidden = !f.proposed;
     document.title = f.title === DEFAULT_TITLE ? 'Sequence Walkthrough' : f.title + ' · Sequence Walkthrough';
     el.flowMeta.textContent = f.isSequence ? `${f.steps.length} steps, ${f.participants.length} layers${f.sections.length ? ', ' + f.sections.length + ' chapters' : ''}` : f.diagramType;
     Notes.load(f);
+    Glossary.load(f);
     if (S.cur >= Walk.count()) S.cur = Walk.count() - 1;
     if (!f.isSequence) S.cur = -1;
     Follow.compute();
     if (Find.q) Find.run(el.findInput.value);
     if (Spot.alias && !f.layers[Spot.alias]) Spot.alias = null;
+    Path.renderSelect();
     Hl.apply(S.cur);
     Hl.decorate();
     Walk.render(null);
     Chapters.render();
+    Progress.render();
     Follow.renderStrip();
     Table.render();
     Editor.renderLint();
     Editor.setError(null);
     this.updateCodeCount();
     Notes.ui();
+    BehindPop.ui();
+    Insight.render();
+    Presenter.render();
     if (!f.isSequence) {
       Shell.notice(`This is a <b>${esc(f.diagramType)}</b> diagram. The walkthrough, pinned header and table work with sequence diagrams, so only pan and zoom are on.`);
       if (S.view === 'table') Shell.setView('diagram');
-    } else if (!Spot.alias) Shell.notice(null);
-    const hs = first && f.isSequence && location.hash.match(/^#step-(\d+)$/);
-    if (hs) Walk.go(+hs[1] - 1);
+    } else if (!Spot.alias && Path.mode === 'all') Shell.notice(null);
+    if (first && f.isSequence && this.hashStep > 0) Walk.go(this.hashStep - 1);
   },
   updateCodeCount() {
     const c = el.codeCount;
@@ -312,6 +338,12 @@ const App = {
     el.dimBtn.setAttribute('aria-pressed', on);
     Hl.apply(S.cur);
   },
+  setBands(on) {
+    S.settings.bands = on;
+    saveSettings();
+    el.bandBtn.setAttribute('aria-pressed', on);
+    Hl.apply(S.cur);
+  },
   setGrid(on) {
     S.settings.grid = on;
     saveSettings();
@@ -324,7 +356,7 @@ const App = {
     if (!f?.isSequence) { Shell.toast('The fix-prompt works with sequence diagrams'); return; }
     const missing = f.steps.filter((s) => !s.explain);
     const other = f.lint.filter((l) => l.code !== 'no-step');
-    const text = `Use the sequence-walkthrough skill in update mode on this Mermaid sequence diagram ("${f.title}").
+    const text = `Use the sequence-walkthrough skill in update mode on this Mermaid sequence diagram ("${f.title}", format ${VERSION.spec}).
 Keep every arrow, label and the arrow order exactly as they are. Only add or fix annotations.
 
 ${missing.length ? `Add a %% @step line (what happens and why, 1-2 sentences) directly above these arrows:\n${missing.map((s) => `- Step ${s.n}, line ${s.line + 1}: ${route(s)}: ${s.label.join(' / ')}`).join('\n')}\n` : 'Every arrow already has a @step.\n'}${other.length ? `\nAlso fix these notes from the viewer:\n${other.map((l) => `- Line ${l.line + 1}: ${l.msg}`).join('\n')}\n` : ''}
@@ -342,6 +374,7 @@ ${el.code.value}
     el.themeSel2.value = S.settings.theme;
     this.setWheel(S.settings.wheel);
     el.dimBtn.setAttribute('aria-pressed', !!S.settings.dim);
+    el.bandBtn.setAttribute('aria-pressed', S.settings.bands !== false);
     el.canvas.classList.toggle('grid', S.settings.grid !== false);
     el.gridBtn.setAttribute('aria-pressed', S.settings.grid !== false);
     el.speedSel.value = String(S.settings.speed);
@@ -349,13 +382,18 @@ ${el.code.value}
     for (const part of ['top', 'bar']) if (S.settings.fold?.[part]) Shell.setFold(part, true);
     Editor.init();
     bindUI();
-    // Initial code: link fragment, then autosave, then the example flow
+    // Initial code: link fragment, then autosave, then the example flow.
+    // The fragment may hold `z.<code>`, `pako:<mermaid.live state>` and `step=N`, joined with `&`.
     let code = Store.get('swv:code', null);
     let fromHash = false;
-    const h = location.hash;
+    const parts = location.hash.replace(/^#/, '').split('&');
+    const stepPart = parts.find((p) => /^step[=-]\d+$/.test(p));
+    this.hashStep = stepPart ? parseInt(stepPart.slice(5), 10) : 0;
+    const z = parts.find((p) => p.startsWith('z.'));
+    const live = parts.find((p) => /^(pako|base64):/.test(p));
     try {
-      if (h.startsWith('#z.')) { code = await Codec.inflate(Codec.unb64(h.slice(3))); fromHash = true; }
-      else if (/^#(pako|base64):/.test(h)) { code = (await Codec.fromLive('https://mermaid.live/edit' + h)).code; fromHash = true; }
+      if (z) { code = await Codec.inflate(Codec.unb64(z.slice(2))); fromHash = true; }
+      else if (live) { code = (await Codec.fromLive('https://mermaid.live/edit#' + live)).code; fromHash = true; }
     } catch { Shell.toast('The code in this link could not be read, so the saved code is shown'); }
     if (!code || !code.trim()) code = SAMPLE;
     Editor.setCode(code, { render: false });
@@ -412,6 +450,8 @@ function bindUI() {
       else if (act === 'live-open') await Exporter.liveOpen();
       else if (act === 'live-copy') await Exporter.liveCopy();
       else if (act === 'share') await Exporter.share();
+      else if (act === 'share-step') await Exporter.share(true);
+      else if (act === 'ai') Ask.settingsModal();
       else if (act === 'skill') await Exporter.skillKit();
       else if (act === 'import') Modal.importer();
       else if (act === 'open-file') document.getElementById('fileInput').click();
@@ -423,6 +463,8 @@ function bindUI() {
     const a = b.dataset.more;
     Shell.closeMenus();
     if (a === 'guide') Modal.guide();
+    else if (a === 'insight') Insight.toggle();
+    else if (a === 'ai') Ask.settingsModal();
     else if (a === 'view') Shell.setView(S.view === 'table' ? 'diagram' : 'table');
     else if (a === 'find') Find.open();
     else if (a === 'fit') Camera.fitWidth();
@@ -450,6 +492,15 @@ function bindUI() {
   on('playBtn', 'click', () => Play.toggle());
   on('speedSel', 'change', (e) => { S.settings.speed = +e.target.value; saveSettings(); if (S.playing) Play.schedule(); });
   on('dimBtn', 'click', () => App.setDim(!S.settings.dim));
+  on('bandBtn', 'click', () => App.setBands(!S.settings.bands));
+  on('insightBtn', 'click', () => Insight.toggle());
+  on('insightClose', 'click', () => Insight.toggle(false));
+  el.insightPanel.addEventListener('click', (ev) => Insight.click(ev));
+  el.insightPanel.addEventListener('submit', (ev) => Insight.submit(ev));
+  on('behindBtn', 'click', () => (BehindPop.node ? BehindPop.close() : BehindPop.open()));
+  on('pathSel', 'change', (e) => Path.set(e.target.value));
+  el.progress.addEventListener('click', (ev) => { const b = ev.target.closest('[data-sec]'); if (b) Chapters.jump(+b.dataset.sec); });
+  el.presentCard.addEventListener('click', (ev) => { if (ev.target.closest('[data-leave]')) Presenter.toggle(false); });
   on('hideBtn', 'click', () => Shell.setHide(true));
   on('showCtrls', 'click', () => Shell.setHide(false));
   on('gridBtn', 'click', () => App.setGrid(!S.settings.grid));
@@ -469,24 +520,49 @@ function bindUI() {
     c.addEventListener('click', () => { if (c.dataset.step != null && !c.classList.contains('empty')) Walk.go(+c.dataset.step); });
     c.addEventListener('keydown', (ev) => { if ((ev.key === 'Enter' || ev.key === ' ') && !c.classList.contains('empty')) { ev.preventDefault(); Walk.go(+c.dataset.step); } });
   }
-  el.chapters.addEventListener('click', (ev) => { const b = ev.target.closest('[data-sec]'); if (b) Chapters.jump(+b.dataset.sec); });
+  el.chapters.addEventListener('click', (ev) => {
+    if (ev.target.closest('#lockBtn')) { Chapters.toggleLock(); return; }
+    const b = ev.target.closest('[data-sec]');
+    if (b) Chapters.jump(+b.dataset.sec);
+  });
   el.followStrip.addEventListener('click', (ev) => {
     const b = ev.target.closest('button');
     if (!b) return;
     if (b.dataset.go) Walk.go(+b.dataset.go);
     else if (b.dataset.fol === 'next') Follow.next();
     else if (b.dataset.fol === 'prev') Follow.prev();
+    else if (b.dataset.fol === 'ask') Ask.term(Follow.display);
     else if (b.dataset.fol === 'clear') Follow.clear();
   });
-  el.cardCur.addEventListener('click', (ev) => { const t = ev.target.closest('.tok'); if (t) Follow.start(t.dataset.tok); });
+  // The centre card: step links, reply chips, layer pills, glossary terms, Follow tokens and the Ask panel.
+  el.cardCur.addEventListener('click', (ev) => {
+    if (Ask.click(ev)) return;
+    const go = ev.target.closest('[data-go]');
+    if (go) { Walk.go(+go.dataset.go); return; }
+    const spot = ev.target.closest('[data-spot]');
+    if (spot) { Spot.toggle(spot.dataset.spot); return; }
+    const open = ev.target.closest('[data-open]');
+    if (open) { Insight.show(open.dataset.open); return; }
+    const term = ev.target.closest('.term');
+    if (term) { TermPop.open(term.dataset.term, ev.clientX, ev.clientY); return; }
+    const t = ev.target.closest('.tok');
+    if (t) Follow.start(t.dataset.tok);
+  });
+  el.cardCur.addEventListener('submit', (ev) => Ask.submit(ev));
   el.bmBtn.addEventListener('click', () => (BmPop.node ? BmPop.close() : BmPop.open()));
   document.addEventListener('click', (ev) => {
     if (BmPop.node && BmPop.node.contains(ev.target)) { BmPop.click(ev); return; }
     if (BmPop.node && !el.bmBtn.contains(ev.target)) BmPop.close();
+    if (BehindPop.node && BehindPop.node.contains(ev.target)) { BehindPop.click(ev); return; }
+    if (BehindPop.node && !el.behindBtn.contains(ev.target)) BehindPop.close();
+    if (TermPop.node && TermPop.node.contains(ev.target)) { TermPop.click(ev); return; }
+    if (TermPop.node && !ev.target.closest('.term')) TermPop.close();
     if (Ctx.node && !Ctx.node.contains(ev.target)) Ctx.close();
     if (!ev.target.closest('.menu-wrap') && (!el.exportMenu.hidden || !el.moreMenu.hidden)) Shell.closeMenus();
-    const sc = ev.target.closest('[data-act="spot-clear"]');
-    if (sc) Spot.clear();
+    if (ev.target.closest('[data-act="spot-clear"]')) Spot.clear();
+    if (ev.target.closest('[data-act="path-clear"]')) Path.set('all');
+    const term = !el.cardCur.contains(ev.target) && ev.target.closest('.term');
+    if (term) TermPop.open(term.dataset.term, ev.clientX, ev.clientY);
   });
   // Files
   document.getElementById('fileInput').addEventListener('change', (ev) => { Importer.fromFile(ev.target.files[0]); ev.target.value = ''; });
@@ -651,6 +727,8 @@ function bindKeys() {
       h: () => Shell.setHide(!S.hide), H: () => Shell.setHide(!S.hide),
       c: () => Shell.setCode(!S.codeOpen), C: () => Shell.setCode(!S.codeOpen),
       b: () => Notes.toggleStar(), B: () => Notes.toggleStar(), n: () => Walk.toggleNote(), N: () => Walk.toggleNote(),
+      a: () => Ask.toggle(), A: () => Ask.toggle(), i: () => Insight.toggle(), I: () => Insight.toggle(),
+      k: () => Chapters.toggleLock(), K: () => Chapters.toggleLock(), p: () => Presenter.toggle(), P: () => Presenter.toggle(),
       '/': () => Find.open(), '?': () => Modal.help(),
     };
     const fn = map[k];
@@ -662,5 +740,5 @@ function bindKeys() {
   });
 }
 
-window.SWV = { S, App, Walk, Camera, Notes, Follow, Find, Spot, Table, Exporter, Codec, Importer, Editor, Renderer, Shell, Chapters, Header, Play, Annotations, buildFlow, mermaidLineToCode };
+window.SWV = { S, App, Walk, Camera, Notes, Follow, Find, Spot, Table, Exporter, Codec, Importer, Editor, Renderer, Shell, Chapters, Header, Play, Annotations, buildFlow, mermaidLineToCode, Path, Progress, Presenter, Insight, Glossary, Ask, BehindPop };
 App.init();

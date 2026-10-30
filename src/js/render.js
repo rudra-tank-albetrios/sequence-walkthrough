@@ -3,18 +3,19 @@ const S = {
   code: '', ann: null, flow: null, svg: null, cleanSvg: '', svgId: '', vb: null, W: 0, H: 0,
   geo: null, dom: [], cur: -1, view: 'diagram', renderSeq: 0, rendered: false, error: null,
   themeBg: '#ffffff', themeDark: false,
-  settings: Object.assign({ theme: 'redux-color', wheel: 'scroll', dim: false, grid: true, speed: 3000 }, Store.get('swv:settings', {})),
-  codeOpen: false, hide: false, noteOpen: false, playing: false, enteredFs: false,
+  settings: Object.assign({ theme: 'redux-color', wheel: 'scroll', dim: false, grid: true, speed: 3000, bands: true }, Store.get('swv:settings', {})),
+  codeOpen: false, hide: false, noteOpen: false, playing: false, enteredFs: false, chapterLock: false, insightOpen: false,
 };
 const saveSettings = () => Store.set('swv:settings', S.settings);
 
 const el = {};
-['app', 'topbar', 'flowName', 'flowMeta', 'canvas', 'layer', 'hdrBand', 'hdrLayer', 'loading', 'notice', 'errBadge',
-  'codeBtn', 'codeCount', 'playBtn', 'playIcon', 'playLbl', 'speedSel', 'dimBtn', 'hideBtn', 'showCtrls', 'tip', 'codePanel',
+['app', 'topbar', 'flowName', 'flowMeta', 'flowBadge', 'canvas', 'layer', 'hdrBand', 'hdrLayer', 'loading', 'notice', 'errBadge',
+  'codeBtn', 'codeCount', 'playBtn', 'playIcon', 'playLbl', 'speedSel', 'dimBtn', 'bandBtn', 'hideBtn', 'showCtrls', 'tip', 'codePanel',
   'gutter', 'edHl', 'code', 'edStatus', 'lintList', 'tableView', 'tvBody', 'tvScroll', 'tv', 'chapters', 'followStrip', 'bmBtn',
   'cards', 'cardPrev', 'cardCur', 'cardNext', 'prevBtn', 'nextBtn', 'live', 'zoomPct', 'wheelBtn', 'themeSel', 'themeSel2',
   'viewDiagram', 'viewTable', 'findPop', 'findInput', 'findCount', 'exportBtn', 'exportMenu', 'moreBtn', 'moreMenu', 'gridBtn',
-  'wbar', 'edgeTop', 'edgeBottom', 'edgeLeft',
+  'wbar', 'edgeTop', 'edgeBottom', 'edgeLeft', 'progress', 'pathSel', 'behindBtn', 'presentCard',
+  'insightBtn', 'insightPanel', 'insightTabs', 'insightBody', 'insightClose',
 ].forEach((id) => { el[id] = document.getElementById(id); });
 
 /* ===================== Fonts ===================== */
@@ -547,9 +548,21 @@ const Hl = {
     const svg = S.svg;
     if (!svg || !S.flow?.isSequence) return;
     svg.classList.toggle('swv-dim', !!S.settings.dim && i >= 0);
+    this.chapter(i);
     const d = S.dom[i];
     if (!d) { Header.setActive(null); return; }
     const dark = S.themeDark;
+    // Dashed rings on the steps paired with this one: the replies of a request, or the request a reply answers.
+    const s0 = S.flow.steps[i];
+    const paired = s0.kind === 'reply' && s0.answers >= 0 ? [s0.answers] : s0.replies;
+    for (const j of paired) {
+      const pd = S.dom[j];
+      if (!pd) continue;
+      const pc = pd.num ? localCenter(pd.num) : lineStart(pd.line);
+      const ring = svgEl('circle', { class: 'swv-pair', cx: pc.x, cy: pc.y, r: 16, style: 'fill: none; stroke: #f0b400; stroke-width: 2px; stroke-dasharray: 4 3; pointer-events: none' });
+      (pd.num || pd.line).after(ring);
+      this.overlays.push(ring);
+    }
     // Marker stroke under the arrow
     const mk = d.line.cloneNode(false);
     ['class', 'marker-end', 'marker-start', 'id', 'data-step'].forEach((a) => mk.removeAttribute(a));
@@ -578,11 +591,46 @@ const Hl = {
     const s = S.flow.steps[i];
     Header.setActive([s.from, s.to]);
   },
-  /** Blue rings (Follow), stars (bookmarks) and spotlight fading. */
+  /** A light band in the chapter's colour behind the arrows of the current chapter, with start and end markers.
+   *  Arrows of the other chapters fade a little, so the chapter's first, middle and last steps stand out. */
+  chapter(i) {
+    const svg = S.svg;
+    svg.querySelectorAll('.swv-band, .swv-band-label').forEach((n) => n.remove());
+    const f = S.flow;
+    const s = f.steps[i];
+    const sec = s && f.sections.length && S.settings.bands ? f.sections[s.section] : null;
+    svg.classList.toggle('swv-chap', !!sec);
+    for (const [k, d] of S.dom.entries()) {
+      const out = !!sec && f.steps[k].section !== sec.idx;
+      for (const e of [d.line, ...d.texts, d.num]) if (e) e.classList.toggle('swv-outch', out);
+    }
+    if (!sec) return;
+    const boxes = S.dom.slice(sec.firstStep, sec.firstStep + sec.count).map((d) => d.box).filter(Boolean);
+    if (!boxes.length) return;
+    const y0 = Math.min(...boxes.map((b) => b.y)) - 6, y1 = Math.max(...boxes.map((b) => b.y + b.h)) + 6;
+    const vb = S.vb;
+    const dark = S.themeDark;
+    const fill = dark ? `hsl(${sec.hue} 45% 28%)` : `hsl(${sec.hue} 85% 90%)`;
+    const ink = dark ? `hsl(${sec.hue} 70% 80%)` : `hsl(${sec.hue} 60% 32%)`;
+    const band = svgEl('rect', { class: 'swv-band', x: vb.x, y: vb.y + y0, width: vb.w, height: y1 - y0, rx: 6, style: `fill: ${fill}; fill-opacity: ${dark ? 0.55 : 0.6}; pointer-events: none` });
+    const edge = svgEl('rect', { class: 'swv-band', x: vb.x + 2, y: vb.y + y0, width: 4, height: y1 - y0, rx: 2, style: `fill: ${ink}; fill-opacity: .8; pointer-events: none` });
+    const label = (txt, y, anchor) => {
+      const t = svgEl('text', { class: 'swv-band-label', x: vb.x + 12, y, style: `font: 600 11px Recursive, sans-serif; fill: ${ink}; pointer-events: none; dominant-baseline: ${anchor}` });
+      t.textContent = txt;
+      return t;
+    };
+    const first = svg.querySelector(':scope > :not(style):not(defs)');
+    (first || svg).before(band);
+    band.after(edge);
+    svg.appendChild(label(`▶ ${sec.name} · ${sec.count === 1 ? '1 step' : sec.count + ' steps'}`, vb.y + y0 + 4, 'hanging'));
+    if (y1 - y0 > 40) svg.appendChild(label(`■ end of ${sec.name}`, vb.y + y1 - 5, 'auto'));
+  },
+  /** Blue rings (Follow), stars (bookmarks), spotlight and path fading, trust boundaries. */
   decorate() {
     const svg = S.svg;
     if (!svg || !S.flow?.isSequence) return;
     svg.querySelectorAll('.swv-follow, .swv-star').forEach((n) => n.remove());
+    this.boundaries();
     const follow = new Set(Follow.hits);
     for (const [i, d] of S.dom.entries()) {
       const c = d.num ? localCenter(d.num) : lineStart(d.line);
@@ -598,10 +646,31 @@ const Hl = {
     }
     const spot = Spot.alias;
     svg.classList.toggle('swv-spot', !!spot);
+    svg.classList.toggle('swv-path', Path.mode !== 'all');
     for (const [i, d] of S.dom.entries()) {
       const s = S.flow.steps[i];
       const out = !!spot && s.from !== spot && s.to !== spot;
-      for (const e of [d.line, ...d.texts, d.num]) if (e) e.classList.toggle('swv-out', out);
+      const off = !Path.visible(s);
+      for (const e of [d.line, ...d.texts, d.num, d.hitLine, d.hitLabel]) if (e) { e.classList.toggle('swv-out', out); e.classList.toggle('swv-off', off); }
+    }
+  },
+  /** Dotted vertical lines where neighbouring layers sit in different trust zones (needs kind= on the layers). */
+  boundaries() {
+    const svg = S.svg;
+    svg.querySelectorAll('.swv-boundary').forEach((n) => n.remove());
+    const f = S.flow, g = S.geo;
+    if (!g || !f.boundaries.length) return;
+    const dark = S.themeDark;
+    for (const b of f.boundaries) {
+      const L = g.actors[b.left]?.top, R = g.actors[b.right]?.top;
+      if (!L || !R) continue;
+      const x = S.vb.x + (L.x + L.w + R.x) / 2;
+      const y0 = S.vb.y + g.rowBottom + 4, y1 = S.vb.y + g.bottomTop - 4;
+      const line = svgEl('line', { class: 'swv-boundary', x1: x, y1: y0, x2: x, y2: y1, style: `stroke: ${dark ? '#9aa4b8' : '#6b7486'}; stroke-width: 1.5px; stroke-dasharray: 3 6; opacity: .7; pointer-events: none` });
+      const t = svgEl('text', { class: 'swv-boundary', x: x + 4, y: y0 + 12, style: `font: 600 10px Recursive, sans-serif; fill: ${dark ? '#9aa4b8' : '#6b7486'}; pointer-events: none` });
+      t.textContent = `${b.from} │ ${b.to}`;
+      svg.appendChild(line);
+      svg.appendChild(t);
     }
   },
 };
@@ -611,7 +680,7 @@ const Tip = {
   show(alias, x, y) {
     const l = S.flow?.layers[alias];
     if (!l) return;
-    el.tip.innerHTML = `<b>${esc(l.name)}</b>${l.desc ? esc(l.desc) : '<span style="opacity:.7">No @layer description yet</span>'}<div style="opacity:.7;margin-top:4px">Click to show only its arrows</div>`;
+    el.tip.innerHTML = `<b>${l.icon ? l.icon + ' ' : ''}${esc(l.name)}${l.kind ? ` <span class="tip-kind">${esc(l.kind)}</span>` : ''}</b>${l.desc ? esc(l.desc) : '<span style="opacity:.7">No @layer description yet</span>'}<div style="opacity:.7;margin-top:4px">Click to show only its arrows</div>`;
     el.tip.hidden = false;
     const r = el.canvas.getBoundingClientRect();
     const tw = el.tip.offsetWidth, th = el.tip.offsetHeight;
