@@ -20,10 +20,6 @@
     "exactOptionalPropertyTypes": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "esModuleInterop": true,
-    "paths": {
-      "@swv/core": ["./packages/core/src/index.ts"],
-      "@swv/ai": ["./packages/ai/src/index.ts"]
-    }
+    "esModuleInterop": true
   }
 }

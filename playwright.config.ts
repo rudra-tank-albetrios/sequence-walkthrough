@@ -3,6 +3,18 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = 4173;
 const CI = Boolean(process.env.CI);
 
+// Every project runs in CI. Locally, SWV_E2E_PROJECTS=chromium,webkit,phone limits the run when a
+// browser cannot start on the machine (docs/decisions.md). CI ignores the variable.
+const projectFilter = CI
+  ? null
+  : process.env.SWV_E2E_PROJECTS?.split(',').map((name) => name.trim());
+const allProjects = [
+  { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+  { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+  { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+  { name: 'phone', use: { ...devices['Pixel 7'] } },
+];
+
 // Browser tests for the web app. `npm run build` must have run first: the built site is served
 // with `vite preview`, which is also how the hosted site behaves.
 export default defineConfig({
@@ -17,12 +29,9 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${PORT}`,
     trace: 'retain-on-failure',
   },
-  projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
-    { name: 'phone', use: { ...devices['Pixel 7'] } },
-  ],
+  projects: projectFilter
+    ? allProjects.filter((project) => projectFilter.includes(project.name))
+    : allProjects,
   webServer: {
     command: `npm run -w @swv/web preview -- --host 127.0.0.1 --port ${PORT} --strictPort`,
     url: `http://127.0.0.1:${PORT}`,

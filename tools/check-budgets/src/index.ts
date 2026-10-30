@@ -2,7 +2,7 @@
 //   node tools/check-budgets/src/index.ts
 // Exit code 1 when any budget is broken or a measured file is missing.
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
 
 import { readJsonList, repoRoot } from '@swv/tool-kit';
@@ -54,7 +54,7 @@ function measure(budget: Budget): Result {
       const sizes = scripts.map((file) => ({ file, gzip: gzipSize(file) }));
       const total = sizes.reduce((sum, item) => sum + item.gzip, 0);
       const detail = sizes
-        .map((item) => `${item.file.slice(dirname(html).length + 1)} ${kb(item.gzip)}`)
+        .map((item) => `${relative(dirname(html), item.file).replaceAll('\\', '/')} ${kb(item.gzip)}`)
         .join(', ');
       return { name: budget.name, measured: total, limit: budget.maxBytesGzip, unit: 'B', ok: total <= budget.maxBytesGzip, detail };
     }

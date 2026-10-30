@@ -3,7 +3,7 @@
 //   node tools/check-refs/src/index.ts
 // refs.json lists each flow file and the project root its links are relative to.
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { isAbsolute, relative, resolve } from 'node:path';
 
 import { readJsonList, repoRoot } from '@swv/tool-kit';
 
@@ -20,7 +20,20 @@ interface Problem {
 }
 
 // A code link is `path/to/file.ext:line` or `path/to/file.ext:from-to`, anywhere in a `%%` comment.
-const CODE_LINK = /(?<![\w/.:-])((?:[\w.-]+\/)*[\w.-]+\.[a-z]{1,5}):(\d+)(?:-(\d+))?(?![\w/])/g;
+// Only source-file extensions count, so `api.example.com:443` in a sentence is not read as a link.
+const SOURCE_EXTENSIONS =
+  'ts|tsx|mts|cts|js|jsx|mjs|cjs|vue|svelte|py|go|rs|java|kt|rb|php|cs|swift|dart|scala|ex|exs|' +
+  'css|scss|html|json|ya?ml|toml|env|sql|prisma|graphql|proto|md|txt|sh|ps1';
+const CODE_LINK = new RegExp(
+  String.raw`(?<![\w/.:-])((?:[\w.-]+/)*[\w.-]+\.(?:${SOURCE_EXTENSIONS})):(\d+)(?:-(\d+))?(?![\w/])`,
+  'g',
+);
+
+/** True when `target` is inside `root` (both absolute), without the prefix trap of startsWith. */
+function isInside(root: string, target: string): boolean {
+  const rel = relative(root, target);
+  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
+}
 
 const root = repoRoot;
 
@@ -53,7 +66,7 @@ function checkFlow(flow: FlowConfig): { links: number; problems: Problem[] } {
       const [link, file = '', from = '0', to] = match;
       links += 1;
       const target = resolve(projectRoot, file);
-      if (!target.startsWith(projectRoot)) {
+      if (!isInside(projectRoot, target)) {
         problems.push({ flow: flow.file, line: index + 1, link, reason: 'points outside the project' });
         continue;
       }

@@ -23,7 +23,16 @@ const rawHtmlSyntax = [
     message: `Raw HTML is allowed only in ${SANITISED_HTML_COMPONENT}, after DOMPurify.`,
   },
   {
-    selector: 'CallExpression[callee.property.name="insertAdjacentHTML"]',
+    selector:
+      'CallExpression[callee.property.name=/^(insertAdjacentHTML|write|writeln|createContextualFragment)$/]',
+    message: `Raw HTML is allowed only in ${SANITISED_HTML_COMPONENT}, after DOMPurify.`,
+  },
+  {
+    selector: 'AssignmentExpression > MemberExpression.left[property.name="srcdoc"]',
+    message: `Raw HTML is allowed only in ${SANITISED_HTML_COMPONENT}, after DOMPurify.`,
+  },
+  {
+    selector: 'JSXAttribute[name.name="srcDoc"]',
     message: `Raw HTML is allowed only in ${SANITISED_HTML_COMPONENT}, after DOMPurify.`,
   },
   { selector: 'CallExpression[callee.name="eval"]', message: 'eval is not allowed.' },

@@ -77,6 +77,8 @@ module.exports = {
           '\\.test\\.(ts|tsx)$',
           // Loaded by the Vitest config, not imported
           '/src/test/setup\\.ts$',
+          // Package entry points are imported from outside the package
+          '^(packages|tools)/[^/]+/src/index\\.ts$',
         ],
       },
       to: {},
