@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
 import { base64url, deflate, fromBase64url, inflate, liveLink, parseHash, shareFragment } from './codec.ts';
