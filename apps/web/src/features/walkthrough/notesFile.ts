@@ -2,7 +2,7 @@ import type { Flow } from '@swv/core';
 
 import { saveFile } from '../../shared/lib/files.ts';
 import { fileName } from '../../shared/lib/util.ts';
-import type { NoteEntry, NotesData } from '../../shared/storage/notes.ts';
+import { toNoteEntry, type NotesData } from '../../shared/storage/notes.ts';
 
 /** The `swv-notes/1` file version 2 wrote and reads back. */
 export interface NotesFile {
@@ -26,19 +26,6 @@ export function exportNotes(flow: Flow, id: string, notes: NotesData): Promise<v
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-function toEntry(value: unknown): NoteEntry | null {
-  if (!isRecord(value)) return null;
-  const entry: NoteEntry = {
-    star: value.star === true,
-    note: typeof value.note === 'string' ? value.note : '',
-  };
-  if (typeof value.n === 'number') entry.n = value.n;
-  if (typeof value.route === 'string') entry.route = value.route;
-  if (typeof value.label === 'string') entry.label = value.label;
-  if (typeof value.updated === 'string') entry.updated = value.updated;
-  return entry;
-}
-
 /**
  * Merges the notes of an exported file into the current set: an entry wins when its `updated`
  * stamp is newer. Returns the merged set and how many entries were written.
@@ -49,8 +36,8 @@ export function importNotes(text: string, current: NotesData): { data: NotesData
   const data: NotesData = { ...current };
   let count = 0;
   for (const [key, raw] of Object.entries(parsed.notes)) {
-    const entry = toEntry(raw);
-    if (!entry) continue;
+    const entry = toNoteEntry(raw);
+    if (!entry || key === '__proto__') continue;
     const existing = data[key];
     if (!existing || (entry.updated ?? '') > (existing.updated ?? '')) {
       data[key] = entry;

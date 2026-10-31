@@ -14,7 +14,10 @@ type Cache = Record<string, CacheEntry>;
 
 export const cacheHash = (provider: string, user: string): string => hashStr(`${provider}|${user}`);
 
-const read = (): Cache => Store.get<Cache>(AI_CACHE_KEY, {});
+const read = (): Cache => {
+  const stored = Store.get<unknown>(AI_CACHE_KEY, null);
+  return typeof stored === 'object' && stored !== null ? (stored as Cache) : {};
+};
 
 /** The saved answer for this provider and message, or null. Holds no key and no context. */
 export function readCached(provider: string, user: string): string | null {
