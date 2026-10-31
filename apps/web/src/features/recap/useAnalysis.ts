@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { callModel, REPLY_TOKENS } from '@swv/ai';
 
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import type { WeakPoint } from '../../shared/storage/weakPoints.ts';
 import { toast } from '../../shared/ui/toast.ts';
 import { buildRecapPrompt, groupsFromReply, RECAP_SYSTEM, RecapReplySchema } from './analysis.ts';
-import { callModel, REPLY_TOKENS } from './recapModel.ts';
 import {
   isCurrent,
   liveGroups,

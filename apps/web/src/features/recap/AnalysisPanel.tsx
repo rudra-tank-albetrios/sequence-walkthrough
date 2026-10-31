@@ -1,11 +1,11 @@
 import { useId, type ReactNode } from 'react';
+import { hasUsableModel } from '@swv/ai';
 
 import type { WeakPoint } from '../../shared/storage/weakPoints.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Chip } from '../../shared/ui/Chip.tsx';
 import type { AnalysisGroup } from './analysis.ts';
-import { hasUsableModel } from './recapModel.ts';
 import { liveGroups, type SavedAnalysis } from './savedAnalysis.ts';
 import styles from './recap.module.css';
 import { useAnalysis, type AnalysisView } from './useAnalysis.ts';

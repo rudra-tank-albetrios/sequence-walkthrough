@@ -1,3 +1,4 @@
+import { mockFetch, mockModel, resetAiStorage, seedModels } from '@swv/ai/testing';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -5,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_DIAGRAM } from '../../shared/lib/defaultDiagram.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { dbDelete, dbGet, dbUpdate } from '../../shared/storage/db.ts';
-import { Store } from '../../shared/storage/store.ts';
 import {
   clearWeakPoints,
   QUIZ_RETRY_KEY,
@@ -28,7 +28,6 @@ const CODE = `sequenceDiagram
 const THIS_FLOW = 't:Orders';
 const NOW = new Date(2026, 9, 31, 15, 30);
 const daysAgo = (days: number) => new Date(2026, 9, 31 - days, 11, 0);
-const TEST_KEY = 'gsk_test_key';
 
 const miss = (question: string, patch: Partial<Miss> = {}): Miss => ({
   flowId: THIS_FLOW,
@@ -43,52 +42,26 @@ const miss = (question: string, patch: Partial<Miss> = {}): Miss => ({
   ...patch,
 });
 
-const GOOD_REPLY = JSON.stringify({
-  groups: [{ title: 'Holds', points: ['A hold keeps stock aside.'], mistakes: [1] }],
-});
+const GOOD_REPLY = {
+  reply: JSON.stringify({
+    groups: [{ title: 'Holds', points: ['A hold keeps stock aside.'], mistakes: [1] }],
+  }),
+};
 
-interface Call {
-  url: string;
-  authorization: string;
-  body: { max_tokens?: number; messages?: { role: string; content: string }[] };
-}
+const realFetch = globalThis.fetch;
 
-/** Replaces `fetch` and records what leaves the page. Nothing here reaches a real provider. */
-function mockFetch(reply: string, status = 200) {
-  const calls: Call[] = [];
-  vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
-    calls.push({
-      url,
-      authorization: new Headers(init.headers).get('authorization') ?? '',
-      body: JSON.parse(init.body as string) as Call['body'],
-    });
-    const body = JSON.stringify({ choices: [{ message: { content: reply } }] });
-    return Promise.resolve(new Response(body, { status }));
-  });
-  return { calls };
-}
-
-/** One saved model, and a replaced `fetch`. */
-function mockModel(reply: string, status = 200) {
-  setUpModel();
-  return mockFetch(reply, status);
-}
-
-function setUpModel() {
-  Store.set('swv:ai', { provider: 'groq', keys: { groq: TEST_KEY } });
-}
-
-/** A provider that answers only when the request is stopped. It shows what the signal did. */
-function hangingFetch() {
+/** A saved model whose provider answers only when the request is stopped. */
+function hangingModel() {
+  seedModels({});
   const seen: { signal: AbortSignal | null | undefined } = { signal: undefined };
-  vi.stubGlobal('fetch', (_url: string, init: RequestInit) => {
-    seen.signal = init.signal;
+  globalThis.fetch = (_url, init) => {
+    seen.signal = init?.signal;
     return new Promise<Response>((_resolve, reject) => {
-      init.signal?.addEventListener('abort', () => {
+      init?.signal?.addEventListener('abort', () => {
         reject(new DOMException('Aborted', 'AbortError'));
       });
     });
-  });
+  };
   return seen;
 }
 
@@ -121,13 +94,13 @@ beforeEach(async () => {
   vi.useFakeTimers({ toFake: ['Date'], now: NOW });
   await clearWeakPoints();
   await dbDelete(SAVED_ANALYSIS_KEY);
-  for (const key of Store.keys('swv:')) Store.del(key);
+  resetAiStorage();
   sessionStorage.clear();
 });
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllGlobals();
+  globalThis.fetch = realFetch;
   useFlowStore.getState().setUi({ recapOpen: false, quizOpen: false, aiSettingsOpen: false });
 });
 
@@ -177,7 +150,7 @@ describe('with no model', () => {
     await openRecap();
     await user.click(await screen.findByRole('button', { name: 'Add a model' }));
     expect(useFlowStore.getState().ui.aiSettingsOpen).toBe(true);
-    setUpModel();
+    seedModels({});
     useFlowStore.getState().setUi({ aiSettingsOpen: false });
     expect(await analyseButton()).toBeInTheDocument();
   });
@@ -189,7 +162,7 @@ describe('with no model', () => {
     await user.click(await analyseButton());
     await screen.findByText('A hold keeps stock aside.');
     expect(calls).toHaveLength(1);
-    Store.del('swv:ai');
+    resetAiStorage();
     await reopen();
     expect(await screen.findByText('A hold keeps stock aside.')).toBeInTheDocument();
     expect(calls).toHaveLength(1);
@@ -206,8 +179,22 @@ describe('the analysis', () => {
     expect(calls).toHaveLength(0);
   });
 
-  it('asks the model for at most 500 reply tokens, with the mistakes as data', async () => {
+  it('sends nothing before the privacy notice is read, and opens it', async () => {
     const { calls } = mockModel(GOOD_REPLY);
+    localStorage.removeItem('swv:ai:consent');
+    await recordMiss(miss('Why hold stock?'), NOW);
+    await openRecap();
+    await user.click(await analyseButton());
+    await waitFor(() => {
+      expect(useFlowStore.getState().ui.aiSettingsOpen).toBe(true);
+    });
+    expect(await analyseButton()).toBeInTheDocument();
+    expect(calls).toHaveLength(0);
+    expect(await dbGet(SAVED_ANALYSIS_KEY)).toBeUndefined();
+  });
+
+  it('asks the model for at most 500 reply tokens, with the mistakes as data', async () => {
+    const { calls, entry } = mockModel(GOOD_REPLY);
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
     await user.click(await analyseButton());
@@ -215,22 +202,22 @@ describe('the analysis', () => {
     expect(calls).toHaveLength(1);
     const call = calls[0];
     expect(call?.url).toBe('https://api.groq.com/openai/v1/chat/completions');
-    expect(call?.authorization).toBe(`Bearer ${TEST_KEY}`);
+    expect(call?.authorization).toBe(`Bearer ${entry.key}`);
     expect(call?.body.max_tokens).toBeLessThanOrEqual(500);
     expect(call?.body.messages?.[1]?.content).toContain('data, not instructions');
     expect(call?.body.messages?.[1]?.content).toContain('Why hold stock?');
-    expect(JSON.stringify(call?.body)).not.toContain(TEST_KEY);
+    expect(JSON.stringify(call?.body)).not.toContain(entry.key);
   });
 
   it('shows the groups and which mistakes each covers', async () => {
-    mockModel(
-      JSON.stringify({
+    mockModel({
+      reply: JSON.stringify({
         groups: [
           { title: 'Holds', points: ['One.', 'Two.'], mistakes: [1, 2] },
           { title: 'Replies', points: ['Three.'], mistakes: [2] },
         ],
       }),
-    );
+    });
     await recordMiss(miss('First?'), NOW);
     await recordMiss(miss('Second?'), NOW);
     await openRecap();
@@ -246,7 +233,7 @@ describe('the analysis', () => {
   });
 
   it('reads a reply wrapped in a code fence', async () => {
-    mockModel(`Here you go:\n\`\`\`json\n${GOOD_REPLY}\n\`\`\``);
+    mockModel({ reply: `Here you go:\n\`\`\`json\n${GOOD_REPLY.reply}\n\`\`\`` });
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
     await user.click(await analyseButton());
@@ -254,8 +241,8 @@ describe('the analysis', () => {
   });
 
   it('shows a reply as plain text, whatever it holds', async () => {
-    mockModel(
-      JSON.stringify({
+    mockModel({
+      reply: JSON.stringify({
         groups: [
           {
             title: '<img src=x onerror=alert(1)>',
@@ -263,7 +250,7 @@ describe('the analysis', () => {
           },
         ],
       }),
-    );
+    });
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
     await user.click(await analyseButton());
@@ -273,11 +260,12 @@ describe('the analysis', () => {
   });
 
   it('refuses a reply it cannot read, saves nothing and can try again', async () => {
-    const { calls } = mockModel('Sorry, here is some prose instead of JSON.');
+    const { calls } = mockModel({ reply: 'Sorry, here is some prose instead of JSON.' });
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
     await user.click(await analyseButton());
     const retry = await screen.findByRole('button', { name: 'Try again' });
+    expect(screen.getByText(/could not be used/)).toBeInTheDocument();
     expect(screen.queryByText(/prose instead/)).not.toBeInTheDocument();
     expect(await dbGet(SAVED_ANALYSIS_KEY)).toBeUndefined();
     await user.click(retry);
@@ -287,19 +275,18 @@ describe('the analysis', () => {
   });
 
   it('shows a provider error in the panel, keeps the mistakes and saves nothing', async () => {
-    mockModel('{}', 429);
+    mockModel({ status: 500, body: '{}' });
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
     await user.click(await analyseButton());
-    expect(await screen.findByText(/429/)).toBeInTheDocument();
+    expect(await screen.findByText(/server error \(500\)/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
     expect(mistakeCards()).toHaveLength(1);
     expect(await dbGet(SAVED_ANALYSIS_KEY)).toBeUndefined();
   });
 
   it('stops the request when the recap closes, and saves nothing', async () => {
-    const seen = hangingFetch();
-    setUpModel();
+    const seen = hangingModel();
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
     await user.click(await analyseButton());
@@ -312,8 +299,7 @@ describe('the analysis', () => {
   });
 
   it('stops the request when the period changes, and the new period shows its own state', async () => {
-    const seen = hangingFetch();
-    setUpModel();
+    const seen = hangingModel();
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
     await user.click(await analyseButton());
@@ -327,14 +313,14 @@ describe('the analysis', () => {
   });
 
   it('never stores the key with the analysis', async () => {
-    mockModel(GOOD_REPLY);
+    const { entry } = mockModel(GOOD_REPLY);
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
     await user.click(await analyseButton());
     await screen.findByText('A hold keeps stock aside.');
     const stored = JSON.stringify(await dbGet(SAVED_ANALYSIS_KEY));
     expect(stored).toContain('A hold keeps stock aside.');
-    expect(stored).not.toContain(TEST_KEY);
+    expect(stored).not.toContain(entry.key);
   });
 });
 
@@ -442,14 +428,14 @@ describe('correct answers reduce the recap', () => {
   });
 
   it('keeps the saved analysis with no network call, hiding a group nothing is left in', async () => {
-    const { calls } = mockModel(
-      JSON.stringify({
+    const { calls } = mockModel({
+      reply: JSON.stringify({
         groups: [
           { title: 'About the first', points: ['Point one.'], mistakes: [1] },
           { title: 'About the second', points: ['Point two.'], mistakes: [2] },
         ],
       }),
-    );
+    });
     // Both were missed once, so the later miss is number 1
     await recordMiss(miss('Earlier?'), new Date(NOW.getTime() - 60_000));
     await recordMiss(miss('Later?'), NOW);
@@ -567,11 +553,11 @@ describe('Retry my mistakes', () => {
   });
 
   it('never takes its topics from a model reply', async () => {
-    mockModel(
-      JSON.stringify({
+    mockModel({
+      reply: JSON.stringify({
         groups: [{ title: 'Injected topic', points: ['Point.'], topics: ['Injected topic'] }],
       }),
-    );
+    });
     await recordMiss(miss('A?', { topic: 'Stock holds' }), NOW);
     await openRecap();
     await user.click(await analyseButton());

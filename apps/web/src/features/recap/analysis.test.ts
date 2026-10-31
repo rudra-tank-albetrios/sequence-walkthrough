@@ -1,8 +1,8 @@
+import { estimateTokens, MAX_PROMPT_TOKENS } from '@swv/ai';
 import { describe, expect, it } from 'vitest';
 
 import type { WeakPoint } from '../../shared/storage/weakPoints.ts';
 import { buildRecapPrompt, groupsFromReply, RECAP_SYSTEM, RecapReplySchema } from './analysis.ts';
-import { REPLY_TOKENS } from './recapModel.ts';
 
 const mistake = (patch: Partial<WeakPoint> = {}): WeakPoint => ({
   id: 'm1',
@@ -21,10 +21,6 @@ const mistake = (patch: Partial<WeakPoint> = {}): WeakPoint => ({
 });
 
 describe('the recap prompt', () => {
-  it('stays inside the 500 reply token budget of plan section 5', () => {
-    expect(REPLY_TOKENS.recap).toBeLessThanOrEqual(500);
-  });
-
   it('holds each mistake in a block marked as data', () => {
     const { prompt, sentIds } = buildRecapPrompt([
       mistake(),
@@ -81,6 +77,7 @@ describe('the recap prompt', () => {
     expect(sentIds.length).toBeLessThan(many.length);
     expect(sentIds[0]).toBe('m0');
     expect(new TextEncoder().encode(prompt).length).toBeLessThanOrEqual(6100);
+    expect(estimateTokens(RECAP_SYSTEM) + estimateTokens(prompt)).toBeLessThan(MAX_PROMPT_TOKENS);
   });
 
   it('sends at most 20 mistakes even when they are short', () => {

@@ -30,6 +30,30 @@ interface Seed {
 
 const DAY_MS = 86_400_000;
 
+/** The little of IndexedDB these tests use in the page. This program has no DOM types. */
+interface IdbRequest<T> {
+  result: T;
+  onsuccess: (() => void) | null;
+  onerror: (() => void) | null;
+}
+interface IdbStore {
+  put: (value: unknown, key: string) => unknown;
+  get: (key: string) => IdbRequest<unknown>;
+}
+interface IdbTransaction {
+  objectStore: (name: string) => IdbStore;
+  oncomplete: (() => void) | null;
+  onerror: (() => void) | null;
+}
+interface IdbDatabase {
+  createObjectStore: (name: string) => unknown;
+  transaction: (store: string, mode?: string) => IdbTransaction;
+  close: () => void;
+}
+declare const indexedDB: {
+  open: (name: string) => IdbRequest<IdbDatabase> & { onupgradeneeded: (() => void) | null };
+};
+
 /** A record in the shape `shared/storage/weakPoints.ts` keeps, dated relative to this moment. */
 const weakPoint = ({ id, question, daysAgo = 0, ...rest }: Seed) => ({
   id,
@@ -103,6 +127,26 @@ async function expectAccessibleDialog(page: Page) {
   expect(results.violations).toEqual([]);
 }
 
+/** What the app's database holds under a key, as JSON. */
+const readStored = (page: Page, key: string) =>
+  page.evaluate(
+    (storeKey) =>
+      new Promise<string>((resolve, reject) => {
+        const open = indexedDB.open('swv-data');
+        open.onerror = () => {
+          reject(new Error('could not open the database'));
+        };
+        open.onsuccess = () => {
+          const get = open.result.transaction('kv').objectStore('kv').get(storeKey);
+          get.onsuccess = () => {
+            open.result.close();
+            resolve(JSON.stringify(get.result));
+          };
+        };
+      }),
+    key,
+  );
+
 /** Answers the provider URL with one fixed reply and counts every request that really left. */
 async function mockProvider(page: Page, answer = REPLY) {
   const sent: { url: string; authorization: string; body: string }[] = [];
@@ -136,15 +180,13 @@ function watchOutsideRequests(page: Page) {
   return outside;
 }
 
-const setUpKey = (page: Page) =>
-  page.addInitScript(
-    ([key]) => {
-      if (!localStorage.getItem('swv:ai')) {
-        localStorage.setItem('swv:ai', JSON.stringify({ provider: 'groq', keys: { groq: key } }));
-      }
-    },
-    [TEST_KEY],
-  );
+/** One saved Groq model with a fake key, its host already announced. */
+const setUpModel = (page: Page) =>
+  page.addInitScript((key) => {
+    const model = { id: 'm-test', name: 'Groq', preset: 'groq', model: 'test-model', key };
+    localStorage.setItem('swv:ai:models', JSON.stringify({ models: [model], activeId: model.id }));
+    localStorage.setItem('swv:ai:consent', JSON.stringify(['api.groq.com']));
+  }, TEST_KEY);
 
 const mistakes = (page: Page) => page.getByTestId('recap-mistake');
 
@@ -187,6 +229,14 @@ test.describe('day recap', () => {
     await expect(dialog.getByRole('button', { name: 'Analyse my mistakes' })).toHaveCount(0);
     await expectAccessibleDialog(page);
     expect(outside).toEqual([]);
+
+    // Setting up a model opens over the recap, and closing it comes back to the recap
+    await dialog.getByRole('button', { name: 'Add a model' }).click();
+    const settings = page.getByRole('dialog', { name: /AI/ });
+    await expect(settings).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(settings).toBeHidden();
+    await expect(dialog.getByText(/No model is set up/)).toBeVisible();
   });
 
   test('mistakes are correct by period and by flow', async ({ page }) => {
@@ -217,7 +267,7 @@ test.describe('day recap', () => {
   test('the analysis is saved: after a reload nothing is sent until a new mistake appears', async ({
     page,
   }) => {
-    await setUpKey(page);
+    await setUpModel(page);
     const sent = await mockProvider(page);
     await openDemo(page);
     await seedWeakPoints(page, [
@@ -229,7 +279,9 @@ test.describe('day recap', () => {
     let dialog = await openRecap(page);
     const analyse = dialog.getByRole('button', { name: 'Analyse my mistakes' });
     await expect(analyse).toBeVisible();
-    await expect(dialog.getByText(/Sends these questions, your answers/)).toContainText('Groq');
+    await expect(dialog.getByText(/Sends these questions, your answers/)).toContainText(
+      'your model',
+    );
     await expectAccessibleDialog(page);
     expect(sent).toHaveLength(0);
 
@@ -270,25 +322,7 @@ test.describe('day recap', () => {
     expect(sent).toHaveLength(1);
 
     // The saved result holds no key
-    const stored = await page.evaluate(
-      () =>
-        new Promise<string>((resolve, reject) => {
-          const open = indexedDB.open('swv-data');
-          open.onerror = () => {
-            reject(new Error('could not open the database'));
-          };
-          open.onsuccess = () => {
-            const get = open.result
-              .transaction('kv')
-              .objectStore('kv')
-              .get('swv:recap:analysis');
-            get.onsuccess = () => {
-              open.result.close();
-              resolve(JSON.stringify(get.result));
-            };
-          };
-        }),
-    );
+    const stored = await readStored(page, 'swv:recap:analysis');
     expect(stored).toContain('A hold keeps stock aside');
     expect(stored).not.toContain(TEST_KEY);
 
@@ -315,7 +349,7 @@ test.describe('day recap', () => {
       dialogs.push(alert.message());
       await alert.dismiss();
     });
-    await setUpKey(page);
+    await setUpModel(page);
     await mockProvider(
       page,
       JSON.stringify({
@@ -340,14 +374,15 @@ test.describe('day recap', () => {
   });
 
   test('an unreadable reply is refused and nothing is saved', async ({ page }) => {
-    await setUpKey(page);
+    await setUpModel(page);
     const sent = await mockProvider(page, 'Sorry, here is some prose.');
     await openDemo(page);
     await seedWeakPoints(page, [{ id: 'q1', question: 'Why hold stock?' }]);
     let dialog = await openRecap(page);
     await dialog.getByRole('button', { name: 'Analyse my mistakes' }).click();
-    await expect(dialog.getByText(/cannot read, so nothing was saved/)).toBeVisible();
+    await expect(dialog.getByText(/could not be used/)).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Try again' })).toBeVisible();
+    await expect(dialog.getByText(/some prose/)).toHaveCount(0);
     await expect(mistakes(page)).toHaveCount(1);
     await expectAccessibleDialog(page);
     expect(sent).toHaveLength(1);
@@ -355,6 +390,43 @@ test.describe('day recap', () => {
     dialog = await openRecap(page);
     await expect(dialog.getByRole('button', { name: 'Analyse my mistakes' })).toBeVisible();
     await expect(dialog.getByText('Saved analysis')).toHaveCount(0);
+    expect(await readStored(page, 'swv:recap:analysis')).toBeUndefined();
+  });
+
+  test('correct answers reduce the recap, and the saved analysis needs no new request', async ({
+    page,
+  }) => {
+    await setUpModel(page);
+    const sent = await mockProvider(page);
+    await openDemo(page);
+    const first = { id: 'q1', question: 'Why hold stock?', timesMissed: 2 };
+    const second = { id: 'q2', question: 'What does a bad body get?' };
+    await seedWeakPoints(page, [first, second]);
+    let dialog = await openRecap(page);
+    await expect(mistakes(page)).toHaveCount(2);
+    await expect(dialog.getByText('Missed 2 times')).toBeVisible();
+    await dialog.getByRole('button', { name: 'Analyse my mistakes' }).click();
+    await expect(dialog.getByText('Saved analysis')).toBeVisible();
+    expect(sent).toHaveLength(1);
+
+    // What one correct answer leaves behind: the store takes one off the count
+    await page.keyboard.press('Escape');
+    await seedWeakPoints(page, [{ ...first, timesMissed: 1 }, second]);
+    dialog = await openRecap(page);
+    await expect(mistakes(page)).toHaveCount(2);
+    await expect(dialog.getByText('Missed 2 times')).toHaveCount(0);
+    await expect(dialog.getByText('A hold keeps stock aside for one order.')).toBeVisible();
+
+    // And another: at zero the record is gone, and so is the group nothing is left in
+    await page.keyboard.press('Escape');
+    await seedWeakPoints(page, [second]);
+    dialog = await openRecap(page);
+    await expect(mistakes(page)).toHaveCount(1);
+    await expect(dialog.getByText('Why hold stock?')).toHaveCount(0);
+    await expect(dialog.getByText('A bad body gets a 422.')).toBeVisible();
+    await expect(dialog.getByText('A hold keeps stock aside for one order.')).toHaveCount(0);
+    expect(sent).toHaveLength(1);
+    await expectAccessibleDialog(page);
   });
 
   test('Retry my mistakes leaves the agreed hand-over for the quiz and closes the recap', async ({
@@ -385,7 +457,8 @@ test.describe('day recap', () => {
       await page.setViewportSize({ width: 360, height: 700 });
       await expect(mistakes(page).first()).toBeVisible();
       const overflow = await dialog.evaluate(
-        (element) => element.scrollWidth - element.clientWidth,
+        (element: { scrollWidth: number; clientWidth: number }) =>
+          element.scrollWidth - element.clientWidth,
       );
       expect(overflow).toBeLessThanOrEqual(0);
       await expectAccessibleDialog(page);

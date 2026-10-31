@@ -3,7 +3,7 @@ import { lazy, Suspense } from 'react';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Dialog } from '../../shared/ui/Dialog.tsx';
 
-// Zod and the storage code load with the recap, not with the page.
+// Zod, the model package and the storage code load with the recap, not with the page.
 const RecapBody = lazy(() =>
   import('./RecapBody.tsx').then(({ RecapBody: Body }) => ({ default: Body })),
 );

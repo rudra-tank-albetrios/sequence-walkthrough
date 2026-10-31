@@ -1,7 +1,7 @@
+import { asData } from '@swv/ai';
 import { z } from 'zod';
 
 import type { WeakPoint } from '../../shared/storage/weakPoints.ts';
-import { asData } from './recapModel.ts';
 
 /** The mistakes in the prompt stay near the 1,500 tokens a flow summary may cost. */
 const MAX_DATA_BYTES = 6000;
