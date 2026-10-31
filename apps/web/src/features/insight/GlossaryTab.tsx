@@ -1,5 +1,5 @@
 import type { Flow } from '@swv/core';
-import { useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useState, type SyntheticEvent } from 'react';
 
 import { allTerms, useGlossaryStore, type GlossaryEntry } from '../../shared/state/glossaryStore.ts';
 import { Button } from '../../shared/ui/Button.tsx';
@@ -13,7 +13,7 @@ function SavedEntry({ entry }: { entry: GlossaryEntry }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(entry.def);
 
-  const save = (event: FormEvent) => {
+  const save = (event: SyntheticEvent) => {
     event.preventDefault();
     if (!draft.trim()) return;
     add(entry.term, draft);
@@ -62,7 +62,7 @@ export function GlossaryTab({ flow }: { flow: Flow }) {
   const [term, setTerm] = useState('');
   const [def, setDef] = useState('');
 
-  const submit = (event: FormEvent) => {
+  const submit = (event: SyntheticEvent) => {
     event.preventDefault();
     const word = term.trim();
     if (!word || !def.trim()) return;

@@ -1,7 +1,8 @@
 import { PART_LABEL, type Step } from '@swv/core';
 
 import styles from './card.module.css';
-import { TermText, TokenText } from './RichText.tsx';
+import { TokenText } from './RichText.tsx';
+import { TermText } from '../../shared/ui/TermText.tsx';
 
 /** The payload parts as labelled boxes, behind "Show payload". */
 export function PayloadBox({ step }: { step: Step }) {

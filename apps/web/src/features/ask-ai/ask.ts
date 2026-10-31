@@ -69,15 +69,3 @@ export function termOf(question: string): string | null {
   return term;
 }
 
-/** The question the panel opens with when another feature asked for a word. */
-export const PREFILL_KEY = 'swv:ask:prefill';
-
-export function takePrefill(): string {
-  try {
-    const text = sessionStorage.getItem(PREFILL_KEY) ?? '';
-    if (text) sessionStorage.removeItem(PREFILL_KEY);
-    return text.trim();
-  } catch {
-    return '';
-  }
-}

@@ -1,6 +1,6 @@
-import { copyText, downloadBlob, fileName } from '../../shared/lib/util.ts';
-import { toast } from '../../shared/ui/toast.ts';
-import { useExportUi } from './exportUi.ts';
+import { useFlowStore } from '../state/flowStore.ts';
+import { toast } from '../ui/toast.ts';
+import { copyText, downloadBlob } from './util.ts';
 
 /** Saving files and copying text, with the Claude artifact host's capabilities when present. */
 
@@ -39,17 +39,6 @@ function downloadsCapability(): Promise<DownloadsCapability | null> {
   return downloads;
 }
 
-/** The flow title made safe for file systems: reserved and control characters out, 120 chars. */
-export function exportName(title: string, extension: string): string {
-  const clean = title
-    .replace(/\p{Cc}/gu, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 120)
-    .trim();
-  return fileName(clean, extension);
-}
-
 const errorCode = (error: unknown): string | undefined =>
   typeof error === 'object' && error !== null && typeof (error as { code?: unknown }).code === 'string'
     ? (error as { code: string }).code
@@ -72,9 +61,12 @@ export async function saveFile(name: string, data: Blob | string | Uint8Array, t
     const code = errorCode(error);
     if (code === 'declined') return;
     if (code === 'rejected_extension') {
-      // The host refuses this extension; the same bytes go out as a .txt file instead.
-      toast(`.${name.split('.').pop() ?? ''} files can't be saved from this page. Saving the text as .txt instead.`);
-      await cap.save({ filename: `${name}.txt`, data: blob }).catch(() => undefined);
+      toast(`.${name.split('.').pop() ?? ''} files can't be saved from this page. The text is the same in a .txt file.`, {
+        label: 'Save as .txt',
+        onClick: () => {
+          void saveFile(`${name}.txt`, blob);
+        },
+      });
       return;
     }
     toast(`Could not save ${name}: ${error instanceof Error ? error.message : (code ?? 'unavailable')}`);
@@ -104,6 +96,22 @@ export async function copyWithFallback(text: string, message: string): Promise<b
     toast(message);
     return true;
   }
-  useExportUi.getState().setCopyFallback(text);
+  useFlowStore.getState().setUi({ copyFallback: text });
   return false;
+}
+
+export const SKILL_KIT_FILE = 'sequence-walkthrough-skill-kit.zip';
+
+/** The skill, its setup guide and the install scripts: a zip built into the site next to the page. */
+export async function downloadSkillKit(): Promise<void> {
+  try {
+    const response = await fetch(`./${SKILL_KIT_FILE}`);
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    // A zip starts with "PK"; a dev server without the file answers with the page instead.
+    if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) throw new Error('the skill kit is not part of this build');
+    await saveFile(SKILL_KIT_FILE, bytes, 'application/zip');
+  } catch (error) {
+    toast(`Download failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }

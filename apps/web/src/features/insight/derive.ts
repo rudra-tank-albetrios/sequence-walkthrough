@@ -1,18 +1,9 @@
-import type { Flow, Step } from '@swv/core';
+import type { Step } from '@swv/core';
 
+import { isUrl } from '../../shared/lib/util.ts';
 import type { ChipTone } from '../../shared/ui/Chip.tsx';
 
-/** Joins class names, dropping the falsy ones (CSS module lookups may be undefined). */
-export const cx = (...parts: (string | false | null | undefined)[]): string =>
-  parts.filter(Boolean).join(' ');
-
 export const unique = <T>(items: T[]): T[] => [...new Set(items)];
-
-/** The steps the Insight lists talk about: all of them, or only those touching the spotlit layer. */
-export function visibleSteps(flow: Flow | null, spot: string | null): Step[] {
-  if (!flow?.isSequence) return [];
-  return spot === null ? flow.steps : flow.steps.filter((s) => s.from === spot || s.to === spot);
-}
 
 export interface Endpoint {
   key: string;
@@ -36,8 +27,6 @@ export function endpointList(steps: Step[]): Endpoint[] {
   }
   return [...map.values()];
 }
-
-export const isUrl = (ref: string): boolean => /^https?:/.test(ref);
 
 /** `src/a.ts:12-14` → `src/a.ts`. */
 export const stripLine = (ref: string): string => ref.replace(/:\d+(-\d+)?$/, '');
