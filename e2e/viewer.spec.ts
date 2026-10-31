@@ -404,8 +404,11 @@ test.describe('diagram', () => {
       code: 'sequenceDiagram\n  A->>B: order placed\n  B-->>A: 200 order\n  A->>B: finish',
     });
     const text = svg(page).locator('.messageText[data-step="0"]').first();
-    const box = await text.boundingBox();
-    if (!box) throw new Error('The label has no box');
+    // From the page, because Playwright's boundingBox is off for SVG text on WebKit.
+    const box = await text.evaluate((el) => {
+      const { x, y, height } = el.getBoundingClientRect();
+      return { x, y, height };
+    });
     await page.mouse.dblclick(box.x + 5, box.y + box.height / 2);
     const strip = page.getByTestId('follow-strip');
     await expect(strip).toContainText('order');
