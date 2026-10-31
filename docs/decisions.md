@@ -180,3 +180,11 @@ Decisions the plan (`docs/IMPLEMENTATION-PLAN.md`) does not already make, one or
 - **A reply that repeats the key has the key hidden.** `hideKey` in `packages/ai/src/client.ts` runs on replies and on error details, after the security spec caught a reply being shown with the key in it.
 - **A changed address drops the key at once**, in the form, before saving, so a saved key can never follow a new address.
 - **The review feature calls the shared `@swv/ai` client.** `features/review/modelCall.ts` is a thin wrapper that only names the cache entry; `apps/web/src/shared/ai` is gone, so one client validates every reply.
+
+## Phase 8: voice (2026-11-01)
+
+- **The browser's own voices, nothing fetched.** Some installed voices are online services run by the browser or system and receive the text, so the settings say so. "Clearest" is a ranking by language and by names such as Natural, Neural, Premium or Siri, since browsers report nothing about quality.
+- **A step stays for the seconds set and until the voice has read it.** The seconds per step are a minimum while the voice is on.
+- **With the voice on, Play reads the step on screen first** instead of moving on at once. Muted or with no voices, Play moves on at once as before.
+- **The text goes out in pieces of at most 200 characters**, because some browsers cut a long utterance off without any event, and each piece has a time limit, so a voice that never reports back cannot stop the walkthrough. A voice error also just moves on.
+- **Not tested: real voices.** The tests use a stand-in, because a test cannot hear a voice and voices differ per device. Some browsers ignore pause; there the step finishes being read while the flow stays paused.

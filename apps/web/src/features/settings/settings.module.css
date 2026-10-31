@@ -145,3 +145,9 @@
   flex-wrap: wrap;
   color: var(--muted);
 }
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+  max-width: 100%;
+}
