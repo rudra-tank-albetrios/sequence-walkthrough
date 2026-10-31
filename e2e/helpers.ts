@@ -199,10 +199,21 @@ export async function openTool(page: Page, group: string, tool: string | RegExp)
   await page.getByRole('menuitem', { name: tool }).click();
 }
 
-/** Opens a panel of the overlay and waits for it. */
+/** Waits for the element's running animations, so a box is measured at rest. */
+export const settled = (locator: Locator): Promise<unknown> =>
+  locator.evaluate((el) =>
+    Promise.all(
+      (el as unknown as { getAnimations: () => { finished: Promise<unknown> }[] })
+        .getAnimations()
+        .map((animation) => animation.finished),
+    ),
+  );
+
+/** Opens a panel of the overlay and waits for it to be in place. */
 export async function openPanel(page: Page, group: string, tool: string | RegExp): Promise<void> {
   await openTool(page, group, tool);
   await expect(overlay(page)).toBeVisible();
+  await settled(overlay(page));
 }
 
 /** Closes the overlay with its button and waits until it is gone. */

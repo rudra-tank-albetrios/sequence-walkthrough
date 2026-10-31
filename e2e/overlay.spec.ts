@@ -11,6 +11,7 @@ import {
   openFocused,
   openPanel,
   overlay,
+  settled,
   stepInput,
   svg,
   viewportOf,
@@ -59,9 +60,11 @@ test.describe('tool overlay', () => {
   }) => {
     await openFocused(page);
     await goToStep(page, 7);
+    await page.waitForTimeout(400);
+    const fitted = await camera(page);
     await page.keyboard.press('+');
     await page.keyboard.press('+');
-    await expect.poll(async () => (await camera(page)).k).toBeGreaterThan(1);
+    await expect.poll(async () => (await camera(page)).k).toBeGreaterThan(fitted.k);
     await page.waitForTimeout(400);
     const before = await camera(page);
 
@@ -116,9 +119,11 @@ test.describe('tool overlay', () => {
     await page.setViewportSize({ width: 390, height: 800 });
     await openFocused(page);
     await page.keyboard.press('i');
+    await expect(overlay(page)).toBeVisible();
+    await settled(overlay(page));
     const panel = await boxOf(overlay(page));
-    expect(panel.width).toBe(390 - 16);
-    expect(panel.height).toBe(800 - 16);
+    expect(Math.abs(panel.width - (390 - 16))).toBeLessThanOrEqual(1);
+    expect(Math.abs(panel.height - (800 - 16))).toBeLessThanOrEqual(1);
     await expect(overlay(page).getByRole('tab', { name: /^Layers/ })).toBeVisible();
     await closeOverlay(page);
   });

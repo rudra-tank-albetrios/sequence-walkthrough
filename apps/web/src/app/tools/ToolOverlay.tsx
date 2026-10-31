@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState, type KeyboardEvent } from 'react
 
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Button } from '../../shared/ui/Button.tsx';
-import { Overlay, OverlayClose } from '../../shared/ui/Overlay.tsx';
+import { Overlay, OverlayClose, OverlayTitle } from '../../shared/ui/Overlay.tsx';
 import { rememberFocus, takeOpener } from './overlayFocus.ts';
 import { activate, findTool, GROUPS, toolsOf, type Tool } from './registry.ts';
 import styles from './ToolOverlay.module.css';
@@ -83,7 +83,9 @@ function OverlayBody({ tool, leave }: { tool: Tool; leave: (then: () => void) =>
         </div>
       </div>
       <Tabs.Content value={tool.id} className={styles.main} tabIndex={-1}>
-        <h2 className={styles.title}>{tool.label}</h2>
+        <OverlayTitle asChild>
+          <h2 className={styles.title}>{tool.label}</h2>
+        </OverlayTitle>
         <div className={styles.body}>
           {Panel ? (
             <Suspense fallback={<Skeleton />}>
@@ -137,7 +139,7 @@ export function ToolOverlay() {
   };
 
   return (
-    <Overlay open={Boolean(tool)} onClose={close} title={tool?.label ?? 'Tool'} onReturnFocus={takeOpener}>
+    <Overlay open={Boolean(tool)} onClose={close} onReturnFocus={takeOpener}>
       {tool ? (
         <div className={styles.frame} onKeyDown={onKeyDown}>
           <OverlayBody tool={tool} leave={leave} />

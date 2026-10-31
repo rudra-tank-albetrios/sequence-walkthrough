@@ -1,7 +1,6 @@
 import { ChevronDown, CircleHelp, Ellipsis, Search } from 'lucide-react';
 import { useRef } from 'react';
 
-import { ExportMenuItems } from '../features/export/index.ts';
 import { plural } from '../shared/lib/util.ts';
 import { useDiagramStore } from '../shared/state/diagramStore.ts';
 import { useFlowStore } from '../shared/state/flowStore.ts';
@@ -68,7 +67,6 @@ function ToolGroupMenu({ group }: { group: ToolGroup }) {
         </Button>
       }
     >
-      {group.id === 'export' ? <ExportMenuItems /> : null}
       <ToolMenuItems group={group.id} opener={opener} />
     </Menu>
   );
@@ -110,7 +108,6 @@ function MoreMenu() {
         <div key={group.id}>
           <MenuSeparator />
           <MenuHeading>{group.menuLabel}</MenuHeading>
-          {group.id === 'export' ? <ExportMenuItems /> : null}
           <ToolMenuItems group={group.id} opener={opener} />
         </div>
       ))}

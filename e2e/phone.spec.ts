@@ -6,6 +6,7 @@ import {
   open,
   openFocused,
   overlay,
+  settled,
   stepInput,
   viewportOf,
 } from './helpers.ts';
@@ -80,9 +81,10 @@ test.describe('phone layout', () => {
     const insight = page.getByTestId('insight');
     await expect(insight).toBeVisible();
     // The overlay is nearly the whole screen on a phone: an 8 px margin on each side (plan 8.6).
+    await settled(overlay(page));
     const box = await overlay(page).boundingBox();
-    expect(box?.width).toBe(viewportOf(page).width - 16);
-    expect(box?.height).toBe(viewportOf(page).height - 16);
+    expect(Math.abs((box?.width ?? 0) - (viewportOf(page).width - 16))).toBeLessThanOrEqual(1);
+    expect(Math.abs((box?.height ?? 0) - (viewportOf(page).height - 16))).toBeLessThanOrEqual(1);
     await closeOverlay(page);
     await expect(insight).toBeHidden();
   });

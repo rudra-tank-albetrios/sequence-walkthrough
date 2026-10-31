@@ -382,8 +382,10 @@ test.describe('insight', () => {
     await expect(panel.locator('[data-layer="SVC"]')).toContainText('Files:');
     await expect(panel).toContainText('Trust boundaries:');
     await redis.getByRole('button', { name: 'Only this layer' }).click();
+    // The overlay closes so the spotlight on the diagram can be seen; the notice takes it off again.
+    await expect(overlay(page)).toBeHidden();
     await expect(notice(page)).toContainText('Showing only');
-    await redis.getByRole('button', { name: 'Show all' }).click();
+    await notice(page).getByRole('button', { name: 'Show all' }).click();
     await expect(notice(page)).toBeHidden();
   });
 

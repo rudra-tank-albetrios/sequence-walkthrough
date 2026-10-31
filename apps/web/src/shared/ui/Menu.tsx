@@ -24,7 +24,7 @@ export function Menu({ trigger, children, align = 'end', label, onCloseAutoFocus
           align={align}
           sideOffset={6}
           collisionPadding={8}
-          aria-label={label}
+          {...(label ? { 'aria-label': label, 'aria-labelledby': undefined } : {})}
           {...(onCloseAutoFocus ? { onCloseAutoFocus } : {})}
         >
           {children}
@@ -73,7 +73,21 @@ export function MenuSeparator() {
   return <RadixMenu.Separator className={styles.separator} />;
 }
 
-/** A row of several small items, such as the PNG scales. */
-export function MenuRow({ children }: { children: ReactNode }) {
-  return <div className={styles.row}>{children}</div>;
+/** A row of several small items with a label at its start, such as "PNG 1× 2× 4×". */
+export function MenuRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className={styles.row}>
+      <span className={styles.rowLabel}>{label}</span>
+      {children}
+    </div>
+  );
+}
+
+/** One of the small items in a MenuRow. */
+export function MenuRowItem({ onSelect, children, tour }: { onSelect: () => void; children: ReactNode; tour?: string }) {
+  return (
+    <RadixMenu.Item className={styles.compact} onSelect={onSelect} {...(tour ? { 'data-tour': tour } : {})}>
+      {children}
+    </RadixMenu.Item>
+  );
 }
