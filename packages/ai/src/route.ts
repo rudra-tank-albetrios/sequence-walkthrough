@@ -26,6 +26,18 @@ const earlier = (a: number | null, b: number | null): number | null => {
 };
 
 /**
+ * `receivingModels(state: ModelState): ModelEntry[]`
+ *
+ * Every model that could receive text now: the active one, then the marked fallbacks, without any
+ * that cannot be asked yet. The privacy notice names these.
+ */
+export function receivingModels(state: ModelState): ModelEntry[] {
+  const active = state.models.find((m) => m.id === state.activeId);
+  const others = state.models.filter((m) => m.fallback && m.id !== state.activeId);
+  return (active ? [active, ...others] : others).filter((m) => !modelProblem(m));
+}
+
+/**
  * Plan section 8.3. The active model comes first, then the models marked as fallbacks in list
  * order. Others are never used. A model at or under the switch level waits behind the healthy
  * ones and is still used when nothing better is left. A used-up model is left out until its reset,
@@ -37,16 +49,8 @@ export function planRoute(
   now: number,
 ): Route {
   const active = state.models.find((m) => m.id === state.activeId);
-  const others = state.models.filter((m) => m.fallback && m.id !== state.activeId);
-  const skipped: Skip[] = [];
-  const candidates: ModelEntry[] = [];
-  for (const model of active ? [active, ...others] : others) {
-    if (modelProblem(model)) {
-      if (model === active) skipped.push({ model, reason: 'not-ready' });
-    } else {
-      candidates.push(model);
-    }
-  }
+  const skipped: Skip[] = active && modelProblem(active) ? [{ model: active, reason: 'not-ready' }] : [];
+  const candidates = receivingModels(state);
 
   const healthy: ModelEntry[] = [];
   const low: ModelEntry[] = [];

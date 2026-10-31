@@ -12,10 +12,12 @@ export interface Answer {
   status: 'busy' | 'done' | 'error';
   text: string;
   cached: boolean;
-  providerName: string;
-  model: string;
+  /** Who wrote it: the saved entry's name, and its model when known. */
+  writer: string;
   /** The answer was appended to the step's note already. */
   noted: boolean;
+  /** What auto-switch did: "Groq limit reached, switched to Gemini". */
+  notices: readonly string[];
 }
 
 export interface AskAnswerProps {
@@ -34,12 +36,15 @@ export function AskAnswer({ answer, onSaveNote, onAddTerm, onAskAgain }: AskAnsw
       data-testid="ask-answer"
     >
       <div className={styles.q}>{answer.q}</div>
+      {answer.notices.map((notice) => (
+        <p key={notice} className={styles.notice} data-testid="ask-notice">
+          {notice}
+        </p>
+      ))}
       <div className={styles.a}>{answer.status === 'busy' ? 'Thinking…' : answer.text}</div>
       {done ? (
         <div className={styles.meta}>
-          <span>
-            {answer.providerName} · {answer.model}
-          </span>
+          <span>{answer.writer}</span>
           {answer.cached ? <Chip title="This answer was given before and kept in this browser">Saved answer</Chip> : null}
         </div>
       ) : null}

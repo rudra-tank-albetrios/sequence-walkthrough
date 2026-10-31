@@ -37,6 +37,13 @@
   color: var(--marker-ink);
 }
 
+.models {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .link {
   padding: 0;
   border: 0;
@@ -97,6 +104,13 @@
   margin-bottom: var(--space-1);
   color: var(--muted);
   font-size: var(--text-sm);
+}
+
+.notice {
+  margin: 0 0 var(--space-1);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
 }
 
 .a {

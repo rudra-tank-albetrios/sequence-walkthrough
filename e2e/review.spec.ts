@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
 import { DEMO_TITLE, demoFlow, open } from './helpers.ts';
-import { PROVIDER_URLS, storedAi } from './support/models.ts';
+import { PROVIDER_URLS, storedAi, storedConsent } from './support/models.ts';
 
 // Plan section 10, row Review: known problems are found and a clean sample has no false threat.
 // Plan 8.11: two separate results, the rules on screen, the model cannot change the score, the
@@ -335,12 +335,12 @@ test.describe('structure review', () => {
 
     await explainButton(page).click();
 
-    const settings = page.getByRole('dialog', { name: 'Ask AI' });
+    const settings = page.getByRole('dialog', { name: 'AI settings', exact: true });
     await expect(settings).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(settings).toBeHidden();
     await expect(review(page).getByTestId('review-explain-status')).toHaveText(
-      'Add a model in AI settings first.',
+      'No AI model set up yet.',
     );
     await expect(review(page).getByTestId('review-score')).toBeVisible();
   });
@@ -389,7 +389,7 @@ test.describe('the model explains the findings', () => {
         ],
       }),
     );
-    await open(page, { code: PROBLEMS, storage: { 'swv:ai': AI_SETTINGS } });
+    await open(page, { code: PROBLEMS, storage: { 'swv:ai': AI_SETTINGS, 'swv:ai:consent': storedConsent() } });
     await openReview(page);
 
     await explainButton(page).click();
@@ -401,7 +401,7 @@ test.describe('the model explains the findings', () => {
     );
     await expect(points.nth(1)).toHaveText('Anyone with the address could change the name.');
     await expect(review(page).getByTestId('review-explain')).toContainText(
-      'From Groq · llama-3.3-70b-versatile.',
+      'From Groq.',
     );
 
     expect(sent).toHaveLength(1);
@@ -438,7 +438,7 @@ test.describe('the model explains the findings', () => {
         action: 'close',
       }),
     );
-    await open(page, { code: PROBLEMS, storage: { 'swv:ai': AI_SETTINGS } });
+    await open(page, { code: PROBLEMS, storage: { 'swv:ai': AI_SETTINGS, 'swv:ai:consent': storedConsent() } });
     await openReview(page);
     const title = await page.title();
     const rulesBefore = await rules(page).textContent();
@@ -462,13 +462,13 @@ test.describe('the model explains the findings', () => {
     page,
   }) => {
     await mockModel(page, 'Sure! The flow looks fine to me, score 100.');
-    await open(page, { code: PROBLEMS, storage: { 'swv:ai': AI_SETTINGS } });
+    await open(page, { code: PROBLEMS, storage: { 'swv:ai': AI_SETTINGS, 'swv:ai:consent': storedConsent() } });
     await openReview(page);
 
     await explainButton(page).click();
 
     await expect(review(page).getByTestId('review-explain-status')).toHaveText(
-      'The reply was not in the expected shape. You can ask again.',
+      'Groq sent a reply that could not be used. Try again.',
     );
     await expect(review(page).getByTestId('review-point')).toHaveCount(0);
     await expect(review(page)).not.toContainText('looks fine to me');

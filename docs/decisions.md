@@ -171,3 +171,12 @@ Decisions the plan (`docs/IMPLEMENTATION-PLAN.md`) does not already make, one or
 - **The lockfile comes from a from-scratch resolve.** `npm install` on Windows prunes the top-level `@emnapi/core` and `@emnapi/runtime` entries that `npm ci` needs on Linux, so it must not be run over this lockfile on Windows; use `npm ci` to sync.
 - **The chapter lock moved to the dock, and the fold tab keeps it.** "Hide the step bar" puts the step cards away; the dock stays, so Play and the Flow Rail are still there.
 - **The overlay is modal, so it closes first in the Esc order.** Insight is no longer a step of its own between hide mode and the code panel.
+
+## Phase 6: models (2026-10-31)
+
+- **Provider browser check (plan 8.1), run with no key from the live site's origin.** Preflight `OPTIONS`: Groq 204 `*`, Gemini 200 with the origin, OpenRouter 204 `*`, Cerebras 200 `*`, Mistral 200 `*`, so all five can be called from a browser. `POST` with no key: Groq 401 `*`, Gemini 400 with the origin, OpenRouter 401 `*`, Mistral 401 `*`, Cerebras 401 with no allow-origin header seen on the error reply.
+- **Not tested: rate-limit headers with a real key.** No `x-ratelimit-*` header came back without a key, and no project keys exist, so which providers expose them to a browser is unknown. Without them the app shows its own count ("Count only") or the user's own limits as an estimate, never a made-up remaining number.
+- **Keys moved from `swv:ai` to `swv:ai:models`.** Old settings are migrated on read and the keys leave the old entry. Answers saved under IndexedDB `swv-ai` hold no key.
+- **A reply that repeats the key has the key hidden.** `hideKey` in `packages/ai/src/client.ts` runs on replies and on error details, after the security spec caught a reply being shown with the key in it.
+- **A changed address drops the key at once**, in the form, before saving, so a saved key can never follow a new address.
+- **The review feature calls the shared `@swv/ai` client.** `features/review/modelCall.ts` is a thin wrapper that only names the cache entry; `apps/web/src/shared/ai` is gone, so one client validates every reply.

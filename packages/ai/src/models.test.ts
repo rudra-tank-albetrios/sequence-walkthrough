@@ -23,7 +23,7 @@ const seedV2 = (value: object) => {
   localStorage.setItem('swv:ai', JSON.stringify(value));
 };
 
-describe("reading Ask AI's provider and keys", () => {
+describe('moving version 2 settings over', () => {
   const v2 = {
     provider: 'gemini',
     keys: { gemini: 'AIza-old', groq: 'gsk_old' },
@@ -42,7 +42,6 @@ describe("reading Ask AI's provider and keys", () => {
       ['groq', 'gsk_old', 'llama-3.3-70b-versatile'],
     ]);
     expect(state.activeId).toBe(state.models[0]?.id);
-    expect(hasUsableModel()).toBe(true);
   });
 
   it('marks nothing as a fallback: only the person chooses that', () => {
@@ -50,47 +49,41 @@ describe("reading Ask AI's provider and keys", () => {
     expect(loadModelState().models.every((m) => !m.fallback)).toBe(true);
   });
 
-  it('leaves the settings exactly as Ask AI wrote them, and copies no key anywhere', () => {
+  it('removes the keys from the old place and leaves the other settings', () => {
     seedV2(v2);
     loadModelState();
-    expect(readStored('swv:ai')).toEqual(v2);
-    expect(readStored('swv:ai:models')).toBeUndefined();
-    saveModelState(loadModelState());
-    expect(JSON.stringify(readStored('swv:ai:models'))).not.toContain('AIza-old');
-    expect(JSON.stringify(readStored('swv:ai:models'))).not.toContain('gsk_old');
+    expect(readStored('swv:ai')).toEqual({ includePayload: false, autoNote: true, mode: 'general' });
+    expect(JSON.stringify(readStored('swv:ai'))).not.toContain('AIza-old');
+    expect(JSON.stringify(readStored('swv:ai:models'))).toContain('AIza-old');
   });
 
-  it('follows every change made in Ask AI: a removed key is gone, a new one appears', () => {
+  it('runs once: loading again changes nothing', () => {
     seedV2(v2);
     const first = loadModelState();
     expect(loadModelState()).toEqual(first);
-    seedV2({ ...v2, keys: { groq: 'gsk_new' } });
-    const state = loadModelState();
-    expect(state.models.map((m) => [m.preset, m.key])).toEqual([['groq', 'gsk_new']]);
-    expect(state.activeId).toBe(state.models[0]?.id);
-    seedV2({ ...v2, keys: {} });
-    expect(loadModelState().models).toEqual([]);
-    expect(hasUsableModel()).toBe(false);
   });
 
-  it('keeps the same id for a provider, so its usage stays attached', () => {
-    seedV2(v2);
-    const before = loadModelState().models.map((m) => m.id);
-    seedV2({ ...v2, keys: { ...v2.keys, groq: 'gsk_changed' } });
-    expect(loadModelState().models.map((m) => m.id)).toEqual(before);
-  });
-
-  it('reads a custom link with its key', () => {
+  it('moves a custom link with its key', () => {
     seedV2({ provider: 'custom', keys: { custom: 'k' }, customUrl: ' https://proxy.example/v1/chat/completions ' });
     const [entry] = loadModelState().models;
     expect(entry).toMatchObject({ preset: 'custom', url: 'https://proxy.example/v1/chat/completions', key: 'k' });
   });
 
-  it('reads a chosen provider that needs no key', () => {
+  it('moves a chosen provider that needs no key', () => {
     seedV2({ provider: 'ollama', keys: {} });
     const state = loadModelState();
     expect(state.models.map((m) => m.preset)).toEqual(['ollama']);
     expect(state.activeId).toBe(state.models[0]?.id);
+  });
+
+  it('keeps a custom link saved without a key while another provider was chosen', () => {
+    seedV2({ provider: 'gemini', keys: { gemini: 'k' }, customUrl: 'https://proxy.example/v1' });
+    const state = loadModelState();
+    expect(state.models.map((m) => [m.preset, m.url, m.key])).toEqual([
+      ['gemini', '', 'k'],
+      ['custom', 'https://proxy.example/v1', ''],
+    ]);
+    expect(state.models[1]?.fallback).toBe(false);
   });
 
   it('makes no entry for a provider that needs a key and has none', () => {
@@ -98,16 +91,12 @@ describe("reading Ask AI's provider and keys", () => {
     expect(loadModelState().models).toEqual([]);
   });
 
-  it('keeps a saved list beside it, and the saved active model stays active', () => {
-    const saved = { ...newModel('groq'), key: 'saved' };
+  it('adds a key to a matching entry instead of duplicating it', () => {
+    const saved = { ...newModel('groq'), key: '' };
     saveModelState({ models: [saved], activeId: saved.id, switchAt: 5, forgetKeys: false });
-    seedV2({ provider: 'gemini', keys: { gemini: 'AIza' } });
+    seedV2({ provider: 'groq', keys: { groq: 'gsk_new' } });
     const state = loadModelState();
-    expect(state.models.map((m) => [m.id, m.key])).toEqual([
-      [saved.id, 'saved'],
-      [state.models[1]?.id, 'AIza'],
-    ]);
-    expect(state.activeId).toBe(saved.id);
+    expect(state.models.map((m) => [m.id, m.key])).toEqual([[saved.id, 'gsk_new']]);
   });
 
   it('ignores odd data', () => {

@@ -239,7 +239,8 @@ test.describe('one-file page, published as a Claude artifact', () => {
       `localStorage.setItem('swv:ai', JSON.stringify({
         provider: 'claude', keys: {}, models: {}, customUrl: '',
         includePayload: true, autoNote: true, mode: 'project',
-      }));`,
+      }));
+      localStorage.setItem('swv:ai:consent', JSON.stringify(['Claude (through this artifact)']));`,
     );
     await expect(svg(page)).toBeVisible({ timeout: 30_000 });
     await page.keyboard.press('ArrowRight');

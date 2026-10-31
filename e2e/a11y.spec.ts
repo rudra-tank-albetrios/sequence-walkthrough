@@ -111,8 +111,8 @@ test.describe('accessibility with things open', () => {
     const ask = page.getByRole('dialog', { name: 'Ask AI about step 1' });
     await expect(ask).toBeVisible();
     await expectNoAxeViolations(page);
-    await ask.getByTitle('Provider, key, model').click();
-    await expect(page.getByRole('dialog', { name: 'Ask AI', exact: true })).toBeVisible();
+    await ask.getByTitle('Models, keys and limits').click();
+    await expect(page.getByRole('dialog', { name: 'AI settings', exact: true })).toBeVisible();
     await expectNoAxeViolations(page);
   });
 });

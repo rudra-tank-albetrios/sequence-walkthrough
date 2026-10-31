@@ -256,18 +256,20 @@ test.describe('old settings', () => {
       'aria-pressed',
       'true',
     );
-    await expect(ask).toContainText('Sends only the question to Google Gemini');
-    await ask.getByTitle('Provider, key, model').click();
-    const settings = page.getByRole('dialog', { name: 'Ask AI', exact: true });
-    await expect(settings.getByRole('radio', { name: /Google Gemini/ })).toBeChecked();
-    const key = settings.getByLabel('API key');
+    await expect(ask).toContainText('Sends only the question to Gemini');
+    await ask.getByTitle('Models, keys and limits').click();
+    const settings = page.getByRole('dialog', { name: 'AI settings', exact: true });
+    await settings.getByRole('button', { name: 'Edit Gemini' }).click();
+    const gemini = settings.getByRole('form', { name: 'Edit Gemini' });
+    const key = gemini.getByLabel('API key');
     await expect(key).toHaveAttribute('type', 'password');
     await expect(key).toHaveValue('old-test-key');
-    await expect(settings.getByLabel('Model', { exact: true })).toHaveValue('gemini-old');
+    await expect(gemini.getByLabel('Model', { exact: true })).toHaveValue('gemini-old');
+    await gemini.getByRole('button', { name: 'Cancel' }).click();
     await expect(settings.getByLabel(/Include the step/)).not.toBeChecked();
     await expect(settings.getByLabel(/Save every answer/)).not.toBeChecked();
-    await settings.getByRole('radio', { name: /Custom/ }).check();
-    await expect(settings.getByLabel('Endpoint URL')).toHaveValue('https://proxy.example/v1');
+    await settings.getByRole('button', { name: 'Edit My model' }).click();
+    await expect(settings.getByLabel('Model link')).toHaveValue('https://proxy.example/v1');
   });
 
   test('P9 an answer cached by version 2 comes back without a request', async ({ page }) => {

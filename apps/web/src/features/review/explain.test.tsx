@@ -1,3 +1,4 @@
+import type { ModelErrorKind } from '@swv/ai';
 import { parseFlow, reviewFlow, type ReviewFinding } from '@swv/core';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -28,6 +29,7 @@ const CODE = `sequenceDiagram
     D-->>C: row`;
 
 const asked = vi.mocked(callModel);
+const TEST_MODEL = { id: 'test', name: 'Test model', model: 'test-1' };
 
 /** What `callModel` does with a reply: only what passes the schema reaches the caller. */
 function modelSays(reply: unknown): void {
@@ -35,14 +37,14 @@ function modelSays(reply: unknown): void {
     const parsed = schema.safeParse(reply);
     return Promise.resolve(
       parsed.success
-        ? { ok: true, data: parsed.data, model: { name: 'Test model' }, cached: false }
-        : { ok: false, error: { kind: 'bad-reply', message: 'The reply was not usable.' } },
+        ? { ok: true, data: parsed.data, text: '', model: TEST_MODEL, cached: false, tokens: null, notices: [] }
+        : { ok: false, error: { kind: 'bad-reply', message: 'The reply was not usable.' }, notices: [] },
     );
   });
 }
 
-function modelFails(kind: string, message: string): void {
-  asked.mockResolvedValue({ ok: false, error: { kind, message } });
+function modelFails(kind: ModelErrorKind, message: string): void {
+  asked.mockResolvedValue({ ok: false, error: { kind, message }, notices: [] });
 }
 
 function open(code = CODE): { unmount: () => void } {
@@ -218,7 +220,7 @@ describe('ExplainPanel', () => {
   });
 
   it('shows a provider failure in its words, without opening settings', async () => {
-    modelFails('provider', '429 Too Many Requests');
+    modelFails('network', '429 Too Many Requests');
     open();
     fireEvent.click(askButton());
     await waitFor(() => {
@@ -261,8 +263,11 @@ describe('ExplainPanel', () => {
     asked.mockResolvedValue({
       ok: true,
       data: { points: [{ finding: 1, plain: 'Saved words.' }] },
-      model: { name: 'Test model' },
+      text: '',
+      model: TEST_MODEL,
       cached: true,
+      tokens: 0,
+      notices: [],
     });
     open();
 

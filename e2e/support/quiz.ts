@@ -36,7 +36,10 @@ export const aiSettings = (): string =>
   });
 
 /** Opens the viewer on the demo flow with a model set up. */
-export const openWithModel = (page: Page) => open(page, { storage: { 'swv:ai': aiSettings() } });
+export const openWithModel = (page: Page) =>
+  open(page, {
+    storage: { 'swv:ai': aiSettings(), 'swv:ai:consent': JSON.stringify([GROQ_HOST]) },
+  });
 
 export const flow = parseFlow(demoFlow()).flow;
 
@@ -193,7 +196,7 @@ export async function mockModel(page: Page, replies: MockReplies): Promise<Model
 
 export const quizDialog = (page: Page) => page.getByRole('dialog', { name: 'Quiz', exact: true });
 export const weakPointsDialog = (page: Page) => page.getByRole('dialog', { name: 'Weak points' });
-export const settingsDialog = (page: Page) => page.getByRole('dialog', { name: 'Ask AI', exact: true });
+export const settingsDialog = (page: Page) => page.getByRole('dialog', { name: 'AI settings', exact: true });
 
 /** Opens the quiz from the Learn menu and waits for its set-up screen. */
 export async function openQuiz(page: Page): Promise<Locator> {

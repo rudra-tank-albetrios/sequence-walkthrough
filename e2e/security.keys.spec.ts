@@ -20,6 +20,7 @@ import {
   PROVIDER_URLS,
   SENTINEL_KEYS,
   storedAi,
+  storedConsent,
 } from './support/models.ts';
 
 // Plan section 4: a key stays in this browser and goes only to its own URL. It never appears in a
@@ -44,10 +45,19 @@ async function openAsk(page: Page) {
   return dialog;
 }
 
+/** A new host shows the privacy notice first; reading it sends the question that was waiting. */
+async function acceptNoticeIfShown(page: Page) {
+  const notice = page.getByRole('button', { name: /I understand|Got it|Continue/ });
+  await notice.waitFor({ timeout: 2_000 }).then(
+    () => notice.click(),
+    () => undefined,
+  );
+}
+
 const openSettings = async (page: Page) => {
   const dialog = await openAsk(page);
-  await dialog.getByTitle('Provider, key, model').click();
-  const settings = page.getByRole('dialog', { name: 'Ask AI', exact: true });
+  await dialog.getByTitle('Models, keys and limits').click();
+  const settings = page.getByRole('dialog', { name: 'AI settings', exact: true });
   await expect(settings).toBeVisible();
   return settings;
 };
@@ -125,8 +135,9 @@ test.describe('each key goes only to its own address', () => {
   for (const provider of HTTP_PROVIDERS) {
     test(`${provider}, read from the network log`, async ({ page, baseURL }) => {
       const armed = await arm(page, baseURL);
-      await seedStorage(page, { 'swv:ai': storedAi(provider) });
+      await seedStorage(page, { 'swv:ai': storedAi(provider), 'swv:ai:consent': storedConsent() });
       for (const url of Object.values(PROVIDER_URLS)) await mockModel(armed, url, 'An answer.');
+      await mockModel(armed, 'https://openrouter.ai/api/v1/key', '{}');
       const dialog = await openAsk(page);
       await dialog.getByRole('button', { name: CHIP }).click();
       await expect(dialog.getByTestId('ask-answer')).toContainText('An answer.');
@@ -134,7 +145,13 @@ test.describe('each key goes only to its own address', () => {
       const url = PROVIDER_URLS[provider];
       expect(modelPosts(armed).map((r) => r.url)).toEqual([url]);
       const key = SENTINEL_KEYS[provider];
-      expect(keysInNetworkLog(armed)).toEqual(key ? [`${key} in authorization to ${url}`] : []);
+      // OpenRouter's key endpoint reads the limits, on the provider's own host.
+      const inLog = keysInNetworkLog(armed);
+      if (key) expect(inLog).toContain(`${key} in authorization to ${url}`);
+      else expect(inLog).toEqual([]);
+      for (const entry of inLog) {
+        expect(entry.startsWith(`${key} in authorization to ${new URL(url).origin}/`)).toBe(true);
+      }
       expect(postsTo(armed, url)[0]?.headers.authorization).toBe(key ? `Bearer ${key}` : undefined);
 
       // A share link holds the whole diagram: it must not reach a provider in a Referer.
@@ -143,7 +160,7 @@ test.describe('each key goes only to its own address', () => {
       expect(referer).not.toContain('z.');
 
       expectNoKeyInLogs(armed);
-      expect(await keysInBrowser(page)).toEqual(['localStorage:swv:ai']);
+      expect(await keysInBrowser(page)).toEqual(['localStorage:swv:ai:models']);
       await expectNothingRan(armed, provider);
     });
   }
@@ -156,17 +173,21 @@ test.describe('each key goes only to its own address', () => {
     for (const url of Object.values(PROVIDER_URLS)) await mockModel(armed, url, 'OK');
     const settings = await openSettings(page);
     const key = SENTINEL_KEYS.mistral ?? '';
-    await settings.getByRole('radio', { name: /Mistral/ }).check();
+    const add = settings.getByRole('button', { name: 'Add a model' });
+    if (await add.isVisible()) await add.click();
+    await settings.getByLabel('Provider').selectOption('mistral');
     await settings.getByLabel('API key').fill(key);
-
-    await settings.getByRole('button', { name: 'Test' }).click();
-    await expect(settings.getByRole('status')).toContainText('Works.');
-    expect(modelPosts(armed).map((r) => r.url)).toEqual([PROVIDER_URLS.mistral]);
     expect(await keysInBrowser(page)).toEqual([]);
+    await settings.getByRole('button', { name: 'Save', exact: true }).click();
 
-    await settings.getByRole('button', { name: 'Save' }).click();
+    await settings.getByRole('button', { name: 'Test Mistral' }).click();
+    await expect(settings.getByRole('status').filter({ hasText: 'Works.' })).toBeVisible();
+    expect(modelPosts(armed).map((r) => r.url)).toEqual([PROVIDER_URLS.mistral]);
+
+    await settings.getByRole('button', { name: 'Close' }).click();
     await expect(settings).toBeHidden();
     await page.getByRole('button', { name: CHIP }).click();
+    await acceptNoticeIfShown(page);
     await expect(page.getByTestId('ask-answer')).toContainText('OK');
 
     expect(modelPosts(armed).map((r) => r.url)).toEqual([
@@ -178,18 +199,27 @@ test.describe('each key goes only to its own address', () => {
       `${key} in authorization to ${PROVIDER_URLS.mistral}`,
     ]);
     expectNoKeyInLogs(armed);
-    expect(await keysInBrowser(page)).toEqual(['localStorage:swv:ai']);
+    expect(await keysInBrowser(page)).toEqual(['localStorage:swv:ai:models']);
   });
 
   test('the saved answers and the note hold no key', async ({ page, baseURL }) => {
     const armed = await arm(page, baseURL);
-    await seedStorage(page, { 'swv:ai': storedAi('groq') });
+    await seedStorage(page, { 'swv:ai': storedAi('groq'), 'swv:ai:consent': storedConsent() });
     await mockModel(armed, PROVIDER_URLS.groq, 'An answer.');
     const dialog = await openAsk(page);
     await dialog.getByRole('button', { name: CHIP }).click();
     await expect(dialog.getByTestId('ask-answer')).toContainText("Saved to this step's note");
     const saved = await page.evaluate<(string | null)[]>(
-      `[localStorage.getItem('swv:ai:cache'), localStorage.getItem('swv:notes:t:Keyed')]`,
+      `new Promise((resolve, reject) => {
+        const open = indexedDB.open('swv-ai');
+        open.onerror = reject;
+        open.onsuccess = () => {
+          const all = open.result.transaction('answers').objectStore('answers').getAll();
+          all.onsuccess = () => {
+            resolve([JSON.stringify(all.result), localStorage.getItem('swv:notes:t:Keyed')]);
+          };
+        };
+      })`,
     );
     expect(saved[0]).toContain('An answer.');
     expect(saved[1]).toContain('An answer.');
@@ -201,7 +231,7 @@ test.describe('each key goes only to its own address', () => {
     baseURL,
   }) => {
     const armed = await arm(page, baseURL);
-    await seedStorage(page, { 'swv:ai': storedAi('groq') });
+    await seedStorage(page, { 'swv:ai': storedAi('groq'), 'swv:ai:consent': storedConsent() });
     const key = SENTINEL_KEYS.groq ?? '';
     await mockModel(armed, PROVIDER_URLS.groq, {
       status: 401,
@@ -212,12 +242,12 @@ test.describe('each key goes only to its own address', () => {
     await expect(dialog.getByTestId('ask-answer')).toContainText('401');
     await expect(dialog.getByTestId('ask-answer')).not.toContainText(key);
     expectNoKeyInLogs(armed);
-    expect(await keysInBrowser(page)).toEqual(['localStorage:swv:ai']);
+    expect(await keysInBrowser(page)).toEqual(['localStorage:swv:ai:models']);
   });
 
   test('a reply that repeats the key does not get it shown or saved', async ({ page, baseURL }) => {
     const armed = await arm(page, baseURL);
-    await seedStorage(page, { 'swv:ai': storedAi('groq') });
+    await seedStorage(page, { 'swv:ai': storedAi('groq'), 'swv:ai:consent': storedConsent() });
     const key = SENTINEL_KEYS.groq ?? '';
     await mockModel(armed, PROVIDER_URLS.groq, `Your key is ${key}, is it not?`);
     const dialog = await openAsk(page);
@@ -225,7 +255,7 @@ test.describe('each key goes only to its own address', () => {
     await expect(dialog.getByTestId('ask-answer')).toContainText('Your key is');
     await expect(dialog.getByTestId('ask-answer')).not.toContainText(key);
     expectNoKeyInLogs(armed);
-    expect(await keysInBrowser(page)).toEqual(['localStorage:swv:ai']);
+    expect(await keysInBrowser(page)).toEqual(['localStorage:swv:ai:models']);
   });
 });
 
@@ -243,10 +273,10 @@ test.describe('custom model addresses', () => {
       const armed = await arm(page, baseURL);
       const normal = new URL(address).href;
       await mockModel(armed, normal, 'OK');
-      await seedStorage(page, { 'swv:ai': storedAi('custom', { customUrl: address }) });
+      await seedStorage(page, { 'swv:ai': storedAi('custom', { customUrl: address }), 'swv:ai:consent': storedConsent() });
       const settings = await openSettings(page);
-      await settings.getByRole('button', { name: 'Test' }).click();
-      await expect(settings.getByRole('status')).toContainText('Works.');
+      await settings.getByRole('button', { name: 'Test My model' }).click();
+      await expect(settings.getByRole('status').filter({ hasText: 'Works.' })).toBeVisible();
       expect(postsTo(armed, normal)).toHaveLength(1);
     });
   }
@@ -276,19 +306,25 @@ test.describe('custom model addresses', () => {
   for (const address of REFUSED) {
     test(`${address} is refused, typed or stored`, async ({ page, baseURL }) => {
       const armed = await arm(page, baseURL);
-      await seedStorage(page, { 'swv:ai': storedAi('custom', { customUrl: address }) });
+      await seedStorage(page, {
+        'swv:ai': storedAi('custom', { customUrl: address, keys: {} }),
+        'swv:ai:consent': storedConsent(),
+      });
 
-      // From what an earlier visit stored.
+      // From what an earlier visit stored: no usable model, so the settings open and nothing is sent.
       const dialog = await openAsk(page);
       await dialog.getByRole('button', { name: CHIP }).click();
-      await expect(dialog.getByTestId('ask-answer')).toContainText('endpoint URL');
+      const settings = page.getByRole('dialog', { name: 'AI settings', exact: true });
+      await expect(settings).toBeVisible();
 
-      // Typed into the settings.
-      await dialog.getByTitle('Provider, key, model').click();
-      const settings = page.getByRole('dialog', { name: 'Ask AI', exact: true });
-      await settings.getByLabel('Endpoint URL').fill(address);
-      await settings.getByRole('button', { name: 'Test' }).click();
-      await expect(settings.getByRole('status')).toContainText('Failed:');
+      // Typed into the settings: the form refuses it and stays open.
+      await settings.getByRole('button', { name: 'Add a model' }).click();
+      const form = settings.getByRole('form', { name: 'Add a model' });
+      await form.getByLabel('Provider').selectOption('custom');
+      await form.getByLabel('Model link').fill(address);
+      await form.getByLabel('Model', { exact: true }).fill('test-model');
+      await form.getByRole('button', { name: 'Save', exact: true }).click();
+      await expect(form).toBeVisible();
 
       expect(armed.requests.filter((r) => r.method !== 'GET')).toEqual([]);
       expect(keysInNetworkLog(armed)).toEqual([]);
@@ -299,12 +335,15 @@ test.describe('custom model addresses', () => {
   test('an address with a user name in it sends nothing', async ({ page, baseURL }) => {
     const armed = await arm(page, baseURL);
     await seedStorage(page, {
-      'swv:ai': storedAi('custom', { customUrl: 'https://user:secret@models.good.example/v1' }),
+      'swv:ai': storedAi('custom', {
+        customUrl: 'https://user:secret@models.good.example/v1',
+        keys: {},
+      }),
+      'swv:ai:consent': JSON.stringify(['models.good.example']),
     });
     const dialog = await openAsk(page);
     await dialog.getByRole('button', { name: CHIP }).click();
-    await expect(dialog.getByTestId('ask-answer')).toBeVisible();
-    await expect(dialog.getByTestId('ask-answer').getByText('Thinking…')).toBeHidden();
+    await expect(page.getByRole('dialog', { name: 'AI settings', exact: true })).toBeVisible();
     expect(armed.requests.filter((r) => r.method !== 'GET')).toEqual([]);
     expect(keysInNetworkLog(armed)).toEqual([]);
     await expectNothingRan(armed, 'a user name in the address');
@@ -315,19 +354,24 @@ test.describe('custom model addresses', () => {
     const other = 'https://other.good.example/v1/chat/completions';
     await mockModel(armed, PROVIDER_URLS.custom, 'OK');
     await mockModel(armed, other, 'OK');
-    await seedStorage(page, { 'swv:ai': storedAi('custom') });
+    await seedStorage(page, { 'swv:ai': storedAi('custom'), 'swv:ai:consent': storedConsent() });
     const settings = await openSettings(page);
-    await expect(settings.getByLabel('API key')).toHaveValue(SENTINEL_KEYS.custom ?? '');
+    await settings.getByRole('button', { name: 'Edit My model' }).click();
+    const form = settings.getByRole('form', { name: 'Edit My model' });
+    await expect(form.getByLabel('API key')).toHaveValue(SENTINEL_KEYS.custom ?? '');
 
-    await settings.getByLabel('Endpoint URL').fill(other);
-    await expect(settings.getByLabel('API key')).toHaveValue('');
-    await settings.getByRole('button', { name: 'Test' }).click();
-    await expect(settings.getByRole('status')).toContainText('Works.');
+    await form.getByLabel('Model link').fill(other);
+    await expect(form.getByLabel('API key')).toHaveValue('');
+    await form.getByLabel('Model', { exact: true }).fill('test-model');
+    await form.getByRole('button', { name: 'Save', exact: true }).click();
+    await settings.getByRole('button', { name: 'Test My model' }).click();
+    await expect(settings.getByRole('status').filter({ hasText: 'Works.' })).toBeVisible();
     expect(postsTo(armed, other)[0]?.headers.authorization).toBeUndefined();
 
-    await settings.getByRole('button', { name: 'Save' }).click();
+    await settings.getByRole('button', { name: 'Close' }).click();
     await expect(settings).toBeHidden();
     await page.getByRole('button', { name: CHIP }).click();
+    await acceptNoticeIfShown(page);
     await expect(page.getByTestId('ask-answer')).toContainText('OK');
     expect(postsTo(armed, other)).toHaveLength(2);
     expect(keysInNetworkLog(armed, [SENTINEL_KEYS.custom ?? ''])).toEqual([]);
@@ -402,6 +446,7 @@ test.describe('a model address that redirects', () => {
         await page.route(`http://127.0.0.1:${second.port}/**`, (route) => route.continue());
         await seedStorage(page, {
           'swv:ai': storedAi('custom', { customUrl: `http://127.0.0.1:${first.port}/v1` }),
+          'swv:ai:consent': JSON.stringify([`127.0.0.1:${first.port}`]),
         });
         const dialog = await openAsk(page);
         await dialog.getByRole('button', { name: CHIP }).click();

@@ -17,6 +17,7 @@ import {
   postsTo,
   PROVIDER_URLS,
   storedAi,
+  storedConsent,
   type ModelReply,
 } from './support/models.ts';
 
@@ -82,7 +83,7 @@ test.describe('a hostile model reply', () => {
   for (const [name, reply] of Object.entries(REPLIES)) {
     test(`${name} is plain text and does nothing`, async ({ page, baseURL }) => {
       const armed = await arm(page, baseURL);
-      await seedStorage(page, { 'swv:ai': storedAi('groq') });
+      await seedStorage(page, { 'swv:ai': storedAi('groq'), 'swv:ai:consent': storedConsent() });
       await mockModel(armed, GROQ, reply);
       const dialog = await openAskOn(page, FLOW);
       const settings = await stored(page, 'swv:ai');
@@ -107,7 +108,7 @@ test.describe('a hostile model reply', () => {
 
   test('the glossary keeps an answer as plain text', async ({ page, baseURL }) => {
     const armed = await arm(page, baseURL);
-    await seedStorage(page, { 'swv:ai': storedAi('groq') });
+    await seedStorage(page, { 'swv:ai': storedAi('groq'), 'swv:ai:consent': storedConsent() });
     await mockModel(armed, GROQ, hostile('glossary'));
     const dialog = await openAskOn(page, FLOW);
     await dialog.getByRole('textbox', { name: 'Question' }).fill('What is zebrafish?');
@@ -122,7 +123,7 @@ test.describe('a hostile model reply', () => {
 
   test('tool calls in the reply are ignored', async ({ page, baseURL }) => {
     const armed = await arm(page, baseURL);
-    await seedStorage(page, { 'swv:ai': storedAi('groq') });
+    await seedStorage(page, { 'swv:ai': storedAi('groq'), 'swv:ai:consent': storedConsent() });
     const call = {
       tool_calls: [{ id: '1', type: 'function', function: { name: 'export', arguments: '{}' } }],
       function_call: { name: 'goto', arguments: '{"step":2}' },
@@ -171,7 +172,7 @@ test.describe('a hostile model reply', () => {
   for (const [name, reply] of Object.entries(BROKEN)) {
     test(`${name} ends in a message, runs nothing and is not saved`, async ({ page, baseURL }) => {
       const armed = await arm(page, baseURL);
-      await seedStorage(page, { 'swv:ai': storedAi('groq') });
+      await seedStorage(page, { 'swv:ai': storedAi('groq'), 'swv:ai:consent': storedConsent() });
       await mockModel(armed, GROQ, reply);
       const dialog = await openAskOn(page, FLOW);
       await dialog.getByRole('button', { name: CHIP }).click();
@@ -187,14 +188,14 @@ test.describe('a hostile model reply', () => {
 
   test('the Test button shows a reply and a failure as plain text', async ({ page, baseURL }) => {
     const armed = await arm(page, baseURL);
-    await seedStorage(page, { 'swv:ai': storedAi('groq') });
+    await seedStorage(page, { 'swv:ai': storedAi('groq'), 'swv:ai:consent': storedConsent() });
     await mockModel(armed, GROQ, `<img src=x onerror="__pwned('test')" data-pwn>`);
     const dialog = await openAskOn(page, FLOW);
-    await dialog.getByTitle('Provider, key, model').click();
-    const settings = page.getByRole('dialog', { name: 'Ask AI', exact: true });
-    const status = settings.getByRole('status');
+    await dialog.getByTitle('Models, keys and limits').click();
+    const settings = page.getByRole('dialog', { name: 'AI settings', exact: true });
+    const status = settings.getByTestId('model-row').filter({ hasText: 'Groq' }).getByRole('status');
 
-    await settings.getByRole('button', { name: 'Test' }).click();
+    await settings.getByRole('button', { name: 'Test Groq' }).click();
     await expect(status).toContainText('onerror=');
     await expectNothingRan(armed, 'the Test button, on a reply');
 
@@ -204,15 +205,15 @@ test.describe('a hostile model reply', () => {
       contentType: 'text/html',
       body: `<img src=x onerror="__pwned('test-fail')" data-pwn>`,
     });
-    await settings.getByRole('button', { name: 'Test' }).click();
-    await expect(status).toContainText('Failed: 403');
+    await settings.getByRole('button', { name: 'Test Groq' }).click();
+    await expect(status).toContainText('403');
     await expect(status).toContainText('onerror=');
     await expectNothingRan(armed, 'the Test button, on a failure');
   });
 
   test('a very long reply leaves the page working', async ({ page, baseURL }) => {
     const armed = await arm(page, baseURL);
-    await seedStorage(page, { 'swv:ai': storedAi('groq') });
+    await seedStorage(page, { 'swv:ai': storedAi('groq'), 'swv:ai:consent': storedConsent() });
     await mockModel(armed, GROQ, `<img src=x onerror="__pwned('long')" data-pwn>`.repeat(40_000));
     const dialog = await openAskOn(page, FLOW);
     await dialog.getByRole('button', { name: CHIP }).click();
@@ -225,7 +226,7 @@ test.describe('a hostile model reply', () => {
 
   test('an answer changed in the saved answers is still plain text', async ({ page, baseURL }) => {
     const armed = await arm(page, baseURL);
-    await seedStorage(page, { 'swv:ai': storedAi('groq', { autoNote: false }) });
+    await seedStorage(page, { 'swv:ai': storedAi('groq', { autoNote: false }), 'swv:ai:consent': storedConsent() });
     await mockModel(armed, GROQ, 'A plain answer.');
     const first = await openAskOn(page, FLOW);
     await first.getByRole('button', { name: CHIP }).click();
@@ -234,11 +235,22 @@ test.describe('a hostile model reply', () => {
     // What an attacker who can write to this storage could change.
     const bad = hostile('cache');
     await page.evaluate(
-      `(() => {
-        const cache = JSON.parse(localStorage.getItem('swv:ai:cache'));
-        for (const entry of Object.values(cache)) entry.a = ${JSON.stringify(bad)};
-        localStorage.setItem('swv:ai:cache', JSON.stringify(cache));
-      })()`,
+      `new Promise((resolve, reject) => {
+        const open = indexedDB.open('swv-ai');
+        open.onerror = reject;
+        open.onsuccess = () => {
+          const tx = open.result.transaction('answers', 'readwrite');
+          const store = tx.objectStore('answers');
+          const cursor = store.openCursor();
+          cursor.onsuccess = () => {
+            if (!cursor.result) return;
+            cursor.result.update({ ...cursor.result.value, text: ${JSON.stringify(bad)} });
+            cursor.result.continue();
+          };
+          tx.oncomplete = resolve;
+          tx.onerror = reject;
+        };
+      })`,
     );
     await page.reload();
     await expect(page.getByTestId('diagram').locator('svg').first()).toBeVisible();
@@ -265,7 +277,7 @@ test.describe('a hostile model reply', () => {
         },
       };`,
     );
-    await seedStorage(page, { 'swv:ai': storedAi('claude') });
+    await seedStorage(page, { 'swv:ai': storedAi('claude'), 'swv:ai:consent': storedConsent() });
     const dialog = await openAskOn(page, FLOW);
     await dialog.getByRole('button', { name: CHIP }).click();
     await expect(dialog.getByTestId('ask-answer')).toContainText('onerror=');
@@ -292,7 +304,7 @@ test.describe('hostile flow text in a prompt', () => {
     baseURL,
   }) => {
     const armed = await arm(page, baseURL);
-    await seedStorage(page, { 'swv:ai': storedAi('groq') });
+    await seedStorage(page, { 'swv:ai': storedAi('groq'), 'swv:ai:consent': storedConsent() });
     await mockModel(armed, GROQ, 'ok');
     const dialog = await openAskOn(page, FENCED);
     await dialog.getByRole('button', { name: CHIP }).click();
@@ -316,7 +328,7 @@ test.describe('hostile flow text in a prompt', () => {
 
   test('nothing goes to a model until the person asks', async ({ page, baseURL }) => {
     const armed = await arm(page, baseURL);
-    await seedStorage(page, { 'swv:ai': storedAi('groq') });
+    await seedStorage(page, { 'swv:ai': storedAi('groq'), 'swv:ai:consent': storedConsent() });
     await mockModel(armed, GROQ, 'ok');
     await openDrawn(page, shareLink.z(FENCED));
     await page.getByTestId('diagram').focus();

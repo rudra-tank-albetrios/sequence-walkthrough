@@ -65,10 +65,13 @@ function errorDetail(text: string): string {
   }
 }
 
+/** A reply or error that repeats the key must not show it, save it or log it. */
+const hideKey = (text: string, key: string): string =>
+  key ? text.split(key).join('[key hidden]') : text;
+
 /** A provider's words are untrusted: shortened, and never allowed to repeat the key. */
 function safeDetail(text: string, key: string): string {
-  const shown = key ? text.split(key).join('[key hidden]') : text;
-  return shown.replace(/\s+/g, ' ').trim().slice(0, DETAIL_CHARS);
+  return hideKey(text, key).replace(/\s+/g, ' ').trim().slice(0, DETAIL_CHARS);
 }
 
 function statusFailure(entry: ModelEntry, status: number, detail: string): Failure {
@@ -173,7 +176,7 @@ function readReply(entry: ModelEntry, body: string, maxTokens: number, windows: 
   const content = reply.data.choices[0]?.message.content ?? '';
   return {
     ok: true,
-    text: content.slice(0, maxTokens * CHARS_PER_REPLY_TOKEN),
+    text: hideKey(content, entry.key).slice(0, maxTokens * CHARS_PER_REPLY_TOKEN),
     tokens: reply.data.usage?.total_tokens ?? null,
     windows,
   };
@@ -185,7 +188,8 @@ type ClaudeSampler = (
   options: { modelTier: 'quick'; cache: boolean },
 ) => Promise<{ text?: string }>;
 interface ClaudeHost {
-  use(capability: 'sample'): Promise<ClaudeSampler>;
+  /** Resolves null when this view cannot run the capability. */
+  use(capability: 'sample'): Promise<ClaudeSampler | null>;
 }
 
 async function sendClaude(entry: ModelEntry, request: ChatRequest): Promise<ChatResult> {
@@ -193,6 +197,7 @@ async function sendClaude(entry: ModelEntry, request: ChatRequest): Promise<Chat
   try {
     const { claude } = globalThis as unknown as { claude: ClaudeHost };
     const sample = await claude.use('sample');
+    if (!sample) return failed({ kind: 'bad-request', message: modelProblem(entry) ?? `${entry.name} is not available on this page.` });
     const content = `${request.system}\n\n${request.prompt}`;
     const reply = await sample([{ role: 'user', content }], { modelTier: 'quick', cache: false });
     if (request.signal?.aborted) return failed({ kind: 'aborted', message: 'The request was cancelled.' });
@@ -200,8 +205,10 @@ async function sendClaude(entry: ModelEntry, request: ChatRequest): Promise<Chat
       ? { ok: true, text: reply.text.slice(0, request.maxTokens * CHARS_PER_REPLY_TOKEN), tokens: null, windows: [] }
       : failed({ kind: 'bad-reply', message: `${entry.name} sent no answer text.` });
   } catch (error) {
-    const detail = safeDetail(error instanceof Error ? error.message : String(error), '');
-    return failed({ kind: 'network', message: `${entry.name} could not answer: ${detail}` });
+    // The host refuses with a plain `{ code, message }`, not an Error, so its words are picked out.
+    const words: unknown = typeof error === 'object' && error !== null ? Reflect.get(error, 'message') : error;
+    const detail = safeDetail(typeof words === 'string' ? words : '', '');
+    return failed({ kind: 'network', message: `${entry.name} could not answer: ${detail || 'no reason was given.'}` });
   }
 }
 

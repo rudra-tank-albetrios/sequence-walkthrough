@@ -28,7 +28,7 @@ export function ExplainPanel({ findings }: { findings: readonly ReviewFinding[] 
     setAsking(false);
     if (!result.ok && result.kind === 'aborted') return;
     setAnswer(result);
-    if (!result.ok && result.kind === 'no-model') setUi({ aiSettingsOpen: true });
+    if (!result.ok && (result.kind === 'no-model' || result.kind === 'consent-needed')) setUi({ aiSettingsOpen: true });
   };
 
   return (

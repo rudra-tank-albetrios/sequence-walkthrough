@@ -46,6 +46,12 @@ export function storedAi(
   });
 }
 
+const CLAUDE_HOST = 'Claude (through this artifact)';
+
+/** What `swv:ai:consent` holds once the privacy notice was read for every provider, as JSON text. */
+export const storedConsent = (): string =>
+  JSON.stringify([...Object.values(PROVIDER_URLS).map((url) => new URL(url).host), CLAUDE_HOST]);
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, content-type, http-referer, x-title',
