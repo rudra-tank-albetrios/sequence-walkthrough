@@ -94,11 +94,8 @@ export interface CompleteOptions {
 async function completeHttp(endpoint: Endpoint, user: string, options: CompleteOptions): Promise<string> {
   const { provider, url, model, key } = endpoint;
   const controller = new AbortController();
-  let timedOut = false;
-  const timer = setTimeout(() => {
-    timedOut = true;
-    controller.abort();
-  }, options.timeoutMs ?? TIMEOUT_MS);
+  const timeout = new Error('The provider did not answer in time');
+  const timer = setTimeout(() => controller.abort(timeout), options.timeoutMs ?? TIMEOUT_MS);
   const onOuterAbort = () => controller.abort(options.signal?.reason);
   options.signal?.addEventListener('abort', onOuterAbort, { once: true });
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -136,7 +133,7 @@ async function completeHttp(endpoint: Endpoint, user: string, options: CompleteO
     return text;
   } catch (error) {
     // Each browser words an aborted fetch differently; the timeout is the one case that is ours.
-    if (timedOut) throw new Error('The provider did not answer in time', { cause: error });
+    if (controller.signal.reason === timeout) throw timeout;
     throw error;
   } finally {
     clearTimeout(timer);
