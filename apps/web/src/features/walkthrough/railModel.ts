@@ -14,15 +14,6 @@ export interface RailMarker {
   beside: boolean;
 }
 
-export interface RailThreat {
-  level?: string;
-  text?: string;
-}
-
-/** Threats arrive with `%% @threat` from the review phase; until then a step has none. */
-export const threatsOf = (step: Step): readonly RailThreat[] =>
-  (step as Step & { threats?: readonly RailThreat[] }).threats ?? [];
-
 /** The chapters drawn on the rail. A flow without chapters is one long chapter. */
 export function railSections(flow: Flow): Section[] {
   const n = flow.steps.length;
@@ -78,7 +69,7 @@ export function railMarkers(
     };
     if (step.isError) add('error');
     if (step.uses.length > 0) add('side');
-    const threatened = threatsOf(step).length > 0;
+    const threatened = step.threats.length > 0;
     if (threatened) add('threat');
     if (starred(step)) add('star', threatened);
   }
@@ -108,8 +99,8 @@ export function markerLines(step: Step, isStarred: boolean): { kind: RailMarkerK
     lines.push({ kind: 'error', text: `${status}${reason}` });
   }
   for (const part of step.uses) lines.push({ kind: 'side', text: `${part.kind} ${part.name}` });
-  for (const threat of threatsOf(step)) {
-    lines.push({ kind: 'threat', text: `Threat${threat.level ? ` (${threat.level})` : ''}: ${threat.text ?? ''}`.trim() });
+  for (const threat of step.threats) {
+    lines.push({ kind: 'threat', text: `Threat (${threat.level}): ${threat.text}` });
   }
   if (isStarred) lines.push({ kind: 'star', text: 'Bookmarked' });
   return lines;
