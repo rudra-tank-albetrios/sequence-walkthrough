@@ -100,7 +100,7 @@ async function errorDetail(res: Response): Promise<string> {
   }
 }
 
-export const TIMEOUT_MS = 20_000;
+export const TIMEOUT_MS = 45_000;
 
 export interface CompleteOptions {
   /** Aborts the request, for example when a newer question replaces it. */

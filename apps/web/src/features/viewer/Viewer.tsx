@@ -30,6 +30,7 @@ type Tip =
 /** The drawing and the flow it was drawn from: they only ever change together. */
 interface Drawing extends RenderedDiagram {
   flow: Flow;
+  code: string;
 }
 
 interface Mounted {
@@ -84,6 +85,7 @@ export function Viewer() {
   const mountedRef = useRef<Mounted | null>(null);
   const renderSeq = useRef(0);
   const firstFit = useRef(true);
+  const fitDone = useRef(0);
   const reducedRef = useRef(reduced);
   useEffect(() => {
     reducedRef.current = reduced;
@@ -149,7 +151,7 @@ export function Viewer() {
       .then((result) => {
         if (seq !== renderSeq.current || !drawing) return;
         drawnFlow.current = drawing;
-        setRenderedState({ ...result, flow: drawing });
+        setRenderedState({ ...result, flow: drawing, code });
         setError(null);
         setLoadFailed(false);
         setRendered({ error: null, rendering: false, lastRenderMs: performance.now() - t0 });
@@ -192,9 +194,11 @@ export function Viewer() {
     }
     mountedRef.current = mounted;
     camera.setContent(vb.w, vb.h);
-    if (firstFit.current) {
+    const fitRequest = useFlowStore.getState().fitRequest;
+    if (firstFit.current || fitDone.current !== fitRequest) {
       camera.initial();
       firstFit.current = false;
+      fitDone.current = fitRequest;
     } else camera.refresh();
     setRendered({ cleanSvg, themeBg: rendered.themeBg, themeDark: rendered.dark, width: vb.w, height: vb.h });
     setMountVersion((v) => v + 1);
@@ -239,6 +243,14 @@ export function Viewer() {
     const d = m.dom[lastGo.index];
     if (d) camera.followStep(d.box, d.labelBox, m.flow.isSequence ? m.geo.hdrH : 0, insetLeft());
   }, [lastGo, view, camera, insetLeft, mountVersion]);
+
+  // Loading the code that is already drawn starts no drawing, so the camera starts over here.
+  const fitRequest = useFlowStore((s) => s.fitRequest);
+  useEffect(() => {
+    if (fitDone.current === fitRequest || rendered?.code !== code) return;
+    fitDone.current = fitRequest;
+    camera.initial();
+  }, [fitRequest, rendered, code, camera]);
 
   // Back from the table, the diagram shows the step that was picked there.
   const lastView = useRef(view);
@@ -375,7 +387,7 @@ export function Viewer() {
       data-testid="diagram"
       hidden={view !== 'diagram'}
     >
-      <div ref={layerRef} className={styles.layer}>
+      <div ref={layerRef} className={styles.layer} data-testid="layer">
         {rendered ? <DiagramSvg svg={rendered.svg} className="" /> : null}
       </div>
       <div ref={hdrBandRef} className={styles.hdrBand} hidden />
