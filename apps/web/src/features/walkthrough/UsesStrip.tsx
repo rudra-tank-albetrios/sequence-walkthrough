@@ -10,7 +10,7 @@ import { usesSummary } from './steps.ts';
 export function UsesStrip({ step }: { step: Step }) {
   if (step.uses.length === 0) return null;
   return (
-    <details className={styles.uses} data-testid="uses">
+    <details className={styles.uses} data-testid="uses" data-tour="side-parts">
       <summary>Also involved: {usesSummary(step.uses)}</summary>
       <ul>
         {step.uses.map((u, i) => (

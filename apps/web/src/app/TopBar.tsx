@@ -116,7 +116,14 @@ export function TopBar() {
         >
           How it works
         </Button>
-        <span className={styles.extra}>
+        <Button
+          className={styles.extra}
+          title="A short walk through every feature, with no key needed"
+          onClick={() => setUi({ tourOpen: true })}
+        >
+          Take the tour
+        </Button>
+        <span className={styles.extra} data-tour="exports">
           <Menu label="Export and share" trigger={<Button>Export ▾</Button>}>
             <ExportMenuItems />
           </Menu>
@@ -130,8 +137,9 @@ export function TopBar() {
         >
           ?
         </Button>
-        <span className={styles.more}>
+        <span className={styles.more} data-tour="exports">
           <Menu label="More" trigger={<Button icon aria-label="More">⋯</Button>}>
+            <MenuItem onSelect={() => setUi({ tourOpen: true })}>Take the tour</MenuItem>
             <MenuItem onSelect={() => setUi({ guideOpen: true })}>How it works</MenuItem>
             <MenuItem onSelect={() => setView(view === 'diagram' ? 'table' : 'diagram')}>
               {view === 'diagram' ? 'Switch to table view' : 'Switch to diagram view'}

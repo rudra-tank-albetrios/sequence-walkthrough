@@ -345,6 +345,7 @@ export function Viewer() {
       aria-roledescription="diagram canvas"
       aria-label="Diagram. Arrow keys step through the flow, drag or scroll to move, plus and minus zoom."
       data-testid="diagram"
+      data-tour="layers"
       hidden={view !== 'diagram'}
     >
       <div ref={layerRef} className={styles.layer}>
