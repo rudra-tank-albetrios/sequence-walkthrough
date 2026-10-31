@@ -1,5 +1,15 @@
 import { STOPWORDS } from './vocabulary.ts';
 
+/** A short, stable hash of a string (FNV-1a), base 36. Version 2's saved data depends on it. */
+export function hashStr(text: string): string {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(36);
+}
+
 /** Named entities Mermaid labels use as `#name;`. Unknown names stay as written. */
 const NAMED_ENTITIES: Record<string, string> = {
   quot: '"',
