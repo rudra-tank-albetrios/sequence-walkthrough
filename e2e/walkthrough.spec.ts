@@ -459,9 +459,16 @@ test.describe('walkthrough', () => {
     await expect(page.locator('#codePanel')).toBeHidden();
     await expect.poll(async () => (await top.boundingBox())?.x ?? 0).toBeCloseTo(centred, 0);
     await diagram(page).focus();
-    // The overlay floats over the page and takes no room from it, so the tabs stay put.
+    // The overlay is modal: while it is open the tabs are out of reach, as is all of the page behind
+    // it. It floats and takes no room, so they have not moved, and they come back when it closes.
     await page.keyboard.press('i');
     await expect(overlay(page)).toBeVisible();
+    await expect(top).toHaveCount(0);
+    const behind = page.locator('button[aria-label="Hide the header"]');
+    expect((await behind.boundingBox())?.x ?? 0).toBeCloseTo(centred, 0);
+    await page.keyboard.press('Escape');
+    await expect(overlay(page)).toBeHidden();
+    await expect(top).toBeVisible();
     expect((await top.boundingBox())?.x ?? 0).toBeCloseTo(centred, 0);
   });
 

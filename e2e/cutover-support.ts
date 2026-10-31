@@ -93,7 +93,9 @@ export async function openGuide(page: Page): Promise<Locator> {
     await more.click();
     await page.getByRole('menuitem', { name: 'How it works' }).click();
   } else {
-    await page.getByRole('button', { name: 'How it works' }).click();
+    // The guide sits in the Learn tool group.
+    await page.getByRole('button', { name: 'Learn', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'How it works' }).click();
   }
   const dialog = page.getByRole('dialog', { name: 'How it works' });
   await expect(dialog).toBeVisible();
