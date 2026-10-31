@@ -97,7 +97,7 @@ export function BehindPopover({ flow }: { flow: Flow }) {
               data-open="behind"
               onClick={() => {
                 setOpen(false);
-                setUi({ insightOpen: true });
+                setUi({ insightOpen: true, insightTab: 'behind' });
               }}
             >
               Open in the Insight panel

@@ -3,18 +3,15 @@ import { useMemo, useRef } from 'react';
 
 import { DEFAULT_DIAGRAM } from '../../shared/lib/defaultDiagram.ts';
 import { errorLine } from '../../shared/lib/mermaidLines.ts';
-import { copyText, plural } from '../../shared/lib/util.ts';
+import { copyText, cx, MERMAID_VERSION, plural } from '../../shared/lib/util.ts';
 import { useDiagramStore } from '../../shared/state/diagramStore.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { toast } from '../../shared/ui/toast.ts';
 import styles from './codePanel.module.css';
-import { Editor, stepAtLine, type EditorHandle } from './Editor.tsx';
+import { Editor, type EditorHandle } from './Editor.tsx';
+import { stepAtLine } from './stepAtLine.ts';
 import { fixPrompt } from './fixPrompt.ts';
-import { cx } from './highlight.tsx';
-
-/** The bundled Mermaid, named in the status line as version 2 did. */
-const MERMAID_VERSION = '12.2.0';
 
 function StatusLine({
   code,

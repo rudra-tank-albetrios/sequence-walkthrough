@@ -64,7 +64,3 @@ export function highlightLine(line: string): ReactNode {
   }
   return line;
 }
-
-/** Joins class names, dropping the falsy ones (CSS module lookups may be undefined). */
-export const cx = (...parts: (string | false | null | undefined)[]): string =>
-  parts.filter(Boolean).join(' ');

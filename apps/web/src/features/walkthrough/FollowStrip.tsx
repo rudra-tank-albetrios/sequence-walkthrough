@@ -1,9 +1,9 @@
 import { Fragment } from 'react';
 
+import { cx } from '../../shared/lib/util.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
+import { askAboutWord } from '../../shared/state/follow.ts';
 import { Button } from '../../shared/ui/Button.tsx';
-import { cx } from './cx.ts';
-import { askAbout } from './follow.ts';
 import styles from './walkbar.module.css';
 
 /** The followed value and the steps that mention it; ‹ › move between them and wrap around. */
@@ -50,7 +50,7 @@ export function FollowStrip() {
         className={styles.small}
         title="Ask what this value is"
         onClick={() => {
-          askAbout(`What is "${token}"?`);
+          askAboutWord(token);
         }}
       >
         Ask

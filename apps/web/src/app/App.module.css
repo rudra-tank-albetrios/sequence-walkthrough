@@ -16,9 +16,10 @@
 
 .showControls {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  right: max(12px, env(safe-area-inset-right, 0px));
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
   z-index: 40;
+  box-shadow: var(--shadow-1), var(--shadow-2);
 }
 
 /* Edge tabs: fold the header, the step bar or the code panel away; the tab stays to bring it back */
@@ -90,4 +91,36 @@
 
 .left[aria-expanded='true'] svg {
   transform: rotate(-90deg);
+}
+
+/* The tabs stay centred over the part of the canvas the panels leave free. */
+.stage[data-code-open] {
+  --cp-w: min(480px, 92%);
+}
+
+.stage[data-code-open] .left {
+  left: var(--cp-w);
+}
+
+.stage[data-code-open] .top,
+.stage[data-code-open] .bottom {
+  left: calc(var(--cp-w) + (100% - var(--cp-w)) / 2);
+}
+
+.stage[data-insight-open]:not([data-code-open]) .top,
+.stage[data-insight-open]:not([data-code-open]) .bottom {
+  left: calc((100% - min(520px, 92%)) / 2);
+}
+
+@media (max-width: 720px) {
+  .stage[data-code-open] .left {
+    display: none;
+  }
+
+  .stage[data-code-open] .top,
+  .stage[data-code-open] .bottom,
+  .stage[data-insight-open]:not([data-code-open]) .top,
+  .stage[data-insight-open]:not([data-code-open]) .bottom {
+    left: 50%;
+  }
 }

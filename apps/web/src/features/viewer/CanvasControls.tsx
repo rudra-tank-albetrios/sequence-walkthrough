@@ -1,5 +1,6 @@
 import { Button } from '../../shared/ui/Button.tsx';
 import { Select } from '../../shared/ui/Select.tsx';
+import { useDiagramStore } from '../../shared/state/diagramStore.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import styles from './viewer.module.css';
 
@@ -14,8 +15,11 @@ export function CanvasControls() {
   const setUi = useFlowStore((s) => s.setUi);
   const setPlaying = useFlowStore((s) => s.setPlaying);
   const updateSettings = useFlowStore((s) => s.updateSettings);
-  const lintCount = flow?.lint.length ?? 0;
+  const syntaxError = useDiagramStore((s) => s.error);
+  const unexplained = flow?.lint.filter((l) => l.code === 'no-step').length ?? 0;
   const isSequence = flow?.isSequence ?? false;
+
+  if (ui.controlsHidden) return null;
 
   return (
     <div className={styles.controls} data-canvas-ui>
@@ -29,9 +33,13 @@ export function CanvasControls() {
         }}
       >
         <span aria-hidden="true">&lt;/&gt;</span> Code
-        {lintCount > 0 ? (
-          <span className={styles.count} title={`${lintCount} annotation warning${lintCount === 1 ? '' : 's'}`}>
-            {lintCount}
+        {syntaxError !== null ? (
+          <span className={`${styles.count} ${styles.countErr}`} data-testid="code-count">
+            error
+          </span>
+        ) : unexplained > 0 ? (
+          <span className={styles.count} data-testid="code-count">
+            {unexplained} unexplained
           </span>
         ) : null}
       </Button>

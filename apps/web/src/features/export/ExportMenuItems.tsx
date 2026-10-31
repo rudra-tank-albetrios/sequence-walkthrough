@@ -1,5 +1,7 @@
 import * as RadixMenu from '@radix-ui/react-dropdown-menu';
 
+import { downloadSkillKit } from '../../shared/lib/files.ts';
+import { copyTableMarkdown, saveTableCsv } from '../../shared/lib/tableActions.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { MenuHeading, MenuItem, MenuRow, MenuSeparator } from '../../shared/ui/Menu.tsx';
 import styles from './export.module.css';
@@ -39,10 +41,10 @@ export function ExportMenuItems() {
       <MenuItem onSelect={() => act.run(act.exportCode)} hint=".mmd">
         Code
       </MenuItem>
-      <MenuItem onSelect={() => act.run(act.exportCsv)} hint=".csv">
+      <MenuItem onSelect={() => act.run(saveTableCsv)} hint=".csv">
         Step table
       </MenuItem>
-      <MenuItem onSelect={() => act.run(act.copyMarkdown)}>Copy table as Markdown</MenuItem>
+      <MenuItem onSelect={() => act.run(copyTableMarkdown)}>Copy table as Markdown</MenuItem>
       <MenuSeparator />
       <MenuHeading>Share</MenuHeading>
       <MenuItem onSelect={() => act.run(act.openLive)} hint="new tab">
@@ -62,7 +64,7 @@ export function ExportMenuItems() {
       </MenuItem>
       <MenuSeparator />
       <MenuHeading>Skill for Claude</MenuHeading>
-      <MenuItem onSelect={() => act.run(act.downloadSkillKit)} hint=".zip with setup guide">
+      <MenuItem onSelect={() => act.run(downloadSkillKit)} hint=".zip with setup guide">
         Download the skill
       </MenuItem>
       <MenuSeparator />

@@ -17,9 +17,17 @@ export function FindPopover() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const hits = useMemo(() => findHits(flow, query), [flow, query]);
 
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (open) inputRef.current?.focus();
-  }, [open]);
+    if (open) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    } else if (wasOpen.current) {
+      setQuery('');
+      document.querySelector<HTMLElement>('[data-testid="diagram"]')?.focus({ preventScroll: true });
+    }
+    wasOpen.current = open;
+  }, [open, setQuery]);
 
   if (!open) return null;
 
@@ -31,14 +39,15 @@ export function FindPopover() {
       : `${at >= 0 ? at + 1 : '–'} of ${hits.length}`;
 
   const step = (direction: 1 | -1) => {
-    if (hits.length === 0) return;
-    const next = at < 0 ? (direction === 1 ? 0 : hits.length - 1) : (at + direction + hits.length) % hits.length;
-    const index = hits[next];
+    const index =
+      direction === 1
+        ? (hits.find((i) => i > cur) ?? hits[0])
+        : ([...hits].reverse().find((i) => i < cur) ?? hits.at(-1));
     if (index !== undefined) go(index);
   };
 
   return (
-    <div className={styles.pop} role="search" data-canvas-ui>
+    <div className={styles.pop} role="search" data-canvas-ui data-testid="find">
       <input
         ref={inputRef}
         type="search"
@@ -48,8 +57,8 @@ export function FindPopover() {
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
-          const first = findHits(flow, e.target.value)[0];
-          if (first !== undefined) go(first);
+          const found = findHits(flow, e.target.value);
+          if (found.length > 0 && !found.includes(cur)) go(found.find((i) => i > cur) ?? found[0] ?? 0);
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
@@ -61,7 +70,7 @@ export function FindPopover() {
           }
         }}
       />
-      <span className={styles.count} aria-live="polite">
+      <span className={styles.count} aria-live="polite" data-testid="find-count">
         {count}
       </span>
       <Button icon aria-label="Previous match" onClick={() => step(-1)}>

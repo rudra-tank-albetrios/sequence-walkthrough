@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { TableView } from './TableView.tsx';
@@ -21,25 +21,9 @@ const CODE = [
   '  B-->>A: 200 OK',
 ].join('\n');
 
-const mediaQueryList = (query: string): MediaQueryList => ({
-  matches: false,
-  media: query,
-  onchange: null,
-  addEventListener: () => undefined,
-  removeEventListener: () => undefined,
-  addListener: () => undefined,
-  removeListener: () => undefined,
-  dispatchEvent: () => false,
-});
-
 const bodyRows = () => screen.getAllByRole('row').filter((row) => row.hasAttribute('data-step'));
 
 describe('table view', () => {
-  beforeAll(() => {
-    vi.stubGlobal('matchMedia', mediaQueryList);
-    Element.prototype.scrollIntoView = vi.fn();
-  });
-
   beforeEach(() => {
     useFlowStore.setState({ cur: -1, path: 'all', spot: null, view: 'table', findQuery: '', follow: null });
     useFlowStore.getState().setCode(CODE);
