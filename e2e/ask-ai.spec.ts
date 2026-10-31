@@ -50,7 +50,7 @@ test.describe('Ask AI', () => {
     await key.fill('test-key-123');
     await settings.getByRole('button', { name: 'Show the key' }).click();
     await expect(key).toHaveAttribute('type', 'text');
-    await settings.getByRole('button', { name: 'Save' }).click();
+    await settings.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(
       page.getByRole('status').filter({ hasText: 'AI settings saved in this browser' }),
     ).toBeVisible();
@@ -131,9 +131,10 @@ test.describe('Guide and shortcuts', () => {
     await expectAccessibleDialog(page);
   });
 
-  test('How it works opens from the top bar with the skill download', async ({ page }) => {
+  test('How it works opens from Learn with the skill download', async ({ page }) => {
     await openDemo(page);
-    await page.getByRole('button', { name: 'How it works' }).click();
+    await page.getByRole('button', { name: 'Learn', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'How it works' }).click();
     const dialog = page.getByRole('dialog', { name: 'How it works' });
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole('heading', { level: 3, name: 'The viewer' })).toBeVisible();

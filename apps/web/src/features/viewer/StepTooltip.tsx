@@ -91,6 +91,11 @@ export function StepTooltip({
           <b>Unconfirmed</b> {cut(step.unconfirmed.join('; '), 140)}
         </div>
       ) : null}
+      {step.threats.length > 0 ? (
+        <div className={`${styles.tipRow} ${styles.tipThreat}`}>
+          <b>Possible problem</b> {cut(step.threats.map((t) => t.text).join('; '), 140)}
+        </div>
+      ) : null}
       {step.refs.length > 0 ? (
         <div className={styles.tipRow}>
           <b>Code</b> <span className="mono">{step.refs.join(' ')}</span>
@@ -119,5 +124,31 @@ export function LayerTooltip({ flow, alias }: { flow: Flow; alias: string }) {
       {layer.desc ? layer.desc : <span className={styles.faint}>No @layer description yet</span>}
       <div className={styles.tipFoot}>Click to show only its arrows</div>
     </>
+  );
+}
+
+/** Hovering the dot on an arrow: each side part's name, purpose, file and line, and the steps using it. */
+export function UsesTooltip({ flow, step }: { flow: Flow; step: Step }) {
+  return (
+    <div data-testid="uses-tooltip">
+      <div className={styles.tipHead}>
+        <span className={styles.tipKind}>Side parts of step {step.n}</span>
+      </div>
+      {step.uses.map((part) => {
+        const used = flow.uses.find((u) => u.kind === part.kind && u.name === part.name)?.steps ?? [step.idx];
+        return (
+          <div key={`${part.kind}:${part.name}`} className={styles.tipUse}>
+            <div>
+              <b>{part.kind}</b> {part.name}
+            </div>
+            {part.text ? <div>{cut(part.text, 160)}</div> : null}
+            {part.ref ? <div className={`${styles.tipRoute} mono`}>{part.ref}</div> : null}
+            <div className={styles.tipRoute}>
+              {used.length === 1 ? 'Used on step' : 'Used on steps'} {used.map((i) => i + 1).join(', ')}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }

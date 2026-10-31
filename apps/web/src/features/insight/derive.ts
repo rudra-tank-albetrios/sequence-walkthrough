@@ -1,6 +1,7 @@
-import type { Step } from '@swv/core';
+import type { Flow, Step } from '@swv/core';
 
 import { isUrl } from '../../shared/lib/util.ts';
+import { allTerms, useGlossaryStore } from '../../shared/state/glossaryStore.ts';
 import type { ChipTone } from '../../shared/ui/Chip.tsx';
 
 export const unique = <T>(items: T[]): T[] => [...new Set(items)];
@@ -59,3 +60,21 @@ export const ZONE_LABEL: Record<string, string> = {
   ours: 'our code',
   outside: 'outside service',
 };
+
+/** How many things each view of the flow lists, shown beside its name. */
+export function insightCount(flow: Flow, view: 'layers' | 'endpoints' | 'errors' | 'behind' | 'glossary' | 'data'): number {
+  switch (view) {
+    case 'layers':
+      return flow.participants.length;
+    case 'endpoints':
+      return endpointList(flow.steps).length;
+    case 'errors':
+      return flow.steps.filter((s) => s.isError).length + flow.unconfirmed;
+    case 'behind':
+      return flow.uses.length + flow.effects.length;
+    case 'glossary':
+      return allTerms(flow, useGlossaryStore.getState().saved).length;
+    case 'data':
+      return flow.data.length;
+  }
+}

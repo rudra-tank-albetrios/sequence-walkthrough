@@ -1,0 +1,9 @@
+{
+  "name": "feature-shop",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "hono": "^4.0.0",
+    "zod": "^4.0.0"
+  }
+}

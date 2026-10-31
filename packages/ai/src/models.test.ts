@@ -76,6 +76,16 @@ describe('moving version 2 settings over', () => {
     expect(state.activeId).toBe(state.models[0]?.id);
   });
 
+  it('keeps a custom link saved without a key while another provider was chosen', () => {
+    seedV2({ provider: 'gemini', keys: { gemini: 'k' }, customUrl: 'https://proxy.example/v1' });
+    const state = loadModelState();
+    expect(state.models.map((m) => [m.preset, m.url, m.key])).toEqual([
+      ['gemini', '', 'k'],
+      ['custom', 'https://proxy.example/v1', ''],
+    ]);
+    expect(state.models[1]?.fallback).toBe(false);
+  });
+
   it('makes no entry for a provider that needs a key and has none', () => {
     seedV2({ provider: 'groq', keys: {}, models: {}, customUrl: '' });
     expect(loadModelState().models).toEqual([]);

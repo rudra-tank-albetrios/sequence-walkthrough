@@ -1,8 +1,7 @@
 import type { Step } from '@swv/core';
 
-import { copyText, cx, isUrl } from '../../shared/lib/util.ts';
+import { cx, isUrl } from '../../shared/lib/util.ts';
 import { Chip } from '../../shared/ui/Chip.tsx';
-import { toast } from '../../shared/ui/toast.ts';
 import { TermText } from '../../shared/ui/TermText.tsx';
 import styles from './card.module.css';
 import { StepLinks } from './RichText.tsx';
@@ -36,7 +35,7 @@ export function EffectsRow({ step }: { step: Step }) {
   );
 }
 
-/** A `@ref`: a URL opens in a new tab; `path:line` copies itself on click. */
+/** A `@ref` that is not a web address: plain text, as version 2 showed it. */
 export function RefChip({ value }: { value: string }) {
   if (isUrl(value)) {
     return (
@@ -46,18 +45,9 @@ export function RefChip({ value }: { value: string }) {
     );
   }
   return (
-    <button
-      type="button"
-      className={cx(styles.ref, 'mono')}
-      title="Source. Click to copy."
-      onClick={() => {
-        void copyText(value).then((ok) => {
-          toast(ok ? `Copied ${value}` : 'Could not copy to the clipboard');
-        });
-      }}
-    >
+    <span className={cx(styles.ref, 'mono')} title="Source">
       {value}
-    </button>
+    </span>
   );
 }
 
@@ -69,6 +59,20 @@ export function RefsRow({ step }: { step: Step }) {
         <RefChip key={r} value={r} />
       ))}
     </>
+  );
+}
+
+/** `@threat` lines say "possible problem, please check", never that something is wrong. */
+export function ThreatList({ step }: { step: Step }) {
+  if (step.threats.length === 0) return null;
+  return (
+    <div className={styles.threats} data-testid="threats">
+      {step.threats.map((threat, i) => (
+        <div key={i}>
+          <b>Possible problem, please check:</b> {threat.text}
+        </div>
+      ))}
+    </div>
   );
 }
 

@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && npm run build:single",
+    "build:single": "vite build --mode single",
     "preview": "vite preview",
     "typecheck": "tsc -p ."
   },
@@ -19,20 +20,24 @@
     "@swv/core": "*",
     "dompurify": "^3.4.17",
     "fflate": "^0.8.3",
+    "idb-keyval": "^6.3.0",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.65.0",
     "mermaid": "12.2.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "zod": "^4.6.7",
     "zustand": "^5.0.16"
   },
   "devDependencies": {
+    "@swv/build-skills": "*",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
-    "vite": "^8.3.5"
+    "vite": "^8.3.5",
+    "vite-plugin-singlefile": "^2.3.4"
   }
 }

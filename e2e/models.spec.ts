@@ -16,6 +16,22 @@ import {
   type SeedModel,
 } from './ai-helpers.ts';
 
+// This project has no DOM lib: the page script below declares only what it uses.
+interface AnswerDb {
+  transaction(store: string): {
+    objectStore(store: string): {
+      getAll(): { result: unknown; onsuccess: (() => void) | null };
+    };
+  };
+}
+declare const indexedDB: {
+  open(name: string): {
+    result: AnswerDb;
+    onsuccess: (() => void) | null;
+    onerror: (() => void) | null;
+  };
+};
+
 const row = (settings: Locator, name: string) =>
   settings.getByTestId('model-row').filter({ hasText: name });
 const answerOf = (dialog: Locator) => dialog.getByTestId('ask-answer');
@@ -48,7 +64,7 @@ async function addModel(settings: Locator, provider: string, key: string) {
   if (await add.isVisible()) await add.click();
   await settings.getByLabel('Provider').selectOption(provider);
   await settings.getByLabel('API key').fill(key);
-  await settings.getByRole('button', { name: 'Save' }).click();
+  await settings.getByRole('button', { name: 'Save', exact: true }).click();
 }
 
 test.describe('The model list', () => {
@@ -82,7 +98,7 @@ test.describe('The model list', () => {
     await settings.getByRole('button', { name: 'Edit Gemini' }).click();
     const edit = settings.getByRole('form', { name: 'Edit Gemini' });
     await edit.getByLabel('Name').fill('Google');
-    await edit.getByRole('button', { name: 'Save' }).click();
+    await edit.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(row(settings, 'Google')).toBeVisible();
 
     await settings.getByRole('button', { name: 'Move Mistral up' }).click();
@@ -131,13 +147,12 @@ test.describe('The model list', () => {
   });
 
   test('a reply without a CORS header reads as blocked', async ({ page }) => {
-    await page.route(GROQ_URL, async (route) => {
-      await route.fulfill({
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ choices: [{ message: { content: 'OK' } }] }),
-      });
-    });
+    // A browser reports a CORS refusal to the page as a failed fetch, and Playwright's own replies
+    // skip that check, so the failure is produced directly.
+    // The address itself still answers the probe that tells a refusal from a dead host.
+    await page.route(GROQ_URL, (route) =>
+      route.request().method() === 'POST' ? route.abort('failed') : route.fulfill({ status: 200 }),
+    );
     await seedStorage(page, modelStorage([{ preset: 'groq' }]));
     await openDemo(page);
     const settings = await openSettings(page);
@@ -578,7 +593,7 @@ test.describe('Keys and replies', () => {
     await expect(answer).toContainText(reply);
     await expect(answer.locator('img, script, b')).toHaveCount(0);
     expect(
-      await page.evaluate(() => (window as unknown as { __hacked?: number }).__hacked),
+      await page.evaluate(() => (globalThis as unknown as { __hacked?: number }).__hacked),
     ).toBeUndefined();
   });
 
@@ -606,7 +621,7 @@ test.describe('Keys and replies', () => {
     await expect(answer).toContainText('Fine.');
 
     const saved = await page.evaluate(async () => {
-      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const db = await new Promise<AnswerDb>((resolve, reject) => {
         const request = indexedDB.open('swv-ai');
         request.onsuccess = () => {
           resolve(request.result);

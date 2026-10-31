@@ -1,11 +1,9 @@
-import { LIVE_LINK_RE, readLiveState } from '../../shared/lib/codec.ts';
+import { isLiveLink, LIVE_LINK_RE, readLiveState } from '../../shared/lib/codec.ts';
 
 /**
  * Reading pasted text, links and files into Mermaid code, exactly as version 2's `Importer` did.
  * Nothing here touches the page: the result says what to load and what to tell the user.
  */
-
-const LIVE_LINK_START_RE = /^\s*https?:\/\/(www\.)?mermaid\.(live|ink)\/[^\s]*#(pako|base64):/;
 
 const DIAGRAM_KEYWORD_RE =
   /^(sequenceDiagram|flowchart|graph|classDiagram|stateDiagram|erDiagram|gantt|pie|journey|gitGraph|mindmap|timeline|quadrantChart|xychart|sankey|block|packet|kanban|architecture|requirementDiagram|C4)/;
@@ -18,8 +16,6 @@ export const ACCEPTED_EXTENSIONS = ['mmd', 'md', 'txt', 'mermaid', 'markdown'] a
 export const FILE_ACCEPT = '.mmd,.md,.txt,.mermaid,text/plain,text/markdown';
 
 export const DROP_HINT = 'Drop a .mmd, .md or .txt file';
-
-export const isLiveLink = (text: string): boolean => LIVE_LINK_START_RE.test(text);
 
 /** True when the first real line (not a `%%` comment or `---` front matter) starts a diagram. */
 export function looksLikeMermaid(text: string): boolean {

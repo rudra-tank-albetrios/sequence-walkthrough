@@ -1,30 +1,3 @@
-.rowLabel {
-  margin-right: var(--space-1);
-  color: var(--muted);
-  font-size: var(--text-xs);
-}
-
-/* The 1× 2× 4× items: small buttons in one menu row */
-.scale {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font-size: var(--text-md);
-  cursor: pointer;
-  outline: none;
-  user-select: none;
-}
-
-.scale[data-highlighted] {
-  background: var(--surface-2);
-}
-
 .textarea {
   width: 100%;
   min-height: 160px;

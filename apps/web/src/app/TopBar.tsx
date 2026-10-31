@@ -1,90 +1,148 @@
-import { ExportMenuItems } from '../features/export/index.ts';
-import { useIsNarrow } from '../shared/hooks/useMediaQuery.ts';
+import { ChevronDown, CircleHelp, Ellipsis, Search } from 'lucide-react';
+import { useRef } from 'react';
+
 import { plural } from '../shared/lib/util.ts';
 import { useDiagramStore } from '../shared/state/diagramStore.ts';
 import { useFlowStore } from '../shared/state/flowStore.ts';
-import { DIAGRAM_THEMES, type DiagramTheme } from '../shared/storage/settings.ts';
 import { Button } from '../shared/ui/Button.tsx';
 import { Chip } from '../shared/ui/Chip.tsx';
-import { Menu, MenuHeading, MenuItem, MenuRow, MenuSeparator } from '../shared/ui/Menu.tsx';
-import { Select } from '../shared/ui/Select.tsx';
+import { Menu, MenuHeading, MenuItem, MenuSeparator } from '../shared/ui/Menu.tsx';
+import { BrandMark } from './BrandMark.tsx';
+import { GROUPS, type ToolGroup } from './tools/registry.ts';
+import { ToolMenuItems } from './tools/ToolMenuItems.tsx';
 import styles from './TopBar.module.css';
 
-function ThemeSelect({ id }: { id: string }) {
-  const theme = useFlowStore((s) => s.settings.theme);
-  const updateSettings = useFlowStore((s) => s.updateSettings);
+/** The overlay takes the focus when a menu item opens it, so the closing menu must not take it back. */
+const keepOverlayFocus = (event: Event) => {
+  if (useFlowStore.getState().ui.overlayTool) event.preventDefault();
+};
+
+/** "Step 12 of 48" while walking, the flow's size on the overview: its own part, as it changes per step. */
+function FlowMeta() {
+  const flow = useFlowStore((s) => s.flow);
+  const cur = useFlowStore((s) => s.cur);
+  if (!flow) return null;
+  if (!flow.isSequence) {
+    return (
+      <span className={styles.meta} id="flowMeta">
+        {flow.diagramType}
+      </span>
+    );
+  }
+  const steps = flow.steps.length;
+  if (!steps) return null;
+  const size = [
+    plural(steps, 'step'),
+    plural(flow.participants.length, 'layer'),
+    flow.sections.length ? plural(flow.sections.length, 'chapter') : '',
+  ]
+    .filter(Boolean)
+    .join(', ');
   return (
-    <Select
-      id={id}
-      aria-label="Diagram theme"
-      value={theme}
-      onChange={(e) => {
-        updateSettings({ theme: e.target.value as DiagramTheme });
-      }}
-    >
-      {DIAGRAM_THEMES.map((t) => (
-        <option key={t} value={t}>
-          {t}
-        </option>
-      ))}
-    </Select>
+    <span className={styles.meta} id="flowMeta" title={size}>
+      {cur >= 0 ? `Step ${String(cur + 1)} of ${String(steps)}` : size}
+    </span>
   );
 }
 
-/** Logo, flow name, view switch, Find, zoom, fit, wheel, theme, guide, Export menu, help, more. */
-export function TopBar() {
-  const flow = useFlowStore((s) => s.flow);
+function ToolGroupMenu({ group }: { group: ToolGroup }) {
+  const opener = useRef<HTMLButtonElement | null>(null);
+  const Icon = group.icon;
+  return (
+    <Menu
+      label={group.menuLabel}
+      onCloseAutoFocus={keepOverlayFocus}
+      trigger={
+        <Button
+          ref={opener}
+          variant="ghost"
+          className={styles.group}
+          aria-label={group.label}
+          title={group.label}
+          data-tour={group.tour}
+        >
+          <Icon size={16} aria-hidden="true" />
+          <span className={styles.groupLabel}>{group.label}</span>
+          <ChevronDown className={styles.chevron} size={13} aria-hidden="true" />
+        </Button>
+      }
+    >
+      <ToolMenuItems group={group.id} opener={opener} />
+    </Menu>
+  );
+}
+
+/** The phone's one menu: the view switch, Find, the diagram's view controls and every tool group. */
+function MoreMenu() {
+  const opener = useRef<HTMLButtonElement | null>(null);
   const view = useFlowStore((s) => s.view);
   const setView = useFlowStore((s) => s.setView);
+  const setUi = useFlowStore((s) => s.setUi);
   const settings = useFlowStore((s) => s.settings);
   const updateSettings = useFlowStore((s) => s.updateSettings);
-  const setUi = useFlowStore((s) => s.setUi);
-  const insightOpen = useFlowStore((s) => s.ui.insightOpen);
-  const zoom = useDiagramStore((s) => s.zoom);
   const commands = useDiagramStore((s) => s.commands);
-  const narrow = useIsNarrow();
+  return (
+    <Menu
+      label="More"
+      onCloseAutoFocus={keepOverlayFocus}
+      trigger={
+        <Button ref={opener} icon variant="ghost" aria-label="More">
+          <Ellipsis size={18} aria-hidden="true" />
+        </Button>
+      }
+    >
+      <MenuItem onSelect={() => setView(view === 'diagram' ? 'table' : 'diagram')}>
+        {view === 'diagram' ? 'Switch to table view' : 'Switch to diagram view'}
+      </MenuItem>
+      <MenuItem onSelect={() => setUi({ findOpen: true })}>Find</MenuItem>
+      <MenuItem onSelect={commands.fitWidth}>Fit width</MenuItem>
+      <MenuItem onSelect={commands.fitAll}>Fit all</MenuItem>
+      <MenuItem onSelect={() => updateSettings({ dim: !settings.dim })}>
+        {settings.dim ? 'Stop dimming the others' : 'Dim others'}
+      </MenuItem>
+      <MenuItem onSelect={() => updateSettings({ bands: !settings.bands })}>
+        {settings.bands ? 'Hide the chapter band' : 'Show the chapter band'}
+      </MenuItem>
+      <MenuItem onSelect={() => setUi({ controlsHidden: true })}>Hide controls</MenuItem>
+      {GROUPS.map((group) => (
+        <div key={group.id}>
+          <MenuSeparator />
+          <MenuHeading>{group.menuLabel}</MenuHeading>
+          <ToolMenuItems group={group.id} opener={opener} />
+        </div>
+      ))}
+    </Menu>
+  );
+}
 
-  const steps = flow?.isSequence ? flow.steps.length : 0;
-  const layers = flow?.isSequence ? flow.participants.length : 0;
-  const chapters = flow?.isSequence ? flow.sections.length : 0;
-  const meta = steps
-    ? [plural(steps, 'step'), plural(layers, 'layer'), chapters ? plural(chapters, 'chapter') : '']
-        .filter(Boolean)
-        .join(', ')
-    : flow && !flow.isSequence
-      ? flow.diagramType
-      : '';
-  const toggleWheel = () => {
-    updateSettings({ wheel: settings.wheel === 'scroll' ? 'zoom' : 'scroll' });
-  };
-  const wheelLabel = `Wheel: ${settings.wheel === 'scroll' ? 'Scroll' : 'Zoom'}`;
-  const wheelTitle =
-    settings.wheel === 'zoom'
-      ? 'The wheel zooms like mermaid.live. Click to scroll instead.'
-      : 'The wheel scrolls; Ctrl + wheel zooms. Click to zoom with the wheel.';
+/** Slim glass bar: the brand, the flow and where you are in it, the view switch, Find and the tool groups. */
+export function TopBar() {
+  const title = useFlowStore((s) => s.flow?.title);
+  const proposed = useFlowStore((s) => s.flow?.proposed);
+  const view = useFlowStore((s) => s.view);
+  const setView = useFlowStore((s) => s.setView);
+  const setUi = useFlowStore((s) => s.setUi);
 
   return (
-    <header className={styles.bar} id="topbar">
-      <div className={styles.left}>
-        <span className={styles.logo} aria-hidden="true">
-          ◆
-        </span>
+    <header className={styles.bar} id="topbar" data-chrome="top" data-tour="header">
+      <span className={styles.brand}>
+        <BrandMark />
+        <span className={styles.word}>Sequence Walkthrough</span>
+      </span>
+      <span className={styles.rule} aria-hidden="true" />
+      <div className={styles.flow}>
         <h1 className={styles.title} id="flowName">
-          {flow?.title ?? 'Sequence diagram'}
+          {title ?? 'Sequence diagram'}
         </h1>
-        {flow?.proposed ? (
+        {proposed ? (
           <Chip tone="unconfirmed" title="This flow is a proposed design: it does not exist in the code yet">
             proposed
           </Chip>
         ) : null}
-        {meta ? (
-          <span className={styles.meta} id="flowMeta">
-            {meta}
-          </span>
-        ) : null}
+        <FlowMeta />
       </div>
-      <div className={styles.right}>
-        <div className={`${styles.seg} ${styles.extra}`} role="group" aria-label="View">
+      <div className={styles.tools}>
+        <div className={styles.seg} role="group" aria-label="View" data-tour="view-switch">
           <button type="button" aria-pressed={view === 'diagram'} onClick={() => setView('diagram')}>
             Diagram
           </button>
@@ -92,83 +150,34 @@ export function TopBar() {
             Table
           </button>
         </div>
-        <Button className={styles.extra} title="Find (/)" onClick={() => setUi({ findOpen: true })}>
-          <span aria-hidden="true">⌕</span> Find
-        </Button>
-        <div className={`${styles.zoom} ${styles.extra}`} role="group" aria-label="Zoom">
-          <button type="button" aria-label="Zoom out" title="Zoom out (−)" onClick={commands.zoomOut}>
-            −
-          </button>
-          <button type="button" title="Set zoom to 100%" onClick={() => commands.zoomTo(1)}>
-            {Math.round(zoom * 100)}%
-          </button>
-          <button type="button" aria-label="Zoom in" title="Zoom in (+)" onClick={commands.zoomIn}>
-            +
-          </button>
-        </div>
-        <Button className={styles.extra} title="Fit width (0). Fit all (F)" onClick={commands.fitWidth}>
-          Fit
-        </Button>
         <Button
-          className={`${styles.extra} ${styles.extraMd}`}
-          pressed={settings.wheel === 'zoom'}
-          title={wheelTitle}
-          onClick={toggleWheel}
+          variant="ghost"
+          className={styles.group}
+          aria-label="Find"
+          title="Find (/)"
+          data-tour="find"
+          onClick={() => setUi({ findOpen: true })}
         >
-          {wheelLabel}
+          <Search size={16} aria-hidden="true" />
+          <span className={styles.groupLabel}>Find</span>
         </Button>
-        <span className={`${styles.extra} ${styles.extraMd}`}>
-          <ThemeSelect id="themeSel" />
-        </span>
+        <span className={styles.rule} aria-hidden="true" />
+        {GROUPS.map((group) => (
+          <ToolGroupMenu key={group.id} group={group} />
+        ))}
         <Button
-          className={styles.extra}
-          title="How the viewer and the Claude skill work"
-          onClick={() => setUi({ guideOpen: true })}
-        >
-          How it works
-        </Button>
-        <span className={styles.extra}>
-          <Menu label="Export and share" trigger={<Button>Export ▾</Button>}>
-            <ExportMenuItems />
-          </Menu>
-        </span>
-        <Button
+          variant="ghost"
           icon
-          className={styles.extra}
           aria-label="Keyboard shortcuts and help"
           title="Shortcuts (?)"
           onClick={() => setUi({ shortcutsOpen: true })}
         >
-          ?
+          <CircleHelp size={16} aria-hidden="true" />
         </Button>
-        <span className={styles.more}>
-          <Menu label="More" trigger={<Button icon aria-label="More">⋯</Button>}>
-            <MenuItem onSelect={() => setUi({ guideOpen: true })}>How it works</MenuItem>
-            <MenuItem onSelect={() => setView(view === 'diagram' ? 'table' : 'diagram')}>
-              {view === 'diagram' ? 'Switch to table view' : 'Switch to diagram view'}
-            </MenuItem>
-            <MenuItem onSelect={() => setUi({ insightOpen: !insightOpen })}>Insight panel</MenuItem>
-            <MenuItem onSelect={() => setUi({ aiSettingsOpen: true })}>Ask AI settings</MenuItem>
-            <MenuItem onSelect={() => setUi({ findOpen: true })}>Find</MenuItem>
-            <MenuItem onSelect={commands.fitWidth}>Fit width</MenuItem>
-            <MenuItem onSelect={commands.fitAll}>Fit all</MenuItem>
-            <MenuItem onSelect={toggleWheel}>{wheelLabel}</MenuItem>
-            <MenuRow>
-              <span className={styles.hint}>Theme</span>
-              <ThemeSelect id="themeSel2" />
-            </MenuRow>
-            {narrow ? (
-              <>
-                <MenuSeparator />
-                <MenuHeading>Export and share</MenuHeading>
-                <ExportMenuItems />
-              </>
-            ) : null}
-            <MenuSeparator />
-            <MenuItem onSelect={() => setUi({ shortcutsOpen: true })}>Shortcuts and help</MenuItem>
-          </Menu>
-        </span>
       </div>
+      <span className={styles.phone}>
+        <MoreMenu />
+      </span>
     </header>
   );
 }

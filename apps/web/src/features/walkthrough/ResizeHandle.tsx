@@ -19,8 +19,7 @@ export function ResizeHandle({ barRef }: { barRef: RefObject<HTMLElement | null>
     return centre?.offsetHeight ?? 200;
   };
   const apply = (h: number) => {
-    barRef.current?.style.setProperty('--card-h', `${h}px`);
-    barRef.current?.setAttribute('data-sized', '');
+    barRef.current?.style.setProperty('--card-h', `${String(h)}px`);
   };
 
   return (

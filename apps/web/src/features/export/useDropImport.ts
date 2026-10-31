@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
 
+import { isLiveLink } from '../../shared/lib/codec.ts';
 import { useExportUi } from './exportUi.ts';
 import { loadFile, loadText } from './importActions.ts';
-import { isLiveLink, looksLikeMermaid } from './importer.ts';
+import { looksLikeMermaid } from './importer.ts';
 
 const hasFiles = (event: DragEvent): boolean => [...(event.dataTransfer?.types ?? [])].includes('Files');
 

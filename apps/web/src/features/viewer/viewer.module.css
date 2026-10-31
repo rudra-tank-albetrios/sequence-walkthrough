@@ -90,16 +90,17 @@
 .message {
   position: absolute;
   left: 50%;
-  top: 14px;
+  top: calc(var(--chrome-top, 0px) + 12px);
   transform: translateX(-50%);
-  z-index: 6;
-  max-width: min(640px, calc(100% - 32px));
-  padding: 8px 12px;
-  border-radius: var(--r-sm);
+  z-index: var(--z-canvas-ui);
+  max-width: min(640px, calc(100% - 180px));
+  padding: 6px 8px 6px 14px;
+  border-radius: var(--r);
   font-size: var(--text-md);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow-1), var(--shadow-2);
+  background: var(--glass);
+  backdrop-filter: var(--glass-filter);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--shadow-float);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -122,32 +123,76 @@
   pointer-events: none;
 }
 
-.controls {
+.codeBtn,
+.tools {
   position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 8px;
-  pointer-events: none;
-  z-index: 8;
+  z-index: var(--z-canvas-ui);
+  background: var(--glass);
+  backdrop-filter: var(--glass-filter);
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen),
+    var(--shadow-float);
 }
 
-.controls > * {
-  pointer-events: auto;
-}
-
-.controlsRight {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
+/* Code sits at the top left of the canvas, under the header */
 .codeBtn {
-  box-shadow: var(--shadow-1);
+  top: calc(var(--chrome-top, 0px) + 12px);
+  left: 12px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: var(--r);
+  font-weight: 600;
+}
+
+.codeBtn:hover {
+  background: var(--surface);
+}
+
+/* The instrument column: zoom, fit, and the switches for how the diagram is shown */
+.tools {
+  top: calc(var(--chrome-top, 0px) + 12px);
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--r-lg);
+}
+
+.tools button {
+  border-radius: var(--r);
+}
+
+.tools button:hover {
+  background: var(--surface-3);
+}
+
+.tools button[aria-pressed='true'] {
+  background: var(--marker);
+  border-color: transparent;
+  color: var(--on-marker);
+}
+
+.zoomValue {
+  width: 34px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.toolsRule {
+  width: 18px;
+  height: 1px;
+  margin: 3px 0;
+  background: var(--line-strong);
 }
 
 .count {
@@ -166,14 +211,14 @@
 
 .tooltip {
   position: absolute;
-  z-index: 45;
+  z-index: var(--z-chrome);
   max-width: min(420px, calc(100% - 16px));
   padding: 8px 10px;
-  border-radius: var(--r-sm);
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  backdrop-filter: blur(6px);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow-1), var(--shadow-2);
+  border-radius: var(--r);
+  background: var(--glass);
+  backdrop-filter: var(--glass-filter);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--shadow-float);
   font-size: var(--text-sm);
   line-height: 1.4;
   pointer-events: none;
@@ -223,6 +268,16 @@
   color: light-dark(#7a3e00, #ffd2a6);
 }
 
+.tipThreat b {
+  color: var(--danger);
+}
+
+.tipUse + .tipUse {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+
 .tipFoot {
   margin-top: 6px;
   color: var(--faint);
@@ -254,13 +309,29 @@
   margin-left: 6px;
 }
 
+/* On a phone the column keeps only zoom and fit; the rest is in the header's menu */
 @media (max-width: 720px) {
-  .lbl {
+  .toolExtra,
+  .toolsRule,
+  .zoomValue {
     display: none;
+  }
+
+  .codeBtn,
+  .tools {
+    top: calc(var(--chrome-top, 0px) + 8px);
+  }
+
+  .codeBtn {
+    left: 8px;
+  }
+
+  .tools {
+    right: 8px;
   }
 }
 
 .countErr {
   background: var(--danger);
-  color: #fff;
+  color: var(--surface);
 }

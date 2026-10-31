@@ -1,4 +1,4 @@
-import { STOPWORDS } from './vocabulary.ts';
+import { STOPWORDS, wordTable } from './vocabulary.ts';
 
 /** A short, stable hash of a string (FNV-1a), base 36. Version 2's saved data depends on it. */
 export function hashStr(text: string): string {
@@ -11,7 +11,7 @@ export function hashStr(text: string): string {
 }
 
 /** Named entities Mermaid labels use as `#name;`. Unknown names stay as written. */
-const NAMED_ENTITIES: Record<string, string> = {
+const NAMED_ENTITIES: Record<string, string> = wordTable({
   quot: '"',
   amp: '&',
   lt: '<',
@@ -37,7 +37,7 @@ const NAMED_ENTITIES: Record<string, string> = {
   pound: '£',
   yen: '¥',
   check: '✓',
-};
+});
 
 /** Mermaid writes entities as `#59;` or `#quot;` inside labels. */
 export function decodeEntities(text: string): string {

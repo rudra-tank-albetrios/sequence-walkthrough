@@ -2,6 +2,7 @@ import type { Flow, FlowUses, Step } from '@swv/core';
 
 import { plural } from '../../shared/lib/util.ts';
 import { Chip } from '../../shared/ui/Chip.tsx';
+import { TermText } from '../../shared/ui/TermText.tsx';
 import styles from './insight.module.css';
 import { StepLink } from './StepLink.tsx';
 
@@ -39,7 +40,11 @@ export function BehindTab({ flow, steps }: { flow: Flow; steps: Step[] }) {
                     <span className={styles.ref}>{u.ref}</span>
                   </>
                 ) : null}
-                {u.text ? <p>{u.text}</p> : null}
+                {u.text ? (
+                  <p>
+                    <TermText text={u.text} />
+                  </p>
+                ) : null}
                 <div className={styles.ilMeta}>
                   {u.steps.map((i) => (
                     <StepLink key={i} index={i} />
@@ -58,7 +63,7 @@ export function BehindTab({ flow, steps }: { flow: Flow; steps: Step[] }) {
           <ul className={styles.il}>
             {effects.map((e, i) => (
               <li key={`${e.step}-${i}`}>
-                {e.text}{' '}
+                <TermText text={e.text} />{' '}
                 <span className={styles.ilMeta}>
                   <StepLink index={e.step} />
                 </span>

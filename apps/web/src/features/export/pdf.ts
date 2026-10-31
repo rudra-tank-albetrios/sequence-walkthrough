@@ -5,8 +5,8 @@ import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { useNotesStore } from '../../shared/state/notesStore.ts';
 import { measureLive, type LiveGeometry } from './liveGeometry.ts';
 import { pdfTablePages } from './pdfTable.ts';
-import { context2d, makeCanvas, rasterize } from './raster.ts';
-import { diagramSvgString } from './svgExport.ts';
+import { context2d, makeCanvas, rasterize } from '../../shared/lib/raster.ts';
+import { diagramSvgString } from '../../shared/lib/svgExport.ts';
 
 /**
  * Landscape pages: the diagram cut between arrows, the participant row repeated on every page

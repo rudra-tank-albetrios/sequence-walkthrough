@@ -159,8 +159,7 @@ function migrateV2(state: ModelState): ModelState {
   const customUrl = typeof fields.customUrl === 'string' ? fields.customUrl.trim() : '';
   const chosen = isPresetId(fields.provider) ? fields.provider : null;
   const wanted = (id: PresetId): boolean =>
-    Boolean(keys[id]) ||
-    (id === chosen && (presetFor(id).key === 'none' || (id === 'custom' && customUrl !== '')));
+    Boolean(keys[id]) || (id === 'custom' && customUrl !== '') || (id === chosen && presetFor(id).key === 'none');
   const order = [...PRESETS.filter((p) => p.id === chosen), ...PRESETS.filter((p) => p.id !== chosen)];
 
   const models = state.models.map((m) => ({ ...m }));
