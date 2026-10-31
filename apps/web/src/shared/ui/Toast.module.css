@@ -4,6 +4,8 @@
   bottom: 16px;
   transform: translateX(-50%);
   z-index: 60;
+  width: max-content;
+  max-width: min(560px, calc(100vw - 32px));
   pointer-events: none;
 }
 
@@ -16,6 +18,23 @@
   font-weight: 500;
   box-shadow: var(--shadow-1), var(--shadow-2);
   animation: rise 160ms ease-out;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* The host lets clicks through to the page under it; only this button takes them. */
+.toast button {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 @keyframes rise {

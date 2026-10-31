@@ -7,7 +7,6 @@ import { deflateSync } from 'node:zlib';
 import { expect, test, type Page } from '@playwright/test';
 
 import {
-  diagram,
   expectDemoWalk,
   expectInjectedScriptsStopped,
   expectV2LinkOpen,
@@ -18,6 +17,7 @@ import {
   V2_FRAGMENT,
   watchPage,
 } from './cutover-support.ts';
+import { download, svg, type SavedFile } from './helpers.ts';
 
 // The one-file build (`npm run build`): the page to open from disk and the page for a Claude artifact.
 
@@ -60,8 +60,8 @@ test.describe('one-file page, opened from disk', () => {
   }) => {
     const watch = watchPage(page);
     await page.goto(`${PAGE_URL}${linkTo('flowchart TD\n  A[Start] --> B[End]\n')}`);
-    await expect(diagram(page)).toBeVisible({ timeout: 30_000 });
-    await expect(diagram(page)).toContainText('Start');
+    await expect(svg(page)).toBeVisible({ timeout: 30_000 });
+    await expect(svg(page)).toContainText('Start');
     expect(watch.errors).toEqual([]);
     expect(requestsBeyond(watch, PAGE_URL)).toEqual([]);
   });
@@ -71,24 +71,17 @@ test.describe('one-file page, opened from disk', () => {
   }) => {
     const watch = watchPage(page);
     await page.goto(PAGE_URL);
-    await expect(diagram(page)).toBeVisible({ timeout: 30_000 });
+    await expect(svg(page)).toBeVisible({ timeout: 30_000 });
 
-    const saved = async (item: RegExp): Promise<{ name: string; bytes: Buffer }> => {
+    const saved = async (item: RegExp): Promise<SavedFile> => {
       const menu = await openExportItems(page);
-      const download = page.waitForEvent('download');
-      await menu.getByRole('menuitem', { name: item }).click();
-      const file = await download;
-      return {
-        name: file.suggestedFilename(),
-        bytes: readFileSync(await file.path()),
-      };
+      return download(page, () => menu.getByRole('menuitem', { name: item }).click());
     };
 
-    const svg = await saved(/^SVG/);
-    expect(svg.name).toBe('Place an order.svg');
-    const text = svg.bytes.toString('utf8');
-    expect(text).toContain('@font-face');
-    expect(text).toContain('url(data:font/woff2;base64,');
+    const image = await saved(/^SVG/);
+    expect(image.name).toBe('Place an order.svg');
+    expect(image.text).toContain('@font-face');
+    expect(image.text).toContain('url(data:font/woff2;base64,');
 
     const kit = await saved(/^Download the skill/);
     expect(kit.name).toBe('sequence-walkthrough-skill-kit.zip');
@@ -97,15 +90,11 @@ test.describe('one-file page, opened from disk', () => {
     const menu = await openExportItems(page);
     await menu.getByRole('menuitem', { name: /^PDF/ }).click();
     const dialog = page.getByRole('dialog', { name: 'Download PDF' });
-    const pdf = page.waitForEvent('download');
-    await dialog.getByRole('button', { name: /^Download / }).click();
-    const pdfFile = await pdf;
-    expect(pdfFile.suggestedFilename()).toBe('Place an order.pdf');
-    expect(
-      readFileSync(await pdfFile.path())
-        .subarray(0, 4)
-        .toString('latin1'),
-    ).toBe('%PDF');
+    const pdf = await download(page, () =>
+      dialog.getByRole('button', { name: /^Download / }).click(),
+    );
+    expect(pdf.name).toBe('Place an order.pdf');
+    expect(pdf.bytes.subarray(0, 4).toString('latin1')).toBe('%PDF');
 
     expect(watch.errors).toEqual([]);
     expect(requestsBeyond(watch, PAGE_URL)).toEqual([]);
@@ -136,13 +125,13 @@ test.describe('one-file page, opened from disk', () => {
 
   test('its policy stops a script added to the page', async ({ page }) => {
     await page.goto(PAGE_URL);
-    await expect(diagram(page)).toBeVisible({ timeout: 30_000 });
+    await expect(svg(page)).toBeVisible({ timeout: 30_000 });
     await expectInjectedScriptsStopped(page);
   });
 
   test('does not offer the zip it came in', async ({ page }) => {
     await page.goto(PAGE_URL);
-    await expect(diagram(page)).toBeVisible({ timeout: 30_000 });
+    await expect(svg(page)).toBeVisible({ timeout: 30_000 });
     const guide = await openGuide(page);
     await expect(guide.getByRole('link', { name: 'download it as one file' })).toHaveCount(0);
   });
@@ -246,7 +235,7 @@ test.describe('one-file page, published as a Claude artifact', () => {
         includePayload: true, autoNote: true, mode: 'project',
       }));`,
     );
-    await expect(diagram(page)).toBeVisible({ timeout: 30_000 });
+    await expect(svg(page)).toBeVisible({ timeout: 30_000 });
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('a');
     const dialog = page.getByRole('dialog', { name: 'Ask AI about step 1' });
@@ -269,7 +258,7 @@ test.describe('one-file page, published as a Claude artifact', () => {
   }) => {
     const watch = watchPage(page);
     await openInHost(page);
-    await expect(diagram(page)).toBeVisible({ timeout: 30_000 });
+    await expect(svg(page)).toBeVisible({ timeout: 30_000 });
 
     const pick = async (item: RegExp) => {
       const menu = await openExportItems(page);

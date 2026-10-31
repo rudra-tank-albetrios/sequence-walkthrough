@@ -1,5 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
+import { DEMO_TITLE, heading, svg } from './helpers.ts';
+
 // Shared by the checks on the website and the one-file build (docs/decisions.md, phase 4).
 
 /**
@@ -34,27 +36,25 @@ export const requestsBeyond = (watch: PageWatch, own: string): string[] =>
     (url) => !url.startsWith('data:') && !url.startsWith('blob:') && url.split('#')[0] !== own,
   );
 
-export const diagram = (page: Page): Locator => page.getByTestId('diagram').locator('svg').first();
-
 export const stepAnnouncement = (page: Page): Locator => page.getByTestId('live');
 
 /** The demo flow opens, its diagram is drawn, and the arrow keys move between steps. */
 export async function expectDemoWalk(page: Page): Promise<void> {
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Place an order');
-  await expect(diagram(page)).toBeVisible({ timeout: 30_000 });
+  await expect(heading(page)).toHaveText(DEMO_TITLE);
+  await expect(svg(page)).toBeVisible({ timeout: 30_000 });
   await page.keyboard.press('ArrowRight');
   await expect(stepAnnouncement(page)).toHaveText(/^Step 1 of \d+\./);
   await page.keyboard.press('ArrowRight');
   await expect(stepAnnouncement(page)).toHaveText(/^Step 2 of \d+\./);
   await page.keyboard.press('ArrowLeft');
   await expect(stepAnnouncement(page)).toHaveText(/^Step 1 of \d+\./);
-  await expect(page.getByTestId('diagram').locator('svg .swv-cur').first()).toBeAttached();
+  await expect(svg(page).locator('.swv-cur').first()).toBeAttached();
 }
 
 /** The version 2 link's flow is open on its step, with its non-ASCII text intact. */
 export async function expectV2LinkOpen(page: Page): Promise<void> {
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(V2_TITLE);
-  await expect(diagram(page)).toBeVisible({ timeout: 30_000 });
+  await expect(heading(page)).toHaveText(V2_TITLE);
+  await expect(svg(page)).toBeVisible({ timeout: 30_000 });
   await expect(stepAnnouncement(page)).toHaveText(/^Step 2 of 3\./);
   await page.keyboard.press('ArrowLeft');
   await expect(page.getByTestId('step-card')).toContainText('résumé');

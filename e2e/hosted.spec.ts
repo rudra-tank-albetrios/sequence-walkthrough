@@ -4,7 +4,6 @@ import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 import {
-  diagram,
   expectInjectedScriptsStopped,
   expectV2LinkOpen,
   openGuide,
@@ -12,6 +11,7 @@ import {
   V2_FRAGMENT,
   watchPage,
 } from './cutover-support.ts';
+import { svg } from './helpers.ts';
 
 // The website as GitHub Pages serves it: its policy, its address, and the links people already have.
 
@@ -25,10 +25,12 @@ test.describe('hosted build', () => {
     'The policy and the zips are only in a production build, not on a dev server.',
   );
 
-  test('has the strict policy and no inline script', async () => {
-    const html = readFileSync(resolve(SITE, 'index.html'), 'utf8');
-    const meta = /<meta http-equiv="Content-Security-Policy" content="([^"]*)"/.exec(html);
-    expect(Object.fromEntries(readPolicy(meta?.[1]))).toEqual({
+  test('has the strict policy and no inline script', async ({ page }) => {
+    await page.goto('/');
+    const policy = await page
+      .locator('meta[http-equiv="Content-Security-Policy"]')
+      .getAttribute('content');
+    expect(Object.fromEntries(readPolicy(policy))).toEqual({
       'default-src': ["'self'"],
       'script-src': ["'self'"],
       'style-src': ["'self'", "'unsafe-inline'"],
@@ -40,6 +42,7 @@ test.describe('hosted build', () => {
       'form-action': ["'none'"],
     });
     // Every script is a file of this site, or the policy above would block it.
+    const html = readFileSync(resolve(SITE, 'index.html'), 'utf8');
     const scripts = [...html.matchAll(/<script\b[^>]*>/g)].map((match) => match[0]);
     expect(scripts.length).toBeGreaterThan(0);
     for (const script of scripts) expect(script).toMatch(/\ssrc="\.\/assets\//);
@@ -47,7 +50,7 @@ test.describe('hosted build', () => {
 
   test('its policy stops a script added to the page', async ({ page }) => {
     await page.goto('/');
-    await expect(diagram(page)).toBeVisible({ timeout: 30_000 });
+    await expect(svg(page)).toBeVisible({ timeout: 30_000 });
     await expectInjectedScriptsStopped(page);
   });
 
@@ -109,7 +112,7 @@ test.describe('hosted build', () => {
 
   test('the guide links to the one-file zip', async ({ page }) => {
     await page.goto('/');
-    await expect(diagram(page)).toBeVisible({ timeout: 30_000 });
+    await expect(svg(page)).toBeVisible({ timeout: 30_000 });
     const guide = await openGuide(page);
     await expect(guide.getByRole('link', { name: 'download it as one file' })).toHaveAttribute(
       'href',
