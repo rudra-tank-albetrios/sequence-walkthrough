@@ -10,9 +10,10 @@ package-lock.json
 
 # The version 2 app and skill, replaced phase by phase
 src/
-skill/
-skill-kit/
 build.py
+
+# Sample projects the skills are tested against, and what the skills wrote about them
+skills/fixtures/
 
 # Prose keeps its own layout
 *.md
