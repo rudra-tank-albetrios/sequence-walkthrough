@@ -1,7 +1,7 @@
+import { asData, callModel, REPLY_TOKENS } from '@swv/ai';
 import type { Flow } from '@swv/core';
 import { z } from 'zod';
 
-import { asData, callModel, REPLY_TOKENS } from './model.ts';
 import { LEVELS, type Mark, type MarkValue, type Question } from './types.ts';
 import { normalizeText } from './validate.ts';
 

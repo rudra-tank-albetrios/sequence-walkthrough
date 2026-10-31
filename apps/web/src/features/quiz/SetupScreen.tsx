@@ -1,3 +1,4 @@
+import { hasUsableModel } from '@swv/ai';
 import type { Flow } from '@swv/core';
 import { useMemo, useState, type FormEvent } from 'react';
 
@@ -6,7 +7,6 @@ import { flowId } from '../../shared/storage/notes.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { ChoiceGroup } from './ChoiceGroup.tsx';
 import { CUSTOM_MINUTES, validMinutes } from './clock.ts';
-import { hasUsableModel } from './model.ts';
 import { useQuizStore } from './quizStore.ts';
 import { pickSample, sampleQuestions } from './sample/index.ts';
 import {

@@ -1,6 +1,6 @@
+import { callModel, REPLY_TOKENS } from '@swv/ai';
 import type { Flow } from '@swv/core';
 
-import { callModel, REPLY_TOKENS } from './model.ts';
 import { planSlots, takeSlot, type Slot } from './plan.ts';
 import { quizPrompt, QUIZ_SYSTEM } from './prompt.ts';
 import { LEVELS, DIFFICULTIES, type Difficulty, type Question, type QuizConfig } from './types.ts';
@@ -112,9 +112,10 @@ export async function generateQuestions(args: GenerateArgs): Promise<Question[]>
     });
     if (!result.ok) {
       const { kind, message } = result.error;
-      if (kind === 'aborted') throw new QuizError(message);
       if (kind === 'no-model' || kind === 'consent-needed') throw new QuizError(message, true);
-      batch.problems.push(message);
+      // A failed request says why in its own words, and auto-switch has already tried the other models.
+      if (kind !== 'bad-reply') throw new QuizError(message);
+      batch.problems.push('the reply was not a JSON object with a list of questions');
       continue;
     }
     for (const item of result.data.questions) {

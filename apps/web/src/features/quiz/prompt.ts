@@ -1,6 +1,6 @@
+import { asData, flowSummary } from '@swv/ai';
 import type { Flow } from '@swv/core';
 
-import { asData, flowSummary } from './model.ts';
 import type { Slot } from './plan.ts';
 import { LEVELS, type Difficulty, type QuizConfig } from './types.ts';
 
@@ -22,6 +22,7 @@ Rules:
 /** How many recent questions go in the "do not repeat" list, and how long each may be. */
 const AVOID_COUNT = 15;
 const AVOID_CHARS = 100;
+const FOCUS_COUNT = 15;
 
 function describeSlots(slots: readonly Slot[], focused: boolean): string {
   const counts = new Map<string, number>();
@@ -61,7 +62,7 @@ export function quizPrompt({ flow, config, slots, avoid, weak, problems }: QuizP
   ];
   if (focused) {
     lines.push(
-      `Ask only about these topics, and use them as "topic": ${config.focus.join(', ')}.`,
+      `Ask only about these topics, and use them as "topic": ${config.focus.slice(0, FOCUS_COUNT).join(', ')}.`,
       'Give each question the "level" (easy, medium or hard) that suits it.',
     );
   } else {
