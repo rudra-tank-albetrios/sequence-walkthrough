@@ -1,6 +1,7 @@
 import type { Flow } from '@swv/core';
 
-import { downloadBlob, fileName } from '../../shared/lib/util.ts';
+import { saveFile } from '../../shared/lib/files.ts';
+import { fileName } from '../../shared/lib/util.ts';
 import type { NoteEntry, NotesData } from '../../shared/storage/notes.ts';
 
 /** The `swv-notes/1` file version 2 wrote and reads back. */
@@ -17,9 +18,9 @@ export function notesFile(flow: Flow, id: string, notes: NotesData): NotesFile {
 }
 
 /** Saves `<title> notes.json`. */
-export function exportNotes(flow: Flow, id: string, notes: NotesData): void {
-  const blob = new Blob([JSON.stringify(notesFile(flow, id, notes), null, 2)], { type: 'application/json' });
-  downloadBlob(blob, fileName(`${flow.title} notes`, 'json'));
+export function exportNotes(flow: Flow, id: string, notes: NotesData): Promise<void> {
+  const text = JSON.stringify(notesFile(flow, id, notes), null, 2);
+  return saveFile(fileName(`${flow.title} notes`, 'json'), text, 'application/json');
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

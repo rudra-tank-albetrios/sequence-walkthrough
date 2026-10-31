@@ -7,53 +7,13 @@ import {
   goToStep,
   open,
   openFocused,
+  rightClickWord,
   stepInput,
   svg,
   toastBox,
 } from './helpers.ts';
 
 const card = (page: Page) => page.getByTestId('step-card');
-
-/** Selects the first occurrence of a word inside an element and right-clicks it. */
-async function rightClickWord(page: Page, testId: string, word: string): Promise<void> {
-  const box = await page.getByTestId(testId).evaluate((el, target) => {
-    interface Range {
-      setStart: (n: unknown, o: number) => void;
-      setEnd: (n: unknown, o: number) => void;
-      getBoundingClientRect: () => { x: number; y: number; width: number; height: number };
-    }
-    interface TextNode {
-      nodeValue: string | null;
-    }
-    const doc = (
-      globalThis as unknown as {
-        document: {
-          createRange: () => Range;
-          createTreeWalker: (r: unknown, w: number) => { nextNode: () => TextNode | null };
-        };
-        getSelection: () => { removeAllRanges: () => void; addRange: (r: Range) => void };
-      }
-    ).document;
-    const walker = doc.createTreeWalker(el, 4);
-    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      const at = (node.nodeValue ?? '').indexOf(target);
-      if (at < 0) continue;
-      const range = doc.createRange();
-      range.setStart(node, at);
-      range.setEnd(node, at + target.length);
-      const selection = (globalThis as unknown as { getSelection: () => {
-        removeAllRanges: () => void;
-        addRange: (r: Range) => void;
-      } }).getSelection();
-      selection.removeAllRanges();
-      selection.addRange(range);
-      const r = range.getBoundingClientRect();
-      return { x: r.x, y: r.y, width: r.width, height: r.height };
-    }
-    throw new Error(`No "${target}" in the element`);
-  }, word);
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
-}
 
 test.describe('step details', () => {
   test('S1 the header row has the count, chapter, branch and flag chips and actions', async ({

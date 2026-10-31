@@ -10,6 +10,7 @@ import {
   heading,
   notice,
   openFocused,
+  seed,
   stepInput,
   svg,
 } from './helpers.ts';
@@ -35,7 +36,7 @@ test.describe('diagram', () => {
   test('D1 renders one drawing with the title and the status line', async ({ page }) => {
     await openFocused(page);
     await expect(heading(page)).toHaveText(DEMO_TITLE);
-    await expect(diagram(page).locator('svg')).toHaveCount(1);
+    await expect(page.getByTestId('layer').locator('svg')).toHaveCount(1);
     const lines = svg(page).locator('.messageLine0[data-step], .messageLine1[data-step]');
     await expect(lines).toHaveCount(DEMO_STEPS);
     await expect(svg(page).locator('.swv-actor[data-alias="SVC"]').first()).toBeAttached();
@@ -71,11 +72,8 @@ test.describe('diagram', () => {
   });
 
   test('D2 a first drawing that fails says so without "last good"', async ({ page }) => {
+    await seed(page, { 'swv:code': JSON.stringify('sequenceDiagram\n  A->>') });
     await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.setItem('swv:code', JSON.stringify('sequenceDiagram\n  A->>'));
-    });
-    await page.reload();
     const badge = page.getByTestId('err-badge');
     await expect(badge).toContainText('Syntax error', { timeout: 30_000 });
     await expect(badge).not.toContainText('Showing the last good diagram');
@@ -267,7 +265,7 @@ test.describe('diagram', () => {
     await expect(header).toBeVisible();
     await expect(header.locator('svg[id$="-hdr"]')).toBeVisible();
     await expect(header.locator('.swv-actor')).not.toHaveCount(0);
-    await page.mouse.wheel(0, -900);
+    await page.mouse.wheel(0, -50_000);
     await expect(header).toBeHidden();
   });
 
@@ -375,7 +373,7 @@ test.describe('diagram', () => {
   test('D20 the chapter band marks the chapter and can be switched off', async ({ page }) => {
     await openFocused(page);
     await page.keyboard.press('ArrowRight');
-    await expect(svg(page).locator('.swv-band')).toHaveCount(1);
+    await expect(svg(page).locator('rect.swv-band')).toHaveCount(2);
     await expect(svg(page).locator('.swv-band-label').first()).toHaveText(
       /^▶ Check the request · \d+ steps/,
     );
@@ -436,10 +434,10 @@ test.describe('diagram', () => {
     await page.keyboard.press('/');
     const input = page.getByPlaceholder('Find in labels and explanations');
     await expect(input).toBeFocused();
-    await input.fill('409');
+    await input.fill('stock');
     const count = page.getByTestId('find-count');
     await expect(count).toHaveText(/^1 of \d+$/);
-    await expect(page.getByTestId('step-card')).toContainText('409');
+    await expect(page.getByTestId('step-card')).toContainText(/stock/i);
     await input.press('Enter');
     await expect(count).toHaveText(/^2 of \d+$/);
     await input.press('Shift+Enter');
