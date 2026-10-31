@@ -39,6 +39,17 @@ Decisions the plan (`docs/IMPLEMENTATION-PLAN.md`) does not already make, one or
 - **The keyboard map is the shell's** (`app/useGlobalKeys.ts`), including the Esc cascade in version 2's order; widgets handle only their local keys.
 - **Version 2 behaviours kept as they really were, not as the README said:** `Home` goes to step 1 (the overview is reached with Esc or at load), and the Claude provider has no consent step of its own in the page (the host's prompt is the consent).
 
+## Phase 10: quick day recap (2026-10-31)
+
+- **The analysis runs on a click, never on opening.** The panel first says what would be sent (the questions, the person's answers and the correct answers, to their own model), so browsing periods spends no tokens and reopening only reads what is saved. The plan says "the user's model groups mistakes" without saying when; asking first is the choice that fits plan section 4.
+- **A saved analysis is kept for each period and flow choice** in IndexedDB (`swv:recap:analysis`, the 30 latest, validated with Zod when loaded; a damaged entry counts as none). It lists the id and date of every mistake it covered.
+- **"New mistakes" means an id the saved analysis has not seen, or a newer date on one it has,** so missing a known question again counts. A correct answer or a period running out does not end it: a group with no mistakes left is hidden, and when none is left the panel asks again. `Saved analysis` always means nothing was sent to show it.
+- **At most 20 mistakes and 6,000 bytes go in the prompt, the most missed first,** with each field clipped. That keeps the request near the 1,500 tokens a flow summary may cost, and the saved line says when only part of the list was covered. The diagram code is never sent.
+- **A reply can only be displayed.** Only `title`, `points` and `mistakes` are kept, as plain text on one line and within fixed sizes, and a number in `mistakes` counts only when it names a mistake that was sent. Retry topics come from the stored mistakes, never from a reply.
+- **The sample recap shows only while the person has no mistakes of their own and the unedited demo flow is on screen,** because its steps and answers are true only for that code. It says it is a sample and sends nothing, even with a model set up. If a person later fixes all their mistakes, the sample comes back, and its banner stays true.
+- **"Today" is the local calendar day, and "last 7 days" is today plus the six days before it,** so the counts match the dates a person sees, whatever the hour.
+- **`Retry my mistakes` closes the recap first.** The hand-over to the quiz is only the `swv:quiz:retry` session key and the `quizOpen` flag, as agreed with phase 9, because features cannot import each other.
+- **The recap's code loads when it first opens** (`lazy`), so its share of the model package and the sample stay out of the first load.
 ## Phase 4: cutover (2026-10-31)
 
 - **The website is built from `apps/web/dist` by Node.** `deploy-pages.yml` has two jobs: `build`, read-only with no npm cache, so no dependency code runs next to a deploy token, and `deploy`, with only `pages: write` and `id-token: write`. `actions/configure-pages` went with Python: it only reads settings the relative `base: './'` does not need, and `deploy-pages` does not depend on it. Same URL, because the repository name and the Pages source did not change.

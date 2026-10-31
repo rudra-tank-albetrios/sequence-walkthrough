@@ -57,5 +57,6 @@
 }
 
 .primary:hover {
+  background: var(--ink);
   opacity: 0.9;
 }
