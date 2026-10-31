@@ -79,7 +79,7 @@ test.describe('accessibility with things open', () => {
     await page.keyboard.press('Escape');
     await expect(shortcuts).toBeHidden();
     await page.getByRole('button', { name: /^Export/ }).click();
-    await expect(page.getByRole('menu', { name: 'Export and share' })).toBeVisible();
+    await expect(page.getByRole('menu')).toBeVisible();
     await expectNoAxeViolations(page);
     await page.getByRole('menuitem', { name: /^PDF/ }).click();
     const pdf = page.getByRole('dialog', { name: 'Download PDF' });

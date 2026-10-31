@@ -62,7 +62,9 @@ test('Mermaid stays at the strict level, set in one place', () => {
 test('nothing that handles keys prints to the console', () => {
   const paths = SHIPPED.filter((file) => /features\/ask-ai\/|packages\/ai\//.test(file));
   expect(paths.length).toBeGreaterThan(0);
-  expect(paths.filter((file) => /\bconsole\./.test(read(file)))).toEqual([]);
+  // A call on the console object; a provider's key page at console.<host> is a web address.
+  const consoleCall = /(?<![\w./-])console\.(?:log|warn|error|info|debug|trace|dir|table)\(/;
+  expect(paths.filter((file) => consoleCall.test(read(file)))).toEqual([]);
 });
 
 test('keys are not stored with fake protection', () => {

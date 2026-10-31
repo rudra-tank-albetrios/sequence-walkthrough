@@ -85,7 +85,8 @@ export function csvText(flow: Flow, notes?: NoteLookup): string {
  * Diagram text in a Markdown document: any reader shows it as words. With `<` and `[` escaped it
  * cannot open an HTML tag, a link or an image.
  */
-const mdText = (value: string): string => value.replace(/</g, '&lt;').replace(/\[/g, '\\[');
+const mdText = (value: string): string =>
+  value.replace(/</g, '&lt;').replace(/\[/g, '\\[').replace(/\]/g, '\\]');
 
 /** A code span, which readers never treat as markup. No backtick inside can end it early. */
 const mdCode = (value: string): string => `\`${value.replace(/`/g, "'")}\``;

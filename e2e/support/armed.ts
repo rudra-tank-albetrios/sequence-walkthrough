@@ -251,10 +251,20 @@ export async function seedStorage(page: Page, values: Record<string, string>): P
   );
 }
 
-async function pointAt(page: Page, target: Locator): Promise<void> {
-  const box = await target.boundingBox();
-  if (!box) throw new Error('The target is not on the page');
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+/** Moves the pointer to the centre of the first match that is inside the viewport. */
+async function pointAt(page: Page, targets: Locator): Promise<void> {
+  const viewport = page.viewportSize();
+  if (!viewport) throw new Error('No viewport');
+  for (const target of await targets.all()) {
+    const box = await target.boundingBox();
+    if (!box) continue;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    if (x < 0 || y < 0 || x > viewport.width || y > viewport.height) continue;
+    await page.mouse.move(x, y);
+    return;
+  }
+  throw new Error('No target is inside the viewport');
 }
 
 /**
@@ -266,12 +276,12 @@ export async function walkEveryScreen(page: Page, steps: number): Promise<void> 
   const tooltip = page.getByTestId('arrow-tooltip');
 
   // The overview fits every layer on the screen, and a step brings its own arrow into view.
-  await pointAt(page, page.locator('.swv-actor').first());
+  await pointAt(page, page.locator('.swv-actor'));
   await expect(tooltip).toBeVisible();
   await page.mouse.move(0, 0);
   await page.getByTestId('diagram').focus();
   await key('ArrowRight');
-  await pointAt(page, page.locator('.swv-hit[data-step="0"]').first());
+  await pointAt(page, page.locator('.swv-hit[data-step="0"]'));
   await expect(tooltip).toBeVisible();
   for (let i = 1; i < steps; i++) await key('ArrowRight');
 

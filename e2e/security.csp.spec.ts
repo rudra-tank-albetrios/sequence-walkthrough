@@ -124,16 +124,16 @@ const ATTACKS: Attack[] = [
   },
   {
     name: 'an object from another site',
-    run: add('object', { data: 'https://evil.example/o.swf' }),
+    run: add('object', { data: 'https://evil.example/o.html' }),
     fires: false,
-    asks: 'https://evil.example/o.swf',
+    asks: 'https://evil.example/o.html',
     directive: 'object-src',
   },
   {
     name: 'an embed from another site',
-    run: add('embed', { src: 'https://evil.example/e.swf' }),
+    run: add('embed', { src: 'https://evil.example/e.html' }),
     fires: false,
-    asks: 'https://evil.example/e.swf',
+    asks: 'https://evil.example/e.html',
     directive: 'object-src',
   },
   {
@@ -260,8 +260,13 @@ test.describe('the built page', () => {
     const head = html.slice(html.indexOf('<head>'), html.indexOf('</head>'));
     const meta = /<meta\s+http-equiv="Content-Security-Policy"\s+content="([^"]+)"/.exec(head);
     expect(meta?.[1]).toBeTruthy();
+    // The build writes the attribute with HTML entities; the browser reads it decoded.
+    const content = (meta?.[1] ?? '')
+      .replace(/&#39;/g, "'")
+      .replace(/&quot;/g, '"')
+      .replace(/&amp;/g, '&');
     const directives = Object.fromEntries(
-      (meta?.[1] ?? '')
+      content
         .split(';')
         .map((part) => part.trim().split(/\s+/))
         .filter((parts) => parts[0])
