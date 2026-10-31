@@ -4,7 +4,7 @@ sequenceDiagram
     %% @trigger The shopper presses "Place order" on the checkout page of the demo store.
     %% @scope From the click to the confirmation email. Signing in and browsing products are outside this flow.
     %% @summary One request crosses every backend layer once. Stock is held in Redis before the order is saved, and the confirmation email is sent later by a worker.
-    %% @term hold: a short-lived Redis key that keeps stock aside for one order until the hold expires.
+    %% @term hold: a short-lived Redis key that keeps stock aside for one order until the order is saved or the hold expires.
     %% @term minor units: money kept as whole paise or cents (₹6197.00 is 619700), so sums never lose fractions.
     %% @term DTO: data transfer object, the typed shape a request body or a reply must have.
     %% @term bearer token: a secret string sent as "Authorization: Bearer <token>" that stands for a signed-in session.
@@ -67,7 +67,7 @@ sequenceDiagram
     %% @payload.headers Authorization: Bearer demo-token
     %% @payload.headers Content-Type: application/json
     %% @payload.body { "items": [{ "productId": "p_1", "quantity": 1 }, { "productId": "p_2", "quantity": 2 }], "shippingAddress": { "line1": "1 Lovelace Lane", "city": "Pune", "postcode": "411001" } }
-    %% @ref src/frontend/api/client.ts:50
+    %% @ref src/frontend/api/client.ts:60
     API->>APP: POST /api/orders
     %% @step The app catches any unexpected error and otherwise lets the router match the method and path.
     %% @ref src/backend/app/app.ts:81
@@ -77,12 +77,13 @@ sequenceDiagram
     RT->>MW: requestId, then requireUser
     %% @step The middleware reads the bearer token from the Authorization header and looks the session up.
     %% @payload.sql -- an in-memory table, doing the job of: SELECT user_id, email FROM sessions WHERE id = 'demo-token'
-    %% @ref src/backend/middleware/auth.middleware.ts:12
+    %% @threat medium Sample threat for the demo: this session token never expires, so a stolen token would keep working.
+    %% @ref src/backend/middleware/auth.middleware.ts:14
     %% @ref src/backend/app/app.ts:73
     MW->>DB: sessions.findById("demo-token")
     %% @step The session row names the user, and the middleware puts them on the request context.
     %% @payload.result { "id": "u_1", "email": "ada@example.com" }
-    %% @ref src/backend/app/app.ts:73
+    %% @ref src/backend/app/app.ts:74
     DB-->>MW: { userId: "u_1", email: "ada@example.com" }
     alt Signed in
         %% @step With a user on the context the chain moves on to the validator.
@@ -95,13 +96,14 @@ sequenceDiagram
         APP-->>API: 401 Unauthorized
     end
     %% @step The validator parses the JSON body and checks every field, collecting all problems at once instead of stopping at the first.
-    %% @schema items non-empty array → 422 "must be a non-empty array"
+    %% @schema items non-empty list → 422 "must be a non-empty list"
     %% @schema items.<i>.productId non-empty string → 422 "must be a non-empty string"
     %% @schema items.<i>.quantity whole number greater than 0 → 422 "must be a whole number greater than 0"
+    %% @schema shippingAddress object → 422 "is required"
     %% @schema shippingAddress.line1 non-empty string → 422 "must be a non-empty string"
     %% @schema shippingAddress.city non-empty string → 422 "must be a non-empty string"
     %% @schema shippingAddress.postcode non-empty string → 422 "must be a non-empty string"
-    %% @ref src/backend/validators/placeOrder.validator.ts:61
+    %% @ref src/backend/validators/placeOrder.validator.ts:62
     VAL->>VAL: validatePlaceOrder(body)
     alt Valid body
         %% @step The checked values become the typed DTO that the rest of the backend trusts.
@@ -125,18 +127,17 @@ sequenceDiagram
     %% @ref src/backend/controllers/orders.controller.ts:21
     CTL->>SVC: placeOrder(user, dto)
     %% @step Each line is priced from the products table. An unknown product id ends in a 404.
-    %% @uses util sumLines src/backend/utils/money.ts:24 Adds up unit price times quantity in minor units.
-    %% @ref src/backend/services/orders.service.ts:96
+    %% @ref src/backend/services/orders.service.ts:106
     SVC->>REPO: findById(productId) for each line
     %% @step The product rows give the names and unit prices the order will carry.
     %% @payload.result { "id": "p_1", "name": "Mechanical keyboard", "unitPrice": 499900, "stock": 10 }
     %% @ref src/backend/repositories/products.repository.ts:12
     REPO-->>SVC: product rows
-    %% @step For each line the service moves units from the stock counter into a hold key with a TTL, so a crash or an abandoned order gives the stock back on its own.
+    %% @step For each line the service moves units from the stock counter into a hold key with a TTL, so a crash before the order is saved gives the stock back on its own.
     %% @payload.input stock:p_1 = 10 → DECRBY 1, then SET hold:<orderId>:p_1 1 EX 900
     %% @uses config RESERVATION_TTL_SECONDS src/backend/config/config.ts:18 How long a hold lasts before the cron returns the stock (900 s).
-    %% @uses cron releaseExpiredReservations src/backend/cron/releaseExpiredReservations.cron.ts:13 Runs every second and returns expired holds to the stock counter.
-    %% @ref src/backend/services/orders.service.ts:111
+    %% @uses cron releaseExpiredReservations src/backend/cron/releaseExpiredReservations.cron.ts:14 Runs every second and returns expired holds to the stock counter.
+    %% @ref src/backend/services/orders.service.ts:119
     %% @ref src/backend/infra/memoryRedis.ts:57
     SVC->>RD: reserve(stock:p_1, hold:<orderId>:p_1, 1, 900)
     alt Stock held
@@ -151,7 +152,7 @@ sequenceDiagram
         RD-->>SVC: false
         %% @step The service gives earlier holds of this order back and stops with OutOfStockError.
         %% @effect Earlier holds of this order are released
-        %% @ref src/backend/services/orders.service.ts:114
+        %% @ref src/backend/services/orders.service.ts:121-122
         SVC-->>CTL: OutOfStockError
         %% @step The controller maps the error to a conflict, naming the product so the page can show which line failed.
         %% @payload.body { "error": "\"Limited edition poster\" is out of stock", "productId": "p_3" }
@@ -160,12 +161,13 @@ sequenceDiagram
     end
 
     %% @section Save the order
-    %% @summary The order and its lines are written in one transaction, and the event that triggers the email is published.
+    %% @summary The order and its lines are written in one transaction, the holds are dropped, and the event that triggers the email is published.
     %% @step With every line held, the service builds the order record and asks the repository to save it with its items.
     %% @payload.input { "id": "<uuid>", "orderNumber": "SW-1001", "userId": "u_1", "status": "placed", "currency": "INR", "total": 619700, "shippingAddress": { "line1": "1 Lovelace Lane", "city": "Pune", "postcode": "411001" }, "placedAt": "2026-01-01T00:00:00.000Z" }
     %% @field orderNumber from the repository's counter, SW-1001 for the first order
     %% @field total from sumLines over the priced items, in minor units
-    %% @ref src/backend/services/orders.service.ts:84
+    %% @uses util sumLines src/backend/utils/money.ts:24 Adds up unit price times quantity in minor units.
+    %% @ref src/backend/services/orders.service.ts:86
     SVC->>REPO: insert(order, items)
     %% @step The repository writes the order row and one row per line inside a single transaction, so a failure leaves no half-saved order.
     %% @payload.sql -- in-memory tables, doing the job of: INSERT INTO orders (id, order_number, user_id, status, currency, total, shipping_address, placed_at) VALUES (...)
@@ -175,19 +177,24 @@ sequenceDiagram
     %% @ref src/backend/repositories/orders.repository.ts:19
     REPO->>DB: transaction: insert orders, insert order_items
     %% @step The saved rows come back as written.
-    %% @ref src/backend/infra/memoryDb.ts:11
+    %% @ref src/backend/infra/memoryDb.ts:20
     DB-->>REPO: rows
     %% @step The repository returns the order with its items.
-    %% @ref src/backend/repositories/orders.repository.ts:18
+    %% @ref src/backend/repositories/orders.repository.ts:21
     REPO-->>SVC: { order, items }
+    %% @step The order is saved, so its units are sold. The service drops the holds, so the cron has nothing to give back for this order.
+    %% @state before stock:p_1 = 9, hold:<orderId>:p_1 = 1
+    %% @state after stock:p_1 = 9, no hold
+    %% @ref src/backend/services/orders.service.ts:130
+    SVC->>RD: del(hold:<orderId>:p_1)
     %% @step The service announces the order. Nothing in this request waits for the email, so the reply is not slowed down.
     %% @async The subscriber only queues a job, the email is sent later
     %% @payload.event { "type": "order.placed", "orderId": "<uuid>", "orderNumber": "SW-1001", "email": "ada@example.com", "total": 619700, "currency": "INR" }
     %% @effect A confirmation job is queued for the mail worker
-    %% @ref src/backend/services/orders.service.ts:85
+    %% @ref src/backend/services/orders.service.ts:93
     SVC->>EB: publish order.placed
     %% @step The service returns the saved order to the controller.
-    %% @ref src/backend/services/orders.service.ts:93
+    %% @ref src/backend/services/orders.service.ts:101
     SVC-->>CTL: { order, items }
 
     %% @section Reply
@@ -201,7 +208,7 @@ sequenceDiagram
     SER->>DTO: OrderResponseDto
     %% @step The public order comes back to the controller.
     %% @payload.result { "orderNumber": "SW-1001", "status": "placed", "currency": "INR", "items": [{ "productId": "p_1", "name": "Mechanical keyboard", "quantity": 1, "unitPrice": 499900, "lineTotal": 499900 }, { "productId": "p_2", "name": "USB-C cable", "quantity": 2, "unitPrice": 59900, "lineTotal": 119800 }], "total": 619700, "totalDisplay": "₹6197.00", "shippingAddress": { "line1": "1 Lovelace Lane", "city": "Pune", "postcode": "411001" }, "placedAt": "2026-01-01T00:00:00.000Z" }
-    %% @ref src/backend/serializers/order.serializer.ts:6
+    %% @ref src/backend/serializers/order.serializer.ts:7
     SER-->>CTL: public order
     %% @step The controller answers 201 with the public order. On the way out the request id middleware adds the X-Request-Id header.
     %% @payload.headers X-Request-Id: 7f3c…
@@ -211,7 +218,7 @@ sequenceDiagram
     APP-->>API: 201 Created
     %% @step The client turns the status code into a typed result, so the page never looks at raw HTTP.
     %% @payload.result { "kind": "placed", "order": { "orderNumber": "SW-1001", "total": 619700 } }
-    %% @ref src/frontend/api/client.ts:26
+    %% @ref src/frontend/api/client.ts:36
     API-->>PG: { kind: "placed", order }
     %% @step The page stores the placed order and empties the cart.
     %% @state before status submitting, two items in the cart
@@ -219,6 +226,7 @@ sequenceDiagram
     %% @ref src/frontend/pages/CheckoutPage.ts:55
     PG->>ST: setState({ status: placed, items: [] })
     %% @step The page asks the component for the confirmation markup.
+    %% @ref src/frontend/pages/CheckoutPage.ts:16
     %% @ref src/frontend/components/OrderConfirmation.ts:5
     PG->>CMP: renderOrderConfirmation(order)
     %% @step The component returns the thank-you block with the order number and the total.

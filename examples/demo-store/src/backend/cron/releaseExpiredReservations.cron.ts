@@ -1,4 +1,5 @@
-// Cron: a stock hold that was never completed goes back to the counter once its TTL ran out.
+// Cron: a hold nobody confirmed, because the request died before the order was saved, goes back
+// to the stock counter once its TTL ran out. A placed order has dropped its holds already.
 import type { MemoryRedis } from '../infra/memoryRedis.ts';
 import { HOLD_PREFIX, productIdFromHoldKey, stockKey } from '../infra/stockKeys.ts';
 
