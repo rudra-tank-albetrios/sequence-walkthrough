@@ -33,8 +33,35 @@ async function pipe(bytes: Uint8Array, stream: GenericTransformStream): Promise<
 export const deflate = (text: string): Promise<Uint8Array> =>
   pipe(new TextEncoder().encode(text), new CompressionStream('deflate'));
 
-export const inflate = async (bytes: Uint8Array): Promise<string> =>
-  new TextDecoder().decode(await pipe(bytes, new DecompressionStream('deflate')));
+/** The most a link may expand to: far above any real diagram, far below what fills the memory. */
+const MAX_INFLATED_BYTES = 4 * 1024 * 1024;
+
+/** Inflates a link's bytes, stopping as soon as the output passes the limit. */
+export async function inflate(bytes: Uint8Array): Promise<string> {
+  const source = new Blob([bytes as BlobPart])
+    .stream()
+    .pipeThrough(new DecompressionStream('deflate'));
+  const reader = source.getReader();
+  const parts: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_INFLATED_BYTES) {
+      await reader.cancel();
+      throw new Error(`The link expands to more than ${MAX_INFLATED_BYTES / 1024 / 1024} MB`);
+    }
+    parts.push(value);
+  }
+  const joined = new Uint8Array(total);
+  let at = 0;
+  for (const part of parts) {
+    joined.set(part, at);
+    at += part.byteLength;
+  }
+  return new TextDecoder().decode(joined);
+}
 
 /** The fragment of a viewer link: `#z.<data>` plus `&step=N` when a step is current. */
 export async function shareFragment(code: string, step: number | null): Promise<string> {

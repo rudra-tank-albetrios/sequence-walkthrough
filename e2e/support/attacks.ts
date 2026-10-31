@@ -148,7 +148,10 @@ export const OTHER_DIAGRAMS: Record<string, string> = {
   click A "javascript:__pwned('flow-click')" "tip <img src=x onerror=__pwned('flow-tip')>"
   click B href "javascript:__pwned('flow-href')"
   click C call __pwned("flow-call")
-  click D callback "<img src=x onerror=__pwned('flow-cb')>"
+  click D callback "<img src=x onerror=__pwned('flow-cb')>"`,
+  // Mermaid 12.2 refuses a url() in a style line; the kind is kept apart so the flowchart above draws.
+  'flowchart with styles that fetch': `flowchart TD
+  A["a"] --> B["b"]
   style A fill:url(https://evil.example/style.png)
   classDef bad fill:url(https://evil.example/class.png),color:red
   class B bad`,

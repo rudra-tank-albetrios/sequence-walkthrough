@@ -2,44 +2,26 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": {
-      "entry": [
-        "e2e/**/*.ts"
-      ],
-      "project": [
-        "e2e/**/*.ts",
-        "*.{js,cjs,ts}"
-      ]
+      "entry": ["e2e/**/*.ts"],
+      "project": ["e2e/**/*.ts", "*.{js,cjs,ts}"]
     },
     "apps/web": {
-      "project": [
-        "src/**/*.{ts,tsx}"
-      ]
+      "project": ["src/**/*.{ts,tsx}"]
     },
     "packages/*": {
-      "project": [
-        "src/**/*.ts"
-      ]
+      "project": ["src/**/*.ts"]
     },
     "tools/*": {
-      "entry": [
-        "src/*.ts"
-      ],
-      "project": [
-        "src/**/*.ts"
-      ]
+      "entry": ["src/*.ts"],
+      "project": ["src/**/*.ts"]
     },
     "tools/build-skills": {
       "entry": ["src/index.ts", "src/*-cli.ts"],
       "project": ["src/**/*.ts"]
     },
     "examples/*": {
-      "entry": [
-        "src/backend/app/app.ts",
-        "src/frontend/pages/CheckoutPage.ts"
-      ],
-      "project": [
-        "src/**/*.ts"
-      ]
+      "entry": ["src/backend/app/app.ts", "src/frontend/pages/CheckoutPage.ts"],
+      "project": ["src/**/*.ts"]
     }
   }
 }

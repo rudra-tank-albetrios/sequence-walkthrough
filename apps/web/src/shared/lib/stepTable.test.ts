@@ -32,7 +32,8 @@ describe('hostile text in the step table', () => {
     expect(words).not.toMatch(/<[a-z]/i);
     expect(words).not.toMatch(/(?<!\\)\[/);
     expect(words).toContain('&lt;img src=x');
-    expect(words).toContain('\\[a](javascript:alert(2))');
+    // Both brackets are escaped, so no reader can make a link of it.
+    expect(words).toContain('\\[a\\](javascript:alert(2))');
     expect(md).toContain("`x' <img src=x onerror=alert(6)>`");
   });
 });
@@ -89,5 +90,46 @@ describe('step table exports', () => {
     for (const line of md.split('\n').filter((l) => l.startsWith('| '))) {
       expect(line.replace(/\\\|/g, '').split('|').length).toBeGreaterThanOrEqual(8);
     }
+  });
+  describe('escapes once', () => {
+    /** The cells of the only row, with the text in both a text cell and the code cell. */
+    const cells = (text: string): { does: string; sends: string } => {
+      const flow = parseFlow(
+        `sequenceDiagram\n  %% @step EXPLAIN\n  A->>B: one`,
+      ).flow;
+      const step = flow.steps[0];
+      if (!step) throw new Error('No step');
+      step.explain = text;
+      step.label = [text];
+      const line = markdownText(flow).split('\n').find((l) => l.startsWith('| 1 |'));
+      if (!line) throw new Error('No row');
+      // Split at the pipes between cells only: a pipe of the text has a backslash before it.
+      const parts = line.split(' | ');
+      return { sends: parts[2] ?? '', does: parts[3] ?? '' };
+    };
+
+    it.each([
+      ['[x](javascript:alert(1))', '\\[x\\](javascript:alert(1))', '`[x](javascript:alert(1))`'],
+      ['\\[x](y)', '\\\\\\[x\\](y)', '`\\[x](y)`'],
+      ['a\\', 'a\\\\', '`a\\`'],
+      ['a|b', 'a\\|b', '`a\\|b`'],
+      ['a\nb', 'a<br>b', '`a b`'],
+      ['a\r\nb', 'a<br>b', '`a b`'],
+      ['<b>', '&lt;b>', '`<b>`'],
+    ])('%j', (text, does, sends) => {
+      const got = cells(text);
+      expect(got.does).toBe(does);
+      expect(got.sends).toBe(sends);
+    });
+
+    it.each(['[x](javascript:alert(1))', '\\[x](y)', '\\\\[x](y)', '\\\\\\[x](y)'])(
+      'leaves no live bracket in %j',
+      (text) => {
+        // An odd number of backslashes before a bracket is what makes it plain text.
+        for (const run of cells(text).does.matchAll(/(\\*)[[\]]/g)) {
+          expect((run[1] ?? '').length % 2).toBe(1);
+        }
+      },
+    );
   });
 });

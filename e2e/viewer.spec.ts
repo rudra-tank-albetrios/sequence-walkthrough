@@ -14,6 +14,7 @@ import {
   seed,
   stepInput,
   svg,
+  topActor,
   themeSelect,
 } from './helpers.ts';
 
@@ -295,7 +296,7 @@ test.describe('diagram', () => {
 
   test('D13 hovering a participant shows its layer text', async ({ page }) => {
     await openFocused(page);
-    await svg(page).locator('.swv-actor[data-alias="RD"]').first().hover({ force: true });
+    await (await topActor(page, 'RD')).hover();
     const tip = page.getByTestId('arrow-tooltip');
     await expect(tip).toContainText('Redis');
     await expect(tip).toContainText('stock counters and per-order holds');
@@ -306,18 +307,18 @@ test.describe('diagram', () => {
     page,
   }) => {
     await openFocused(page);
-    const actor = svg(page).locator('.swv-actor[data-alias="RD"]').first();
-    await actor.click({ force: true });
+    const actor = await topActor(page, 'RD');
+    await actor.click();
     await expect(notice(page)).toHaveText(/^Showing only the \d+ arrows of Redis\./);
     await expect(svg(page).locator('[data-step].swv-out').first()).toBeAttached();
     await expect(svg(page)).toHaveClass(/swv-spot/);
     await page.getByRole('button', { name: 'Show all' }).click();
     await expect(svg(page).locator('[data-step].swv-out')).toHaveCount(0);
-    await actor.click({ force: true });
+    await actor.click();
     await expect(notice(page)).toBeVisible();
-    await actor.click({ force: true });
+    await actor.click();
     await expect(notice(page)).toBeHidden();
-    await actor.click({ force: true });
+    await actor.click();
     await expect(notice(page)).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(notice(page)).toBeHidden();
@@ -409,8 +410,14 @@ test.describe('diagram', () => {
       code: 'sequenceDiagram\n  A->>B: order placed\n  B-->>A: 200 order\n  A->>B: finish',
     });
     const text = svg(page).locator('.messageText[data-step="0"]').first();
-    const box = await text.boundingBox();
-    if (!box) throw new Error('The label has no box');
+    // From the page, because Playwright's boundingBox is off for SVG text on WebKit.
+    const box = await text.evaluate((el) => {
+      const label = el as unknown as {
+        getBoundingClientRect: () => Record<'x' | 'y' | 'height', number>;
+      };
+      const { x, y, height } = label.getBoundingClientRect();
+      return { x, y, height };
+    });
     await page.mouse.dblclick(box.x + 5, box.y + box.height / 2);
     const strip = page.getByTestId('follow-strip');
     await expect(strip).toContainText('order');

@@ -104,6 +104,15 @@ export interface Armed {
 const isWeb = (url: string): boolean => /^https?:/i.test(url);
 
 /**
+ * Messages WebKit raises as errors on the page that are not code running: a layout observer that
+ * re-ran, and a cross-site fetch it refused (the refusal is the point of that test).
+ */
+const BROWSER_NOTICES = [
+  /^ResizeObserver loop completed with undelivered notifications\.$/,
+  /due to access control checks\.$/,
+];
+
+/**
  * Starts recording on a page, before it opens anything. Requests to other sites are refused here,
  * so a hostile page cannot reach the network even when an attack gets through.
  */
@@ -121,7 +130,11 @@ export async function arm(page: Page, baseURL: string | undefined): Promise<Arme
     });
   });
   page.on('console', (message) => armed.console.push(message.text()));
-  page.on('pageerror', (error) => armed.pageErrors.push(error.message));
+  page.on('pageerror', (error) => {
+    if (!BROWSER_NOTICES.some((notice) => notice.test(error.message))) {
+      armed.pageErrors.push(error.message);
+    }
+  });
   await page.route(
     (url) => isWeb(url.href) && url.origin !== origin,
     (route) => {
@@ -251,10 +264,54 @@ export async function seedStorage(page: Page, values: Record<string, string>): P
   );
 }
 
-async function pointAt(page: Page, target: Locator): Promise<void> {
-  const box = await target.boundingBox();
-  if (!box) throw new Error('The target is not on the page');
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+/** Moves the pointer to the centre of the first match that is inside the viewport. */
+async function pointAt(page: Page, targets: Locator): Promise<void> {
+  const viewport = page.viewportSize();
+  if (!viewport) throw new Error('No viewport');
+  const tried: string[] = [];
+  for (const target of await targets.all()) {
+    const box = await target.boundingBox();
+    if (!box) {
+      tried.push('not rendered');
+      continue;
+    }
+    // The centre of the part that is on screen: a wide arrow's middle may be off to the side.
+    const left = Math.max(box.x, 0);
+    const top = Math.max(box.y, 0);
+    const right = Math.min(box.x + box.width, viewport.width);
+    const bottom = Math.min(box.y + box.height, viewport.height);
+    if (right - left < 4 || bottom - top < 2) {
+      tried.push(`(${Math.round(box.x)}, ${Math.round(box.y)}) is outside the viewport`);
+      continue;
+    }
+    const x = (left + right) / 2;
+    const y = (top + bottom) / 2;
+    // The pinned header draws a copy of the actor row over the original: either one answers.
+    const under = await target.evaluate(
+      (el, point) => {
+        const scope = globalThis as unknown as {
+          document: {
+            elementFromPoint: (
+              x: number,
+              y: number,
+            ) => { closest: (s: string) => unknown; tagName: string; className: unknown } | null;
+          };
+        };
+        const hit = scope.document.elementFromPoint(point.x, point.y);
+        if (hit === null) return 'nothing';
+        if (hit === el || hit.closest('.swv-actor, .swv-hit') !== null) return 'ok';
+        return `${hit.tagName}.${String(hit.className)}`;
+      },
+      { x, y },
+    );
+    if (under !== 'ok') {
+      tried.push(`(${Math.round(x)}, ${Math.round(y)}) is covered by ${under}`);
+      continue;
+    }
+    await page.mouse.move(x, y);
+    return;
+  }
+  throw new Error(`No target is inside the viewport and uncovered: ${tried.join('; ')}`);
 }
 
 /**
@@ -266,12 +323,12 @@ export async function walkEveryScreen(page: Page, steps: number): Promise<void> 
   const tooltip = page.getByTestId('arrow-tooltip');
 
   // The overview fits every layer on the screen, and a step brings its own arrow into view.
-  await pointAt(page, page.locator('.swv-actor').first());
+  await pointAt(page, page.locator('.swv-actor'));
   await expect(tooltip).toBeVisible();
   await page.mouse.move(0, 0);
   await page.getByTestId('diagram').focus();
   await key('ArrowRight');
-  await pointAt(page, page.locator('.swv-hit[data-step="0"]').first());
+  await pointAt(page, page.locator('.swv-hit[data-step="0"]'));
   await expect(tooltip).toBeVisible();
   for (let i = 1; i < steps; i++) await key('ArrowRight');
 

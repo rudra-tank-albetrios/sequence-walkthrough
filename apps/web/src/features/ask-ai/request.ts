@@ -93,6 +93,9 @@ export function endpointFor(settings: AiSettings): Endpoint {
 
 // A reply is untrusted data (plan section 4): only these shapes are read, and only as text. The
 // tree-shakeable zod/mini keeps the schemas a few hundred bytes within the first-load budget.
+// Zod would probe `Function('')` once to decide on compiling schemas; the page's policy forbids
+// eval and would report the probe, so it is told not to try.
+z.config({ jitless: true });
 
 /** The answer every OpenAI-style endpoint returns. */
 const ANSWER = z.object({
@@ -131,7 +134,10 @@ export interface CompleteOptions {
 async function completeHttp(endpoint: Endpoint, user: string, options: CompleteOptions): Promise<string> {
   const { provider, url, model, key } = endpoint;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(new Error('The provider did not answer in time')), options.timeoutMs ?? TIMEOUT_MS);
+  const timedOut = new Error('The provider did not answer in time');
+  const timer = setTimeout(() => {
+    controller.abort(timedOut);
+  }, options.timeoutMs ?? TIMEOUT_MS);
   const onOuterAbort = () => controller.abort(options.signal?.reason);
   options.signal?.addEventListener('abort', onOuterAbort, { once: true });
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -167,6 +173,9 @@ async function completeHttp(endpoint: Endpoint, user: string, options: CompleteO
     const text = answer.success ? (answer.data.choices[0]?.message.content ?? '') : '';
     if (!text) throw new Error('The provider sent no answer text');
     return text;
+  } catch (error) {
+    // Each browser words an aborted fetch differently; the timeout is the one case that is ours.
+    throw controller.signal.reason === timedOut ? timedOut : error;
   } finally {
     clearTimeout(timer);
     options.signal?.removeEventListener('abort', onOuterAbort);
@@ -179,18 +188,30 @@ type ClaudeSampler = (
   options: { modelTier: 'quick'; cache: boolean },
 ) => Promise<unknown>;
 interface ClaudeHost {
-  use(capability: 'sample'): Promise<ClaudeSampler>;
+  /** Resolves null when this view cannot run the capability. */
+  use(capability: 'sample'): Promise<ClaudeSampler | null>;
 }
 
 const CLAUDE_MISSING = 'Claude is not available on this page. Open the viewer as a Claude artifact, or pick another provider.';
+
+/** The host refuses with a plain `{ code, message }`, not an Error, so its words are picked out here. */
+function claudeRefusal(err: unknown): Error {
+  const message: unknown = typeof err === 'object' && err !== null ? Reflect.get(err, 'message') : undefined;
+  return new Error(typeof message === 'string' && message ? message : 'Claude did not answer.', { cause: err });
+}
 
 async function completeClaude(user: string): Promise<string> {
   if (!hasClaudeHost()) throw new Error(CLAUDE_MISSING);
   const host = (window as unknown as { claude: ClaudeHost }).claude;
   const sample = await host.use('sample');
-  const reply = await sample([{ role: 'user', content: `${AI_SYSTEM}\n\n${user}` }], { modelTier: 'quick', cache: false });
-  const parsed = HOST_REPLY.safeParse(reply);
-  return parsed.success ? parsed.data.text : '';
+  if (!sample) throw new Error(CLAUDE_MISSING);
+  try {
+    const reply = await sample([{ role: 'user', content: `${AI_SYSTEM}\n\n${user}` }], { modelTier: 'quick', cache: false });
+    const parsed = HOST_REPLY.safeParse(reply);
+    return parsed.success ? parsed.data.text : '';
+  } catch (err) {
+    throw claudeRefusal(err);
+  }
 }
 
 export const NETWORK_FAILURE = /failed to fetch|networkerror|load failed/i;
@@ -211,8 +232,8 @@ export async function complete(settings: AiSettings, user: string, options: Comp
     return hideKey(await completeHttp(endpoint, user, options), endpoint.key);
   } catch (err) {
     const message = hideKey(err instanceof Error ? err.message : String(err), endpoint.key);
-    // No `cause`: the original error can carry the key in its text, and keys never reach logs (plan section 4).
-    // eslint-disable-next-line preserve-caught-error
+    // The caught error is not attached as the cause: its message may repeat the key.
+    // eslint-disable-next-line preserve-caught-error -- the cause could carry the key into a log
     throw new Error(NETWORK_FAILURE.test(message) ? unreachable(provider) : message);
   }
 }

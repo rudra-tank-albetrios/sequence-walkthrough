@@ -29,16 +29,24 @@ export function SelectionMenu() {
   const boxRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    // Some browsers move the selection on the right button's press, before the menu event fires.
+    let pressed: string | null = null;
+    const onPress = (ev: PointerEvent) => {
+      pressed = ev.button === 2 ? selectedWord() : null;
+    };
     const onContext = (ev: MouseEvent) => {
       const target = ev.target instanceof Element ? ev.target : null;
       if (target?.closest('textarea, input')) return;
-      const word = selectedWord();
+      const word = selectedWord() ?? pressed;
+      pressed = null;
       if (!word) return;
       ev.preventDefault();
       setMenu({ word, x: ev.clientX, y: ev.clientY });
     };
+    document.addEventListener('pointerdown', onPress, true);
     document.addEventListener('contextmenu', onContext);
     return () => {
+      document.removeEventListener('pointerdown', onPress, true);
       document.removeEventListener('contextmenu', onContext);
     };
   }, []);

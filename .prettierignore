@@ -2,15 +2,15 @@
 node_modules/
 dist/
 dist-single/
-dist-claude/
 coverage/
 playwright-report/
 test-results/
 package-lock.json
 
-# The version 2 app and skill, replaced phase by phase
-src/
-build.py
+# Every src folder. Since phase 1 the line "src/" here matched them all, not only the old app, so no
+# source has been through Prettier yet. Delete this line and run `npm run format` once when no build
+# branch is open: it touches over 100 files (docs/decisions.md, phase 4).
+**/src/
 
 # Sample projects the skills are tested against, and what the skills wrote about them
 skills/fixtures/
