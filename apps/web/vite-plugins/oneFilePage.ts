@@ -30,7 +30,10 @@ because the artifact host sets that, so do not put this file on a website of you
 function zipEntries(files: [name: string, data: Uint8Array][]): Uint8Array {
   const entries: Zippable = {};
   for (const [name, data] of [...files].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))) {
-    entries[name] = [data, { level: 9, mtime: new Date(2026, 9, 29), os: 3, attrs: (0o100644 << 16) >>> 0 }];
+    entries[name] = [
+      data,
+      { level: 9, mtime: new Date(2026, 9, 29), os: 3, attrs: (0o100644 << 16) >>> 0 },
+    ];
   }
   return zipSync(entries, { level: 9 });
 }

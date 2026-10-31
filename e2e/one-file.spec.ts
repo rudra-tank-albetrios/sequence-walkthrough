@@ -18,12 +18,20 @@ import {
   watchPage,
 } from './cutover-support.ts';
 import { download, svg, type SavedFile } from './helpers.ts';
+import { TOUR_SEEN } from './visitors.ts';
 
 // The one-file build (`npm run build`): the page to open from disk and the page for a Claude artifact.
 
 const BUILD = resolve(import.meta.dirname, '../apps/web/dist-single');
 const PAGE_FILE = resolve(BUILD, 'sequence-walkthrough.html');
 const PAGE_URL = pathToFileURL(PAGE_FILE).href;
+
+// The configs' returning visitor covers the site's own address, not these pages, so they get it here.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(({ name, value }) => {
+    localStorage.setItem(name, value);
+  }, TOUR_SEEN);
+});
 
 const linkTo = (code: string): string => `#z.${deflateSync(code).toString('base64url')}`;
 

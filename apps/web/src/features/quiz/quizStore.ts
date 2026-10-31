@@ -18,7 +18,7 @@ import { loadRecentQuestions, rememberQuestions } from './recent.ts';
 import { pickSample } from './sample/index.ts';
 import { DEFAULT_CONFIG, type Question, type QuizConfig, type QuizSource } from './types.ts';
 
-export type Phase = 'setup' | 'loading' | 'running' | 'result' | 'error';
+type Phase = 'setup' | 'loading' | 'running' | 'result' | 'error';
 
 export interface QuizState {
   phase: Phase;

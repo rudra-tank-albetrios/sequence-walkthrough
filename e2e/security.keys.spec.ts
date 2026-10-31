@@ -273,7 +273,10 @@ test.describe('custom model addresses', () => {
       const armed = await arm(page, baseURL);
       const normal = new URL(address).href;
       await mockModel(armed, normal, 'OK');
-      await seedStorage(page, { 'swv:ai': storedAi('custom', { customUrl: address }), 'swv:ai:consent': storedConsent() });
+      await seedStorage(page, {
+        'swv:ai': storedAi('custom', { customUrl: address }),
+        'swv:ai:consent': storedConsent(),
+      });
       const settings = await openSettings(page);
       await settings.getByRole('button', { name: 'Test My model' }).click();
       await expect(settings.getByRole('status').filter({ hasText: 'Works.' })).toBeVisible();

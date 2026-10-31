@@ -1,6 +1,6 @@
 import styles from './quiz.module.css';
 
-export interface ChoiceOption<T> {
+interface ChoiceOption<T> {
   value: T;
   label: string;
 }

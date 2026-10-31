@@ -2,7 +2,7 @@ import { modelProblem, type ModelEntry, type ModelState } from './models.ts';
 import { standing, type UsageRecord } from './usage.ts';
 
 /** Why the first choice was passed over before anything was sent. */
-export type SkipReason = 'low' | 'out' | 'not-ready';
+type SkipReason = 'low' | 'out' | 'not-ready';
 
 export interface Skip {
   model: ModelEntry;

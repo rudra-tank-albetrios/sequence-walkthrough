@@ -20,12 +20,15 @@ test.describe('phone layout', () => {
   }) => {
     await open(page);
     await expect(heading(page)).toBeVisible();
-    await expect(page.locator('#flowMeta')).toBeHidden();
+    // The counts give way before the title does, and the header never makes the page scroll sideways.
+    expect(await page.evaluate(`document.documentElement.scrollWidth <= window.innerWidth`)).toBe(
+      true,
+    );
     for (const name of ['Find', 'Fit', 'How it works', 'Keyboard shortcuts and help', /^Export/]) {
-      await expect(page.getByRole('button', { name })).toBeHidden();
+      await expect(page.locator('#topbar').getByRole('button', { name })).toBeHidden();
     }
-    await expect(page.getByRole('group', { name: 'View' })).toBeHidden();
-    await expect(page.getByRole('group', { name: 'Zoom' })).toBeHidden();
+    await expect(page.locator('#topbar').getByRole('group', { name: 'View' })).toBeHidden();
+    await expect(page.locator('#topbar').getByRole('group', { name: 'Zoom' })).toBeHidden();
     await page.getByRole('button', { name: 'More' }).click();
     const menu = page.getByRole('menu', { name: 'More' });
     await expect(menu.getByRole('menuitem', { name: 'How it works' })).toBeVisible();

@@ -4,7 +4,7 @@
  * limit of the window `tokens-minute`. A browser sees only headers the provider exposes through
  * CORS; when it sees none, the usage bar falls back to counting in the browser.
  */
-export type RateUnit = 'requests' | 'tokens' | 'credits';
+type RateUnit = 'requests' | 'tokens' | 'credits';
 
 /** One limit a provider reports, such as requests per day. */
 export interface RateWindow {

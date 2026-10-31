@@ -148,7 +148,7 @@ function AskBody({ flow, step }: { flow: Flow; step: Step }) {
   };
 
   return (
-    <div className={styles.ask}>
+    <div className={styles.ask} data-tour="ask-panel">
       <div className={styles.top}>
         <span className={styles.seg} role="group" aria-label="Question mode">
           {MODES.map((m) => (

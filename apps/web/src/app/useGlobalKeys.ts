@@ -24,6 +24,7 @@ export function useGlobalKeys(narrow: boolean): void {
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
       if (ev.defaultPrevented || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+      if (useFlowStore.getState().ui.tourOpen) return;
       const target = ev.target as HTMLElement | null;
       const inField = Boolean(target?.closest(FIELD));
       if (ev.key === 'Escape') {

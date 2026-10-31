@@ -12,7 +12,13 @@ import {
   type Armed,
 } from './support/armed.ts';
 import { hostile, HOSTILE_FLOW } from './support/attacks.ts';
-import { ALL_SENTINELS, mockModel, PROVIDER_URLS, storedAi } from './support/models.ts';
+import {
+  ALL_SENTINELS,
+  mockModel,
+  PROVIDER_URLS,
+  storedAi,
+  storedConsent,
+} from './support/models.ts';
 
 // An export leaves the page and its policy behind, so nothing hostile may stay live in the file.
 // Each file is checked as text, then opened on a page of its own with no policy to help.
@@ -347,7 +353,7 @@ test.describe('a notes file with hostile notes', () => {
 test.describe('keys in exports', () => {
   test('no file, link or copied text holds a key', async ({ page, baseURL }) => {
     const armed = await arm(page, baseURL);
-    await seedStorage(page, { 'swv:ai': storedAi('groq') });
+    await seedStorage(page, { 'swv:ai': storedAi('groq'), 'swv:ai:consent': storedConsent() });
     await mockModel(armed, PROVIDER_URLS.groq, 'An answer.');
     await openDrawn(page, shareLink.z('sequenceDiagram\n  %% @title Keyed\n  A->>B: hello'));
     await page.getByTestId('diagram').focus();

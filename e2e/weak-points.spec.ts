@@ -47,7 +47,9 @@ async function missEverything(page: Page): Promise<string[]> {
 }
 
 const openWeakPoints = async (page: Page): Promise<Locator> => {
-  await quizDialog(page).getByRole('button', { name: /weak points/i }).click();
+  await quizDialog(page)
+    .getByRole('button', { name: /weak points/i })
+    .click();
   const weak = weakPointsDialog(page);
   await expect(weak).toBeVisible();
   await expect(weak.getByRole('status')).toHaveCount(0);
@@ -67,7 +69,9 @@ test.describe('Weak points', () => {
     await expect(found).toBeVisible();
     // The five easy choice questions cover four topics; every miss is counted.
     const chips = await found.locator('li').allTextContents();
-    expect(chips.map((chip) => Number(chip.split(': ')[1])).reduce((a, b) => a + b, 0)).toBe(EASY_CHOICE_COUNT);
+    expect(chips.map((chip) => Number(chip.split(': ')[1])).reduce((a, b) => a + b, 0)).toBe(
+      EASY_CHOICE_COUNT,
+    );
 
     let weak = await openWeakPoints(page);
     await expect(weak).toContainText(NOTICE);
@@ -83,14 +87,18 @@ test.describe('Weak points', () => {
     for (const question of asked) await expect(weak).toContainText(question);
 
     await page.reload();
-    await expect(page.getByTestId('diagram').locator('svg').first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('diagram').locator('svg').first()).toBeVisible({
+      timeout: 30_000,
+    });
     await openQuiz(page);
     weak = await openWeakPoints(page);
     await expect(items(weak)).toHaveCount(EASY_CHOICE_COUNT);
     for (const question of asked) await expect(weak).toContainText(question);
   });
 
-  test('WP2 a later correct answer lowers the count, and at zero the point goes away', async ({ page }) => {
+  test('WP2 a later correct answer lowers the count, and at zero the point goes away', async ({
+    page,
+  }) => {
     await open(page);
     await missEverything(page);
     const dialog = quizDialog(page);
@@ -109,7 +117,9 @@ test.describe('Weak points', () => {
     await answerAllRight(dialog);
     await submitQuiz(dialog);
     await expect(dialog.getByRole('heading', { name: /^Score: 5 of 5 \(100%\)/ })).toBeVisible();
-    await expect(dialog.getByRole('region', { name: 'Weak points found' })).toContainText('None so far.');
+    await expect(dialog.getByRole('region', { name: 'Weak points found' })).toContainText(
+      'None so far.',
+    );
     weak = await openWeakPoints(page);
     await expect(items(weak)).toHaveCount(EASY_CHOICE_COUNT);
     await expect(weak.getByText(/^1 time, last on/)).toHaveCount(EASY_CHOICE_COUNT);
@@ -124,13 +134,17 @@ test.describe('Weak points', () => {
     await expect(weak).toContainText('Nothing here yet. Mistakes in a quiz show up in this list.');
   });
 
-  test('WP3 the list can be exported as Markdown and cleared, after a confirmation', async ({ page }) => {
+  test('WP3 the list can be exported as Markdown and cleared, after a confirmation', async ({
+    page,
+  }) => {
     await open(page);
     const asked = await missEverything(page);
     const weak = await openWeakPoints(page);
     await expect(weak.getByRole('radio', { name: 'This flow' })).toBeChecked();
 
-    const file = await download(page, () => weak.getByRole('button', { name: 'Export as Markdown' }).click());
+    const file = await download(page, () =>
+      weak.getByRole('button', { name: 'Export as Markdown' }).click(),
+    );
     expect(file.name).toBe(`${DEMO_TITLE} - weak points.md`);
     expect(file.text.startsWith('# Weak points\n')).toBe(true);
     for (const question of asked) expect(file.text).toContain(`## ${mdText(question)}`);
@@ -140,7 +154,9 @@ test.describe('Weak points', () => {
     await expect(toastBox(page)).toContainText(`Downloaded ${DEMO_TITLE} - weak points.md`);
 
     await weak.getByRole('button', { name: 'Clear', exact: true }).click();
-    await expect(weak.getByRole('alert')).toContainText(`Clear ${EASY_CHOICE_COUNT} weak points? This cannot be undone.`);
+    await expect(weak.getByRole('alert')).toContainText(
+      `Clear ${EASY_CHOICE_COUNT} weak points? This cannot be undone.`,
+    );
     await weak.getByRole('button', { name: 'Keep them' }).click();
     await expect(items(weak)).toHaveCount(EASY_CHOICE_COUNT);
     await weak.getByRole('button', { name: 'Clear', exact: true }).click();
@@ -150,7 +166,9 @@ test.describe('Weak points', () => {
     await expect(toastBox(page)).toContainText('Weak points cleared');
 
     await page.reload();
-    await expect(page.getByTestId('diagram').locator('svg').first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('diagram').locator('svg').first()).toBeVisible({
+      timeout: 30_000,
+    });
     await openQuiz(page);
     await expect(items(await openWeakPoints(page))).toHaveCount(0);
   });

@@ -97,6 +97,7 @@ export const Editor = forwardRef<EditorHandle>(function Editor(_props, ref) {
   const caretLine = useRef(-1);
   const [text, setText] = useState(code);
   const textRef = useRef(code);
+  const unsaved = useRef(false);
 
   useEffect(() => {
     textRef.current = text;
@@ -105,6 +106,7 @@ export const Editor = forwardRef<EditorHandle>(function Editor(_props, ref) {
   const flush = useMemo(
     () =>
       debounce((value: string) => {
+        unsaved.current = false;
         setCode(value);
       }, EDIT_DEBOUNCE_MS),
     [setCode],
@@ -114,16 +116,17 @@ export const Editor = forwardRef<EditorHandle>(function Editor(_props, ref) {
   useEffect(() => {
     if (code !== textRef.current) {
       flush.cancel();
+      unsaved.current = false;
       setText(code);
     }
   }, [code, flush]);
 
-  // Closing the panel right after typing must not lose the edit.
+  // Closing the panel right after typing must not lose the edit. Only an edit: code that changed
+  // outside the editor in the same moment (the tour, an import) stays.
   useEffect(
     () => () => {
       flush.cancel();
-      const pending = textRef.current;
-      if (pending !== useFlowStore.getState().code) setCode(pending);
+      if (unsaved.current) setCode(textRef.current);
     },
     [flush, setCode],
   );
@@ -200,6 +203,7 @@ export const Editor = forwardRef<EditorHandle>(function Editor(_props, ref) {
       flush.cancel();
       setCode(value);
     } else {
+      unsaved.current = true;
       flush(value);
     }
   };

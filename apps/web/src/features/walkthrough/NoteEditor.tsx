@@ -10,7 +10,7 @@ import styles from './card.module.css';
 const storedNote = (key: string): string => useNotesStore.getState().data[key]?.note ?? '';
 
 /** The inline note editor: saves as you type, on blur and on Esc (which also closes it). */
-export function NoteEditor({ step }: { step: Step }) {
+function NoteEditor({ step }: { step: Step }) {
   const setNote = useNotesStore((s) => s.setNote);
   const setUi = useFlowStore((s) => s.setUi);
   const [text, setText] = useState(() => storedNote(step.key));

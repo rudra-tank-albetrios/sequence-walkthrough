@@ -3,7 +3,7 @@ import { toast } from '../../shared/ui/toast.ts';
 import { importFile, importText, type ImportResult } from './importer.ts';
 
 /** Loads an import result into the viewer and tells the user; false when nothing was loaded. */
-export function applyImport(result: ImportResult): boolean {
+function applyImport(result: ImportResult): boolean {
   if (!result.ok) {
     toast(result.message);
     return false;

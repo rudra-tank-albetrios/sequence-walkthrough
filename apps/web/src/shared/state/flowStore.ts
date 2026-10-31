@@ -8,7 +8,7 @@ import { toast } from '../ui/toast.ts';
 import { pathVisible, type PathMode } from './path.ts';
 import { followHits } from './search.ts';
 
-export type View = 'diagram' | 'table';
+type View = 'diagram' | 'table';
 
 /** A word the user is following through the flow (double-click), with the steps that mention it. */
 export interface FollowState {
@@ -66,6 +66,7 @@ export interface FlowState {
     copyFallback: string | null;
     /** A question another feature prepared for the Ask panel, sent as it opens. */
     askQuestion: string | null;
+    tourOpen: boolean;
   };
 
   setCode: (code: string) => void;
@@ -145,6 +146,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     tableNotes: false,
     copyFallback: null,
     askQuestion: null,
+    tourOpen: false,
   },
   lastGo: { index: -1, camera: true, seq: 0 },
   fitRequest: 0,

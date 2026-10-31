@@ -1,6 +1,6 @@
 {
   "name": "sequence-walkthrough",
-  "version": "3.0.0-dev",
+  "version": "3.0.0",
   "private": true,
   "description": "Turn a Mermaid sequence diagram into a guided, step-by-step walkthrough of how a project really works.",
   "license": "MIT",

@@ -26,7 +26,7 @@ test.describe('header', () => {
   test('O3 the title, the counts and the page title come from the flow', async ({ page }) => {
     await open(page);
     await expect(heading(page)).toHaveText(DEMO_TITLE);
-    await expect(page.locator('#flowMeta')).toHaveText(/^42 steps, \d+ layers, 5 chapters$/);
+    await expect(page.locator('#flowMeta')).toHaveText(/^43 steps, \d+ layers, 5 chapters$/);
     await expect(page).toHaveTitle('Place an order · Sequence Walkthrough');
     await expect(page.locator('#topbar').getByText('proposed', { exact: true })).toBeHidden();
   });

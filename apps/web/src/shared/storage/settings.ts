@@ -14,7 +14,7 @@ export const DIAGRAM_THEMES = [
 ] as const;
 export type DiagramTheme = (typeof DIAGRAM_THEMES)[number];
 
-export type WheelMode = 'scroll' | 'zoom';
+type WheelMode = 'scroll' | 'zoom';
 
 /** The page's own colours: what the system asks for, unless the user picks one. */
 export const PAGE_THEMES = ['system', 'light', 'dark'] as const;
@@ -46,7 +46,7 @@ export interface Settings {
 
 export const SETTINGS_KEY = 'swv:settings';
 
-export const DEFAULT_SETTINGS: Settings = {
+const DEFAULT_SETTINGS: Settings = {
   theme: 'redux-color',
   themeAuto: true,
   pageTheme: 'system',
@@ -105,7 +105,7 @@ export function applyPageTheme(pageTheme: PageTheme): void {
 }
 
 /** `swv:code`: the last code the user had in the panel, written a moment after each edit. */
-export const CODE_KEY = 'swv:code';
+const CODE_KEY = 'swv:code';
 
 export function loadSavedCode(): string | null {
   const saved = Store.get<unknown>(CODE_KEY, null);

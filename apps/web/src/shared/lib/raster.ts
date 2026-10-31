@@ -1,10 +1,10 @@
 /** Drawing an SVG string on a canvas, within the sizes browsers accept. */
 
-export const MAX_SIDE = 16000;
-export const MAX_AREA = 120e6;
+const MAX_SIDE = 16000;
+const MAX_AREA = 120e6;
 
 /** Lowers the scale by 0.8 steps while the canvas would be too large, down to 0.25. */
-export function fitScale(width: number, height: number, scale: number): number {
+function fitScale(width: number, height: number, scale: number): number {
   let s = scale;
   while (s > 0.25 && (width * s > MAX_SIDE || height * s > MAX_SIDE || width * height * s * s > MAX_AREA)) {
     s *= 0.8;

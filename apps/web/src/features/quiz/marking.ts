@@ -61,7 +61,7 @@ function clip(text: string, chars: number): string {
   return text.length > chars ? `${text.slice(0, chars)}…` : text;
 }
 
-export function markPrompt(items: readonly { question: Question; answer: string }[]): string {
+function markPrompt(items: readonly { question: Question; answer: string }[]): string {
   const room = Math.min(1200, Math.floor(9000 / Math.max(1, items.length)));
   const body = items.map(({ question, answer }, i) =>
     [
@@ -108,7 +108,7 @@ export async function markWritten(
   };
 }
 
-export const WORTH: Record<MarkValue, number> = { correct: 1, partly: 0.5, wrong: 0 };
+const WORTH: Record<MarkValue, number> = { correct: 1, partly: 0.5, wrong: 0 };
 
 export interface ScoreRow {
   label: string;
@@ -166,7 +166,7 @@ export function scoreQuiz(flow: Flow, questions: readonly Question[], marks: Mar
   };
 }
 
-export const percent = (points: number, total: number): number =>
+const percent = (points: number, total: number): number =>
   total > 0 ? Math.round((points / total) * 100) : 0;
 
 export const scoreLine = ({ points, total }: Score): string =>

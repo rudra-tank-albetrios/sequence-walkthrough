@@ -43,7 +43,11 @@ export const openWithModel = (page: Page) =>
 
 export const flow = parseFlow(demoFlow()).flow;
 
-const SAMPLES: Record<Difficulty, readonly SampleQuestion[]> = { easy: EASY, medium: MEDIUM, hard: HARD };
+const SAMPLES: Record<Difficulty, readonly SampleQuestion[]> = {
+  easy: EASY,
+  medium: MEDIUM,
+  hard: HARD,
+};
 
 export const ALL_SAMPLES: readonly SampleQuestion[] = [...EASY, ...MEDIUM, ...HARD];
 
@@ -105,10 +109,15 @@ export function goodItems(shape: QuizShape, skip = 0): ReplyItem[] {
   });
 }
 
-export const quizReply = (items: readonly unknown[]): string => JSON.stringify({ questions: items });
+export const quizReply = (items: readonly unknown[]): string =>
+  JSON.stringify({ questions: items });
 
 /** A mark for every written answer, in order. */
-export const marksReply = (count: number, mark: 'correct' | 'partly' | 'wrong', why = 'Half of it.'): string =>
+export const marksReply = (
+  count: number,
+  mark: 'correct' | 'partly' | 'wrong',
+  why = 'Half of it.',
+): string =>
   JSON.stringify({ marks: Array.from({ length: count }, (_, i) => ({ id: i + 1, mark, why })) });
 
 /** What the page sent to the model in one request. */
@@ -196,7 +205,8 @@ export async function mockModel(page: Page, replies: MockReplies): Promise<Model
 
 export const quizDialog = (page: Page) => page.getByRole('dialog', { name: 'Quiz', exact: true });
 export const weakPointsDialog = (page: Page) => page.getByRole('dialog', { name: 'Weak points' });
-export const settingsDialog = (page: Page) => page.getByRole('dialog', { name: 'AI settings', exact: true });
+export const settingsDialog = (page: Page) =>
+  page.getByRole('dialog', { name: 'AI settings', exact: true });
 
 /** Opens the quiz from the Learn menu and waits for its set-up screen. */
 export async function openQuiz(page: Page): Promise<Locator> {
@@ -245,7 +255,8 @@ export async function chooseSetup(dialog: Locator, choices: SetupChoices): Promi
   if (choices.source) await pick(choices.source);
 }
 
-export const startButton = (dialog: Locator) => dialog.getByRole('button', { name: 'Start the quiz' });
+export const startButton = (dialog: Locator) =>
+  dialog.getByRole('button', { name: 'Start the quiz' });
 
 /** Chooses the options, starts, and waits until the questions are on screen. */
 export async function startQuiz(dialog: Locator, choices: SetupChoices = {}): Promise<void> {
@@ -298,7 +309,8 @@ export async function answerAllRight(dialog: Locator): Promise<void> {
   }
 }
 
-export const submitButton = (dialog: Locator) => dialog.getByRole('button', { name: 'Submit', exact: true });
+export const submitButton = (dialog: Locator) =>
+  dialog.getByRole('button', { name: 'Submit', exact: true });
 
 /** Submits and waits for the score. */
 export async function submitQuiz(dialog: Locator): Promise<void> {

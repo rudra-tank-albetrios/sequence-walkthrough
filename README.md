@@ -11,19 +11,43 @@ The project has two parts:
 
 The diagrams are plain Mermaid. The walkthrough text lives in `%%` comments (format `walkthrough/2`), so the same code still renders unchanged on GitHub, mermaid.live and anywhere else Mermaid runs.
 
+**Try it:** <https://rudra-tank-albetrios.github.io/sequence-walkthrough/>. It opens the demo flow and, on a first visit, a short tour. No key or account is needed.
+
 ---
 
 ## Contents
 
+- [Try the demo](#try-the-demo)
 - [Run the viewer](#run-the-viewer)
 - [Use the viewer](#use-the-viewer)
+- [Voice](#voice)
 - [Ask AI](#ask-ai)
+- [Quiz and day recap](#quiz-and-day-recap)
+- [Review this flow](#review-this-flow)
 - [The annotation format](#the-annotation-format)
-- [The Claude skill](#the-claude-skill)
+- [The Claude skills](#the-claude-skills)
 - [Make it live and share it](#make-it-live-and-share-it)
 - [Project structure](#project-structure)
 - [Development](#development)
 - [Privacy and dependencies](#privacy-and-dependencies)
+
+---
+
+## Try the demo
+
+The viewer opens on "Place an order", the flow of [`examples/demo-store`](examples/demo-store), a small real project with in-memory stand-ins for its database, Redis, queue and mail. Its code links are checked by `npm run check:refs`, and its tests run with the rest (`npm run test`).
+
+| Feature | Where the demo shows it |
+|---|---|
+| Layers and numbering | Every main layer of a frontend and a backend, with numbered arrows |
+| What goes and what comes back | Payloads and returned values on each step |
+| Replies | 201, 401, 409 and 422 |
+| Background work | Event, queue, worker and the confirmation email, in their own chapter |
+| Side parts | A cron, hook, util and config value on the Flow Rail and on hover |
+| Threat | One clearly labelled sample threat |
+| Quiz and recap | A built-in sample quiz and recap, so they work with no key |
+
+**Take the tour** (under **Learn**) walks through the layers, voice, Flow Rail, side parts, Ask AI, usage and auto-switch, quiz, recap, review and exports. It can be skipped, runs by itself once for a first-time visitor, never calls a model, and puts your own flow back when it ends. The usage bars it shows are simulated and labelled as a demo.
 
 ---
 
@@ -65,7 +89,7 @@ Everything is bundled, so the viewer needs no CDN and works with no internet con
 
 ## Use the viewer
 
-New here? Click **How it works** in the header (on a phone: **⋯ → How it works**). It explains the viewer and how to set up and use the skill in a few key points, and has a button to download the skill.
+New here? Open **Learn** in the header and choose **Take the tour**, or **How it works** for the viewer and the skill in a few key points, with a button to download the skill. The header's four menus hold every tool: **Learn**, **Analyze**, **Export** and **Settings**. A tool that needs room opens in a large panel over the page, and closing it leaves your flow, step and zoom as they were.
 
 1. Paste Mermaid `sequenceDiagram` code into the code panel. Open it with the **Code** button or **C**; the tab on the panel's right edge closes it. You can also use **Export → Paste a link or code…**, or **Open a file…** (`.mmd`, `.md`, `.txt`).
 2. Press **→**, or roll the mouse wheel over the step bar, to go through the flow one arrow at a time. Each step shows its card, highlights the arrow and moves the camera to it.
@@ -87,11 +111,12 @@ New here? Click **How it works** in the header (on a phone: **⋯ → How it wor
 
 Each `@section` chapter gets a fixed pastel colour. The current chapter is drawn as a light band behind its arrows, with a "▶ start" and "■ end" marker, while the other chapters fade a little, so you always see where the chapter begins, where it ends and where you are in it. The same colour marks the chapter tab, the progress bar under it, the code gutter and the table rows. **Chapter band** in the canvas controls turns the band off. **K** locks the arrow keys inside the current chapter.
 
-### Paths, side parts and the Insight panel
+### Paths, side parts and the Analyze tools
 
 - **Path** (in the step bar, when the flow has branches): walk every step, the happy path only, the errors only, or one `alt` branch. Steps outside the chosen path fade in the diagram, disappear from the table, and the arrow keys skip them.
 - **Behind** (in the step bar): the hooks, crons, utilities, config and side effects of the whole flow, grouped by kind and expandable, each with the steps it acts in.
-- **Insight** (**I**): a side panel with six tabs. *Layers* with their kind, description, steps, chapters, files and side parts; *Endpoints*, every call with its replies; *Errors*, every 4xx and 5xx reply with its message, branch and cause, plus the unconfirmed details; *Behind the scenes*; *Glossary*, the `@term` lines plus the answers you saved from Ask AI, editable; *Data*, the tables touched and the files in the flow.
+- **Flow Rail** (in the dock): the whole flow on one line, in chapter colours, with markers for errors, side parts, threats and bookmarks. Hover to preview a step, click to go there.
+- **Analyze** (**I** opens it): *Layers* with their kind, description, steps, chapters, files and side parts; *Endpoints*, every call with its replies; *Errors*, every 4xx and 5xx reply with its message, branch and cause, plus the unconfirmed details; *Data*, the tables touched and the files in the flow; *Side parts*. **Learn → Glossary** holds the `@term` lines plus the answers you saved from Ask AI, editable.
 - The overview card (press **Esc** or **Home**) shows what starts the flow, its scope, the possible endings with their status codes, and the layers with their icons. Layers with a `kind=` also get dotted trust-boundary lines in the diagram between the client, our systems and external services.
 
 ### Keys
@@ -102,11 +127,11 @@ Each `@section` chapter gets a fixed pastel colour. The current chapter is drawn
 | `Home` `End` | First / last step |
 | `[` `]` | Previous / next chapter |
 | `K` | Lock the arrow keys inside the current chapter |
-| `Space` | Play / pause |
+| `Space` | Play / pause (the voice follows) |
 | `+` `−` / `Ctrl` + wheel | Zoom |
 | `0` / `F` | Fit width / fit all |
 | `T` | Switch between diagram and table |
-| `I` | Insight panel |
+| `I` | Open the Analyze tools |
 | `A` | Ask AI about the current step |
 | `H` | Hide the controls |
 | `P` | Presenter mode: controls hidden, one big card, your note as speaker notes |
@@ -134,6 +159,17 @@ Exported files are named after the diagram's `@title`.
 
 ---
 
+## Voice
+
+Press **Play** and each step's plain explanation is read aloud, with paths and code turned into simple words. The next step waits for the voice to finish, and the seconds per step become a minimum.
+
+- The speaker icon beside Play mutes only the voice. The flow keeps playing.
+- Pause also pauses the speech, and Play carries on from there. Skipping stops the old speech and reads the new step. Walking by hand stays silent.
+- **Settings → Theme and display** has the voice speed (0.5x to 2x, default 1x) and the voice, both remembered. The default is the clearest installed voice for your language.
+- Voices come from your device, so how they sound depends on it, and some are online services run by your browser or system that receive the text they read. The icon is hidden where there is no voice.
+
+---
+
 ## Ask AI
 
 Press **A** on any step, or select a word and right-click it, to ask a short question: "Explain simpler", "Why this step?", "What if it fails?", "What is tombstone?" or anything you type. Two modes:
@@ -143,7 +179,7 @@ Press **A** on any step, or select a word and right-click it, to ask a short que
 
 Answers are under 60 words, written for a developer new to the codebase, in plain words with technical terms glossed. Every answer is saved into the step's note (press **N** to edit it later), and a "What is …?" answer can be added to the glossary with one click.
 
-The viewer is a static page, so it cannot hide an API key. You add models under **Export → Ask AI → Provider and key…**, as an ordered list. Each key is stored in this browser, not encrypted, and is sent only to its own model's address. "Forget key when this tab closes" keeps it out of permanent storage. Before the first question, the viewer says what text goes to which provider.
+The viewer is a static page, so it cannot hide an API key. You add models under **Settings → Models and keys**, as an ordered list. Each key is stored in this browser, not encrypted, and is sent only to its own model's address. "Forget key when this tab closes" keeps it out of permanent storage. Before the first question, the viewer says what text goes to which provider.
 
 | Provider | Needs | Notes |
 |---|---|---|
@@ -159,6 +195,22 @@ If a browser call is blocked, the **Test** button on that model says so; pick an
 **Auto-switch.** Mark a model as a fallback and it may take over: when the one before it has 5% or less left (you can change the level), hits a limit, or cannot be reached. A short notice says what happened. A bad key never switches. Each request tries each model at most once, and models not marked as fallbacks are never used.
 
 **Saved answers.** A repeated question about an unchanged step costs no tokens: the answer is labelled "Saved answer", says which model wrote it, and has an **Ask again** button. The newest 500 are kept in this browser, and AI settings shows their size with a clear button.
+
+---
+
+## Quiz and day recap
+
+**Learn → Quiz** tests you on the flow on screen. Choose the difficulty, 5, 10 or 15 questions, the question types (multiple choice, one-line answer, short theory or Mix) and a stopwatch or a timer. Every question names the step it comes from, and the result links back to it. It needs your own model, except on the demo flow, which has a built-in sample quiz.
+
+Your mistakes stay in this browser. **Learn → Day recap** lists each one with the right answer, by day or for all time, shows your weak points, and lets you retry them. With a model set up it adds short key points; without one, the list still works. Results can be exported.
+
+---
+
+## Review this flow
+
+**Analyze → Review this flow** rates how well a flow follows its layers, with a confidence level, lists the findings with the step each comes from, and shows possible threats written in the flow with `@threat`.
+
+It says "This flow" because one flow cannot rate a whole project. A threat means "possible problem, please check". **This is not a security audit, and a clean result does not mean a project is safe.**
 
 ---
 
@@ -354,7 +406,6 @@ Connect the repository and use these settings. Netlify reads them from [netlify.
 - On GitHub Pages' free plan the repository is public, so anyone can also see the source code.
 - Each friend's notes, bookmarks, saved terms, settings and AI keys stay in their own browser. Nothing is uploaded or shared between visitors.
 - To send someone a specific diagram, use **Export → Copy viewer link**, or **Copy link to this step** to open on a step. The diagram code travels inside the link, so they see exactly what you see.
-- If you make the repository public, add a `LICENSE` file so others know how they may use the code.
 - To use your own domain, every host above supports one under its domain settings. Point a `CNAME` record at the host.
 
 ---
@@ -364,7 +415,8 @@ Connect the repository and use these settings. Netlify reads them from [netlify.
 ```text
 .
 ├── apps/web/                   the viewer: React, TypeScript and Vite
-├── packages/core/              the walkthrough/2 parser, the flow model and the validator
+├── packages/core/              the walkthrough/2 parser, the flow model, review rules and the validator
+├── packages/ai/                model clients, usage, auto-switch, the answer cache and reply schemas
 ├── examples/demo-store/        the small real project behind the demo flow
 ├── e2e/                        browser tests and the live-site smoke test
 ├── docs/                       architecture, decisions, the build plan and feature parity
@@ -385,7 +437,7 @@ Connect the repository and use these settings. Netlify reads them from [netlify.
 
 ## Development
 
-> **Version 3 is being built.** The plan is in [`docs/IMPLEMENTATION-PLAN.md`](docs/IMPLEMENTATION-PLAN.md), the layout in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and the setup in [`CONTRIBUTING.md`](CONTRIBUTING.md): `npm ci`, then `npm run check` before a merge (`npm run verify` is the full run by hand).
+The layout is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and the setup in [`CONTRIBUTING.md`](CONTRIBUTING.md): `npm ci`, then `npm run check` before a merge (`npm run verify` is the full run by hand). No workflow tests a pull request, so this check is the gate. The history of the build is in [`docs/IMPLEMENTATION-PLAN.md`](docs/IMPLEMENTATION-PLAN.md) and [`docs/decisions.md`](docs/decisions.md).
 
 - Edit files in `apps/web/src` with `npm run dev` running. `npm run build` writes the website and the one-file viewer, which inlines the scripts, styles and fonts and embeds the skill kit.
 - The build is reproducible: the same sources always give the same bytes, including the zips.
@@ -399,7 +451,8 @@ Connect the repository and use these settings. Netlify reads them from [netlify.
 ## Privacy and dependencies
 
 - **No server, no analytics, no cookies.** Diagrams, notes, bookmarks, saved glossary terms and AI settings never leave the browser; they are kept in `localStorage`.
-- **Ask AI** sends your question, and in project mode the current step's text, to the provider you chose, with the key you entered. Nothing is sent until you ask.
+- **Ask AI, the quiz, the recap and the review's explanations** send your question or the flow's text to the provider you chose, with the key you entered. Nothing is sent until you ask, and a notice says what goes where before the first request.
+- **The voice** uses your device's voices. This page fetches nothing for it, but an online voice receives the text it reads.
 - **Nothing loads from a CDN:** Mermaid and jsPDF are bundled with the viewer, and on the website jsPDF loads only when you export a PDF.
 - **Fonts:** Recursive (SIL Open Font License) is built into the page, so exports keep their typography.
-- **Browsers:** tested in Microsoft Edge (Chromium) on desktop and at phone width. Current Chrome, Firefox and Safari should work, but they weren't part of the test runs.
+- **Browsers:** the final version was tested in Chromium on desktop. Firefox, Safari and phone profiles have browser tests in the repository, but they were not part of the last run.

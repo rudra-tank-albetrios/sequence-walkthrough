@@ -119,13 +119,15 @@ async function openRecap(page: Page) {
 
 async function expectAccessibleDialog(page: Page) {
   // A button that just changed is still fading to its colours; axe must measure them at rest.
-  await page.getByRole('dialog').evaluate((el) =>
-    Promise.all(
-      (el as unknown as { getAnimations: (o: object) => { finished: Promise<unknown> }[] })
-        .getAnimations({ subtree: true })
-        .map((animation) => animation.finished),
-    ),
-  );
+  await page
+    .getByRole('dialog')
+    .evaluate((el) =>
+      Promise.all(
+        (el as unknown as { getAnimations: (o: object) => { finished: Promise<unknown> }[] })
+          .getAnimations({ subtree: true })
+          .map((animation) => animation.finished),
+      ),
+    );
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .include('[role="dialog"]')

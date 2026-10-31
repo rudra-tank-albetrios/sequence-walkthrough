@@ -5,7 +5,7 @@ import { fileName } from '../../shared/lib/util.ts';
 import { toNoteEntry, type NotesData } from '../../shared/storage/notes.ts';
 
 /** The `swv-notes/1` file version 2 wrote and reads back. */
-export interface NotesFile {
+interface NotesFile {
   format: 'swv-notes/1';
   flow: string;
   flowId: string;
@@ -13,7 +13,7 @@ export interface NotesFile {
   notes: NotesData;
 }
 
-export function notesFile(flow: Flow, id: string, notes: NotesData): NotesFile {
+function notesFile(flow: Flow, id: string, notes: NotesData): NotesFile {
   return { format: 'swv-notes/1', flow: flow.title, flowId: id, exported: new Date().toISOString(), notes };
 }
 

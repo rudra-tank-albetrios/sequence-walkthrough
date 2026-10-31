@@ -89,6 +89,7 @@ export class OrdersService {
       this.releaseHolds(orderId, priced);
       throw error;
     }
+    this.confirmHolds(orderId, priced);
     eventBus.publish({
       type: 'order.placed',
       orderId,
@@ -122,6 +123,11 @@ export class OrdersService {
       }
       held.push(item);
     }
+  }
+
+  /** The order is saved, so its units are sold: the holds go and the stock stays taken. */
+  private confirmHolds(orderId: string, items: PricedItem[]): void {
+    for (const item of items) this.deps.redis.del(holdKey(orderId, item.product.id));
   }
 
   /** Gives the held units of these lines back to their stock counters. */

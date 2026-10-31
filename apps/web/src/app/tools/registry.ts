@@ -93,7 +93,7 @@ interface ToolBase {
 export type Tool = ToolBase & ({ panel: LazyExoticComponent<ComponentType> } | { run: () => void });
 
 /** A component that is downloaded only when it is first shown, so it stays out of the first load. */
-export const onDemand = <M>(load: () => Promise<M>, pick: (module: M) => ComponentType) =>
+const onDemand = <M>(load: () => Promise<M>, pick: (module: M) => ComponentType) =>
   lazy(async () => ({ default: pick(await load()) }));
 
 /** A tool's action that only raises a `ui` flag in the store. */
@@ -117,6 +117,7 @@ export const TOOLS: readonly Tool[] = [
   { id: 'quiz', group: 'learn', label: 'Quiz', icon: ListChecks, tour: 'tool-quiz', host: onDemand(() => import('../../features/quiz/index.ts'), (m) => m.QuizMount), run: setUi({ quizOpen: true }) },
   { id: 'recap', group: 'learn', label: 'Day recap', icon: CalendarCheck, tour: 'tool-recap', host: onDemand(() => import('../../features/recap/index.ts'), (m) => m.RecapDialog), run: setUi({ recapOpen: true }) },
   { id: 'guide', group: 'learn', label: 'How it works', icon: Compass, tour: 'tool-guide', run: setUi({ guideOpen: true }) },
+  { id: 'tour', group: 'learn', label: 'Take the tour', icon: Compass, tour: 'tool-tour', run: setUi({ tourOpen: true }) },
   { id: 'shortcuts', group: 'learn', label: 'Shortcuts and help', icon: Keyboard, tour: 'tool-shortcuts', hint: '?', run: setUi({ shortcutsOpen: true }) },
 
   { id: 'review', group: 'analyze', label: 'Review this flow', icon: ShieldCheck, tour: 'tool-review', host: onDemand(() => import('../../features/review/index.ts'), (m) => m.ReviewHost), run: setUi({ reviewOpen: true }) },

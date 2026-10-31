@@ -17,7 +17,7 @@ Then:
 |---|---|
 | `npm run dev` | Starts the web app with live reload |
 | `npm run check` | Types, lint, unit tests, the build, then opens the built site in one browser. Must pass before a merge. |
-| `npm run verify` | Every check, including all browser tests. Run by hand for a full pass. |
+| `npm run verify` | Every check, including all browser tests. Run by hand for a full pass. On Windows, knip needs `KNIP_DISABLE_RAW_TRANSFER=1`. |
 | `npm run test` | Unit and component tests only |
 | `npm run test:e2e` | Browser tests (run `npm run build` first) |
 | `npm run smoke` | Smoke test against the live site (`SMOKE_URL=...` to point it elsewhere) |
@@ -40,7 +40,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). The short version:
 1. Branch from the latest `main`. One branch per change.
 2. Keep files small and focused, ideally under 300 lines.
 3. Add or update tests with the change. Browser-visible changes need a Playwright test.
-4. Run `npm run check`. Fix every failure; never weaken a check to get a pass.
+4. Run `npm run check`, plus the browser tests your change touches. No workflow tests a pull request, so this is the gate. Fix every failure; never weaken a check to get a pass.
 5. Open a pull request that says what changed and how it was tested.
 6. Merge with a merge commit, then delete the branch.
 

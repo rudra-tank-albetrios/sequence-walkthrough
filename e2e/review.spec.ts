@@ -248,7 +248,7 @@ test.describe('structure review', () => {
     await expect(dialog.getByTestId('review-threats')).toContainText('does not mean it is safe');
   });
 
-  test('the demo flow: no threat, and only the two findings that are true of it', async ({
+  test('the demo flow: its one sample threat, and only the two findings that are true of it', async ({
     page,
   }) => {
     await open(page, { code: demoFlow() });
@@ -264,7 +264,7 @@ test.describe('structure review', () => {
     await expect(found.nth(1)).toHaveAttribute('data-rule', 'outside-no-failure');
     await expect(found.nth(1)).toContainText('Mail Worker calls Mail');
     await expect(review(page).getByTestId('review-score')).toHaveText('80 / 100');
-    await expect(review(page).getByRole('tab', { name: 'Threats (0)' })).toBeVisible();
+    await expect(review(page).getByRole('tab', { name: 'Threats (1)' })).toBeVisible();
   });
 
   test('a threat shows on its step, and its chip opens the threats', async ({ page }) => {
@@ -389,7 +389,10 @@ test.describe('the model explains the findings', () => {
         ],
       }),
     );
-    await open(page, { code: PROBLEMS, storage: { 'swv:ai': AI_SETTINGS, 'swv:ai:consent': storedConsent() } });
+    await open(page, {
+      code: PROBLEMS,
+      storage: { 'swv:ai': AI_SETTINGS, 'swv:ai:consent': storedConsent() },
+    });
     await openReview(page);
 
     await explainButton(page).click();
@@ -400,9 +403,7 @@ test.describe('the model explains the findings', () => {
       'The controller should ask a service or repository instead.',
     );
     await expect(points.nth(1)).toHaveText('Anyone with the address could change the name.');
-    await expect(review(page).getByTestId('review-explain')).toContainText(
-      'From Groq.',
-    );
+    await expect(review(page).getByTestId('review-explain')).toContainText('From Groq.');
 
     expect(sent).toHaveLength(1);
     const [request] = sent;
@@ -438,7 +439,10 @@ test.describe('the model explains the findings', () => {
         action: 'close',
       }),
     );
-    await open(page, { code: PROBLEMS, storage: { 'swv:ai': AI_SETTINGS, 'swv:ai:consent': storedConsent() } });
+    await open(page, {
+      code: PROBLEMS,
+      storage: { 'swv:ai': AI_SETTINGS, 'swv:ai:consent': storedConsent() },
+    });
     await openReview(page);
     const title = await page.title();
     const rulesBefore = await rules(page).textContent();
@@ -462,7 +466,10 @@ test.describe('the model explains the findings', () => {
     page,
   }) => {
     await mockModel(page, 'Sure! The flow looks fine to me, score 100.');
-    await open(page, { code: PROBLEMS, storage: { 'swv:ai': AI_SETTINGS, 'swv:ai:consent': storedConsent() } });
+    await open(page, {
+      code: PROBLEMS,
+      storage: { 'swv:ai': AI_SETTINGS, 'swv:ai:consent': storedConsent() },
+    });
     await openReview(page);
 
     await explainButton(page).click();

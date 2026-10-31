@@ -6,7 +6,7 @@
       "project": ["e2e/**/*.ts", "*.{js,cjs,ts}"]
     },
     "apps/web": {
-      "project": ["src/**/*.{ts,tsx}"]
+      "project": ["src/**/*.{ts,tsx}", "vite-plugins/*.ts"]
     },
     "packages/*": {
       "project": ["src/**/*.ts"]

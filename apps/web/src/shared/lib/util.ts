@@ -36,10 +36,6 @@ export function debounce<A extends unknown[]>(fn: (...args: A) => void, ms: numb
   return debounced;
 }
 
-export const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
 
 /**
  * Exported files are named after the flow: reserved and control characters out, white space

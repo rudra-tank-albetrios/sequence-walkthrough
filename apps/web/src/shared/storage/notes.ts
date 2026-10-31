@@ -105,7 +105,7 @@ export function touchEntry(data: NotesData, step: Step): NoteEntry {
 }
 
 /** `swv:terms:<flow id>`: glossary entries the user saved, keyed by the lower-cased term. */
-export const TERMS_PREFIX = 'swv:terms:';
+const TERMS_PREFIX = 'swv:terms:';
 
 export interface SavedTerm {
   term: string;

@@ -34,7 +34,7 @@ const RANGES: [string, string][] = [
   ],
 ];
 
-export function parseRanges(text: string): [number, number][] {
+function parseRanges(text: string): [number, number][] {
   return text
     .split(',')
     .map((part) => part.trim().replace(/^U\+/i, ''))
@@ -66,7 +66,7 @@ function fontBase64(url: string): Promise<string> {
 }
 
 /** The subsets that cover any character of `text`. */
-export function subsetsFor(text: string): Subset[] {
+function subsetsFor(text: string): Subset[] {
   const points = [...new Set(text)].map((c) => c.codePointAt(0) ?? 0);
   return SUBSETS.filter((s) => points.some((cp) => s.ranges.some(([a, b]) => cp >= a && cp <= b)));
 }

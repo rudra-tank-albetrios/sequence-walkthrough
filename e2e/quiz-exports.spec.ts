@@ -66,10 +66,13 @@ test.describe('Quiz downloads', () => {
 
     const plain = await save(page, dialog, 'Quiz as Markdown');
     expect(plain.name).toBe(`${DEMO_TITLE} - quiz.md`);
-    expect(plain.text.startsWith(`# ${DEMO_TITLE}: quiz\n\n5 questions, without answers.`)).toBe(true);
+    expect(plain.text.startsWith(`# ${DEMO_TITLE}: quiz\n\n5 questions, without answers.`)).toBe(
+      true,
+    );
     samples.forEach((sample, i) => {
       expect(plain.text).toContain(`### ${i + 1}. ${md(sample.question)}`);
-      for (const option of sample.options ?? []) expect(plain.text).toContain(`- [ ] ${md(option)}`);
+      for (const option of sample.options ?? [])
+        expect(plain.text).toContain(`- [ ] ${md(option)}`);
     });
     expect(plain.text).toMatch(/\*Step \d+: .*\. Multiple choice\. Easy\*/);
     expect(plain.text).not.toContain('Correct answer');
@@ -95,7 +98,9 @@ test.describe('Quiz downloads', () => {
     }
   });
 
-  test('X2 the result, as Markdown and PDF, with score, time, marks and feedback', async ({ page }) => {
+  test('X2 the result, as Markdown and PDF, with score, time, marks and feedback', async ({
+    page,
+  }) => {
     await page.clock.install();
     await open(page);
     const dialog = await openQuiz(page);
@@ -110,9 +115,15 @@ test.describe('Quiz downloads', () => {
 
     const file = await save(page, dialog, 'Result as Markdown');
     expect(file.name).toBe(`${DEMO_TITLE} - result.md`);
-    expect(file.text.startsWith(`# ${DEMO_TITLE}: quiz result\n\n${md('Score: 0 of 5 (0%)')}\n\nTime: 1:12.`)).toBe(true);
+    expect(
+      file.text.startsWith(
+        `# ${DEMO_TITLE}: quiz result\n\n${md('Score: 0 of 5 (0%)')}\n\nTime: 1:12.`,
+      ),
+    ).toBe(true);
     expect(file.text).toContain('## Score per chapter\n\n| Chapter | Score |');
-    expect(file.text).toContain(`## Score per difficulty\n\n| Difficulty | Score |\n| --- | --- |\n| Easy | ${md('0 of 5 (0%)')} |`);
+    expect(file.text).toContain(
+      `## Score per difficulty\n\n| Difficulty | Score |\n| --- | --- |\n| Easy | ${md('0 of 5 (0%)')} |`,
+    );
     expect(file.text).toContain('## Weak points found\n\n| Topic | Answers that fell short |');
     expect(file.text).toContain('## Questions and answers');
     for (const sample of samples) {
@@ -132,7 +143,9 @@ test.describe('Quiz downloads', () => {
     expect(pdf.text).toContain('Mark: Wrong');
   });
 
-  test('X3 the quiz with the flow carries the diagram image and the Mermaid code', async ({ page }) => {
+  test('X3 the quiz with the flow carries the diagram image and the Mermaid code', async ({
+    page,
+  }) => {
     await open(page);
     const dialog = await openQuiz(page);
     await startQuiz(dialog, EASY_CHOICE);
@@ -140,7 +153,9 @@ test.describe('Quiz downloads', () => {
     const file = await save(page, dialog, 'Quiz with flow as Markdown');
     expect(file.name).toBe(`${DEMO_TITLE} - quiz with flow.md`);
     expect(file.text.startsWith(`# ${DEMO_TITLE}: quiz\n`)).toBe(true);
-    expect(file.text).toContain('## The flow\n\nThe diagram and its Mermaid code, as they were on screen.');
+    expect(file.text).toContain(
+      '## The flow\n\nThe diagram and its Mermaid code, as they were on screen.',
+    );
     expect(file.text).toContain(`![Diagram of ${DEMO_TITLE}](data:image/png;base64,`);
     expect(file.text).toContain('## Mermaid code\n\n```mermaid\n');
     expect(file.text).toContain(demoFlow().trim());

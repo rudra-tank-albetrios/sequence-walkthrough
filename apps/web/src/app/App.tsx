@@ -4,6 +4,7 @@ import { CodePanel } from '../features/code-panel/index.ts';
 import { ImportDialog, useDropImport } from '../features/export/index.ts';
 import { FindPopover } from '../features/find/index.ts';
 import { TableView } from '../features/table/index.ts';
+import { Tour } from '../features/tour/index.ts';
 import { Viewer } from '../features/viewer/index.ts';
 import { PresenterCard, SelectionMenu, WalkBar, WalkthroughRuntime } from '../features/walkthrough/index.ts';
 import { useIsNarrow } from '../shared/hooks/useMediaQuery.ts';
@@ -104,7 +105,8 @@ export function App() {
     };
   }, [setCode, go]);
 
-  // Autosave the code a moment after each change, as version 2 did.
+  // Autosave the code a moment after each change, as version 2 did. The tour's demo flow is only
+  // on loan, so it must not replace the person's saved code.
   useEffect(() => {
     const save = debounce((code: string) => {
       saveCode(code);
@@ -113,7 +115,7 @@ export function App() {
     const unsubscribe = useFlowStore.subscribe((s) => {
       if (s.code !== last) {
         last = s.code;
-        if (s.code.trim()) save(s.code);
+        if (s.code.trim() && !s.ui.tourOpen) save(s.code);
       }
     });
     return () => {
@@ -187,6 +189,7 @@ export function App() {
           <ShortcutsDialog />
         </Deferred>
         <ImportDialog />
+        <Tour />
         <ToastHost />
       </div>
     </TooltipProvider>

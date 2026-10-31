@@ -9,7 +9,7 @@ import { expect, type Locator, type Page } from '@playwright/test';
 const root = resolve(import.meta.dirname, '..');
 
 export const DEMO_TITLE = 'Place an order';
-export const DEMO_STEPS = 42;
+export const DEMO_STEPS = 43;
 export const DEMO_NOTES_KEY = `swv:notes:t:${DEMO_TITLE}`;
 
 export const demoFlow = (): string =>

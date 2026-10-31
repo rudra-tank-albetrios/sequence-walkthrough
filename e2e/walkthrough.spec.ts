@@ -327,7 +327,7 @@ test.describe('walkthrough', () => {
     await expect(select.locator('option').nth(2)).toHaveText('Errors only');
     await expect(select.locator('optgroup')).toHaveAttribute('label', 'One branch');
     await select.selectOption('happy');
-    await expect(notice(page)).toHaveText(/^Path: happy path, \d+ of 42 steps\./);
+    await expect(notice(page)).toHaveText(/^Path: happy path, \d+ of 43 steps\./);
     expect(await page.getByTestId('progress').locator('[data-hidden]').count()).toBeGreaterThan(0);
     await diagram(page).focus();
     await page.keyboard.press('ArrowRight');
@@ -344,7 +344,7 @@ test.describe('walkthrough', () => {
     await expect(select).toHaveValue('all');
     expect(await page.getByTestId('progress').locator('[data-hidden]').count()).toBe(0);
     await select.selectOption('errors');
-    await expect(notice(page)).toHaveText(/^Path: errors only, \d+ of 42 steps\./);
+    await expect(notice(page)).toHaveText(/^Path: errors only, \d+ of 43 steps\./);
     await diagram(page).focus();
     await page.keyboard.press('Escape');
     await expect(select).toHaveValue('all');

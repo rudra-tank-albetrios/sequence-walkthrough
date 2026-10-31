@@ -335,7 +335,7 @@ test.describe('diagram', () => {
     await expect(tip).toContainText('Replies');
     await expect(tip).toContainText('Headers');
     await expect(tip).toContainText('Code');
-    await expect(tip).toContainText('src/frontend/api/client.ts:50');
+    await expect(tip).toContainText('src/frontend/api/client.ts:60');
     await expect(tip).toContainText('Click the arrow for the full card');
   });
 
@@ -496,8 +496,8 @@ test.describe('diagram', () => {
       'Diagram. Arrow keys step through the flow, drag or scroll to move, plus and minus zoom.',
     );
     await page.keyboard.press('ArrowRight');
-    await expect(page.getByTestId('live')).toHaveText(/^Step 1 of 42\. Shopper to Pages: /);
+    await expect(page.getByTestId('live')).toHaveText(/^Step 1 of 43. Shopper to Pages: /);
     await page.keyboard.press('Escape');
-    await expect(page.getByTestId('live')).toHaveText('Overview. 42 steps.');
+    await expect(page.getByTestId('live')).toHaveText('Overview. 43 steps.');
   });
 });

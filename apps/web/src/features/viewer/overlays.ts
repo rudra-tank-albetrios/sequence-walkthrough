@@ -209,7 +209,7 @@ export function decorate(ctx: DrawContext, options: DecorateOptions): void {
 }
 
 /** Dotted vertical lines where neighbouring layers sit in different trust zones. */
-export function drawBoundaries(ctx: DrawContext): void {
+function drawBoundaries(ctx: DrawContext): void {
   const { svg, flow, geo, vb, dark } = ctx;
   remove(svg, '.swv-boundary');
   if (flow.boundaries.length === 0) return;

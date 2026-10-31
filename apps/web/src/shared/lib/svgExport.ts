@@ -7,7 +7,7 @@ import { embedFontCss, FONT_FAMILIES } from './fonts.ts';
 const SVGNS = 'http://www.w3.org/2000/svg';
 const XLINKNS = 'http://www.w3.org/1999/xlink';
 
-export interface SvgDocumentOptions {
+interface SvgDocumentOptions {
   width: number;
   height: number;
   background: string;
@@ -20,7 +20,7 @@ export interface SvgDocumentOptions {
  * Mermaid's output, which is usually well-formed XML; when it is not (an HTML entity, say), the
  * HTML parser reads it and the XML serialiser writes it out well-formed.
  */
-export function parseSvg(markup: string): Element {
+function parseSvg(markup: string): Element {
   const parser = new DOMParser();
   const xml = parser.parseFromString(markup, 'image/svg+xml');
   const root = xml.documentElement;
@@ -45,14 +45,14 @@ function decorate(svg: Element, options: SvgDocumentOptions): void {
 }
 
 /** The clean SVG markup as a complete file. */
-export function buildSvgDocument(markup: string, options: SvgDocumentOptions): string {
+function buildSvgDocument(markup: string, options: SvgDocumentOptions): string {
   const svg = parseSvg(markup);
   decorate(svg, options);
   return new XMLSerializer().serializeToString(svg);
 }
 
 /** The live SVG with its highlights, minus the invisible hit areas and the side-part dots. */
-export function buildLiveSvgDocument(live: SVGSVGElement, options: SvgDocumentOptions): string {
+function buildLiveSvgDocument(live: SVGSVGElement, options: SvgDocumentOptions): string {
   const svg = live.cloneNode(true) as SVGSVGElement;
   svg.querySelectorAll('.swv-hit, .swv-uses-dot').forEach((n) => {
     n.remove();
@@ -61,7 +61,7 @@ export function buildLiveSvgDocument(live: SVGSVGElement, options: SvgDocumentOp
   return new XMLSerializer().serializeToString(svg);
 }
 
-export const usesRecursive = (markup: string): boolean => FONT_FAMILIES.some((f) => markup.includes(f));
+const usesRecursive = (markup: string): boolean => FONT_FAMILIES.some((f) => markup.includes(f));
 
 let warnedFont = false;
 

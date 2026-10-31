@@ -55,7 +55,9 @@ test.describe('Timer', () => {
 
     await page.clock.fastForward(11 * 1000);
     await expect(dialog.getByRole('heading', { name: /^Score: 0 of 5/ })).toBeVisible();
-    await expect(dialog).toContainText('Time: 1:00. The time ran out, so your answers were submitted.');
+    await expect(dialog).toContainText(
+      'Time: 1:00. The time ran out, so your answers were submitted.',
+    );
     await expect(submitButton(dialog)).toHaveCount(0);
     await expect(questionItems(dialog)).toHaveCount(EASY_CHOICE_COUNT);
     await expect(dialog.getByText('Not answered')).toHaveCount(EASY_CHOICE_COUNT);

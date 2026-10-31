@@ -1,0 +1,150 @@
+/* The layer above everything, a feature's own dialog included (dialogs use 40 and 41) */
+.blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+
+.dim {
+  background: var(--scrim);
+}
+
+/* The hole: the huge shadow is the dim layer, and the box itself stays clear */
+.spot {
+  position: absolute;
+  border-radius: var(--r);
+  box-shadow:
+    0 0 0 2px var(--marker),
+    0 0 0 200vmax var(--scrim);
+}
+
+.card {
+  position: fixed;
+  /* On screen from its first moment, as the focus lands on it before it is placed */
+  left: 8px;
+  top: 8px;
+  z-index: 61;
+  width: min(380px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1), var(--shadow-2);
+  outline: none;
+  animation: tour-card-in 160ms ease-out;
+}
+
+@keyframes tour-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.count {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.body {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.move {
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.demo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-2);
+  border: 1px dashed var(--line);
+  border-radius: var(--r);
+  font-size: var(--text-sm);
+}
+
+.demoHead,
+.notice {
+  margin: 0;
+}
+
+.demoHead {
+  color: var(--muted);
+}
+
+.notice {
+  font-weight: 600;
+}
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.barText {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.meter {
+  display: block;
+  height: 6px;
+  background: var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+}
+
+.low {
+  background: var(--ok);
+}
+
+.mid {
+  background: var(--s-3xx);
+}
+
+.high {
+  background: var(--danger);
+}

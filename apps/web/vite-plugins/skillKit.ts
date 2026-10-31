@@ -11,7 +11,7 @@ import type { Plugin } from 'vite';
  * is missing, it is made on demand. The name stays version 2's, so links to it keep working, and
  * version 2's other address for the skill download serves the same kit.
  */
-export const SKILL_KIT_FILE = `${KIT_NAME}.zip`;
+const SKILL_KIT_FILE = `${KIT_NAME}.zip`;
 const OLD_SKILL_FILE = 'sequence-walkthrough.zip';
 
 export async function readSkillKit(): Promise<Uint8Array> {

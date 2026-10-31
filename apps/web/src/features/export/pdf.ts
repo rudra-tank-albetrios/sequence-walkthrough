@@ -4,7 +4,7 @@ import { useDiagramStore } from '../../shared/state/diagramStore.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { useNotesStore } from '../../shared/state/notesStore.ts';
 import { measureLive, type LiveGeometry } from './liveGeometry.ts';
-import { pdfTablePages } from './pdfTable.ts';
+import { pdfTablePages, type PdfPlan } from './pdfTable.ts';
 import { context2d, makeCanvas, rasterize } from '../../shared/lib/raster.ts';
 import { diagramSvgString } from '../../shared/lib/svgExport.ts';
 
@@ -22,21 +22,6 @@ export interface PdfOptions {
   table: boolean;
   /** Adds the Your note column to the table. */
   notes: boolean;
-}
-
-export interface PdfPlan {
-  page: { w: number; h: number };
-  margin: number;
-  titleH: number;
-  footH: number;
-  cw: number;
-  ch: number;
-  /** Millimetres per diagram unit. */
-  mm: number;
-  /** [top, bottom] of each page's slice in diagram units. */
-  slices: [number, number][];
-  /** [hdrTop, hdrH] when the participant row is repeated. */
-  hdr: [number, number] | null;
 }
 
 export function pdfPlan(size: PaperSize, width: number, height: number, geo: LiveGeometry | null): PdfPlan {

@@ -36,7 +36,7 @@ export interface TextItem {
   tone: Tone;
 }
 
-export interface RuleItem {
+interface RuleItem {
   kind: 'rule';
   x: number;
   y: number;

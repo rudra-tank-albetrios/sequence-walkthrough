@@ -32,7 +32,7 @@ export interface RenderedDiagram {
   dark: boolean;
 }
 
-export class DiagramSyntaxError extends Error {
+class DiagramSyntaxError extends Error {
   override readonly name = 'DiagramSyntaxError';
 }
 

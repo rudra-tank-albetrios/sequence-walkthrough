@@ -67,7 +67,9 @@ const finishStep = async (page: Page) => {
 };
 
 test.describe('voice', () => {
-  test('V1 Play starts the voice, in simple words, and the next step waits for it', async ({ page }) => {
+  test('V1 Play starts the voice, in simple words, and the next step waits for it', async ({
+    page,
+  }) => {
     await openVoiced(page);
     expect(await spokenCount(page)).toBe(0);
     await play(page).click();
@@ -157,7 +159,9 @@ test.describe('voice', () => {
     expect(await spokenCount(page)).toBe(0);
   });
 
-  test('V7 speed and voice are chosen in settings and remembered, clearest voice by default', async ({ page }) => {
+  test('V7 speed and voice are chosen in settings and remembered, clearest voice by default', async ({
+    page,
+  }) => {
     await openVoiced(page);
     await play(page).click();
     await expect.poll(() => spokenCount(page)).toBeGreaterThan(0);
@@ -169,7 +173,14 @@ test.describe('voice', () => {
     await page.getByRole('button', { name: 'Settings' }).click();
     await page.getByRole('menuitem', { name: 'Theme and display' }).click();
     const speed = page.getByLabel('Voice speed');
-    await expect(speed.locator('option')).toHaveText(['0.5x', '0.75x', '1x', '1.25x', '1.5x', '2x']);
+    await expect(speed.locator('option')).toHaveText([
+      '0.5x',
+      '0.75x',
+      '1x',
+      '1.25x',
+      '1.5x',
+      '2x',
+    ]);
     await speed.selectOption('2');
     await page.getByLabel('Voice', { exact: true }).selectOption('basic');
     await expect(page.getByText('how they sound depends on it')).toBeVisible();
@@ -184,7 +195,9 @@ test.describe('voice', () => {
     expect((await speechLog(page)).spoken[0]).toMatchObject({ voice: 'basic', rate: 2 });
   });
 
-  test('V8 where speech is unsupported the icon is hidden and the flow still plays', async ({ page }) => {
+  test('V8 where speech is unsupported the icon is hidden and the flow still plays', async ({
+    page,
+  }) => {
     await page.addInitScript(`
       delete window.speechSynthesis;
       Object.defineProperty(window, 'speechSynthesis', { value: undefined });

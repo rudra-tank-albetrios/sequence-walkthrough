@@ -1,11 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
 
+import { returningVisitor } from './e2e/visitors.ts';
+
 // Worktrees that run at the same time need their own port: an existing server is reused locally.
 const PORT = Number(process.env.SWV_E2E_PORT ?? 4173);
 const CI = Boolean(process.env.CI);
 // SWV_E2E_URL=http://127.0.0.1:5173 runs the specs against a dev server that is already up
 // (no build, no preview server). CI never sets it.
 const externalUrl = CI ? undefined : process.env.SWV_E2E_URL;
+const baseURL = externalUrl ?? `http://127.0.0.1:${PORT}`;
 
 // Every project runs in CI. Locally, SWV_E2E_PROJECTS=chromium,webkit,phone limits the run when a
 // browser cannot start on the machine (docs/decisions.md). CI ignores the variable.
@@ -33,7 +36,8 @@ export default defineConfig({
   reporter: CI ? [['github'], ['html', { open: 'never' }]] : [['list']],
   timeout: 60_000,
   use: {
-    baseURL: externalUrl ?? `http://127.0.0.1:${PORT}`,
+    baseURL,
+    storageState: returningVisitor(baseURL),
     trace: 'retain-on-failure',
   },
   projects: projectFilter

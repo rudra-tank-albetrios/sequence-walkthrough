@@ -1,6 +1,6 @@
 {
   "name": "@swv/ai",
-  "version": "3.0.0-dev",
+  "version": "3.0.0",
   "private": true,
   "description": "Model clients, usage tracking, auto-switch, answer cache, prompts and reply schemas.",
   "type": "module",

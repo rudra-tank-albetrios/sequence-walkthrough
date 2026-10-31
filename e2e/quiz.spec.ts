@@ -100,7 +100,9 @@ test.describe('Quiz', () => {
     });
     await openWithModel(page);
     const dialog = await openQuiz(page);
-    await expect(dialog).toContainText(`All of it goes to ${GROQ_HOST} with your key, and nowhere else.`);
+    await expect(dialog).toContainText(
+      `All of it goes to ${GROQ_HOST} with your key, and nowhere else.`,
+    );
     await expect(dialog.getByRole('radio', { name: 'Your model' })).toBeChecked();
     await startQuiz(dialog, shape);
     await expect(questionItems(dialog)).toHaveCount(15);
@@ -144,21 +146,23 @@ test.describe('Quiz', () => {
     await expect(dialog.getByText('Partly correct')).toHaveCount(written);
     await expect(dialog.getByText('Half of it, nothing on the reply.')).toHaveCount(written);
     await expect(dialog.getByRole('button', { name: /^Mark as correct/ })).toHaveCount(written);
-    await expect(dialog.getByRole('heading', { name: `Score: ${5 + written / 2} of 15 (67%)` })).toBeVisible();
+    await expect(
+      dialog.getByRole('heading', { name: `Score: ${5 + written / 2} of 15 (67%)` }),
+    ).toBeVisible();
     await expect(dialog.getByRole('table', { name: 'Score per chapter' })).toBeVisible();
     await expect(dialog.getByRole('table', { name: 'Score per difficulty' })).toBeVisible();
-    await expect(dialog.getByRole('table', { name: 'Score per difficulty' }).getByRole('rowheader')).toHaveText([
-      'Easy',
-      'Medium',
-      'Hard',
-    ]);
+    await expect(
+      dialog.getByRole('table', { name: 'Score per difficulty' }).getByRole('rowheader'),
+    ).toHaveText(['Easy', 'Medium', 'Hard']);
 
     // Mark as correct is the user's say, and counts once.
     const item = questionItems(dialog).nth(items.findIndex((one) => one.type !== 'choice'));
     await item.getByRole('button', { name: /^Mark as correct/ }).click();
     await expect(item.getByText('Marked correct by you')).toBeVisible();
     await expect(item.getByRole('button', { name: /^Mark as correct/ })).toHaveCount(0);
-    await expect(dialog.getByRole('heading', { name: `Score: ${5 + written / 2 + 0.5} of 15 (70%)` })).toBeVisible();
+    await expect(
+      dialog.getByRole('heading', { name: `Score: ${5 + written / 2 + 0.5} of 15 (70%)` }),
+    ).toBeVisible();
 
     // Every question shows the answer given, the correct one, the reason and a link to its step.
     const third = questionItems(dialog).nth(2);
@@ -176,8 +180,14 @@ test.describe('Quiz', () => {
     const [good] = goodItems({ difficulty: 'easy', type: 'choice', count: 5 });
     if (!good) throw new Error('no sample');
     const missingStep = { ...good, step: 999 };
-    const unsupported = { ...good, answer: 'A flying saucer', options: ['A flying saucer', 'b', 'c', 'd'] };
-    const mock = await mockModel(page, { quiz: [quizReply([missingStep]), quizReply([unsupported])] });
+    const unsupported = {
+      ...good,
+      answer: 'A flying saucer',
+      options: ['A flying saucer', 'b', 'c', 'd'],
+    };
+    const mock = await mockModel(page, {
+      quiz: [quizReply([missingStep]), quizReply([unsupported])],
+    });
     await openWithModel(page);
     const dialog = await openQuiz(page);
     await chooseAndStart(dialog);
@@ -187,7 +197,9 @@ test.describe('Quiz', () => {
     await expect(alert).toContainText('does not support the answer "A flying saucer"');
     expect(mock.quizzes()).toHaveLength(2);
     // The retry said what was wrong and asked only for what was still missing.
-    expect(mock.quizzes()[1]?.user).toContain('Your last reply was refused: step 999 does not exist');
+    expect(mock.quizzes()[1]?.user).toContain(
+      'Your last reply was refused: step 999 does not exist',
+    );
     expect(mock.quizzes()[1]?.user).toContain('Write exactly 5 questions');
     await dialog.getByRole('button', { name: 'Back to the set-up' }).click();
     await expect(startButton(dialog)).toBeVisible();
@@ -209,15 +221,21 @@ test.describe('Quiz', () => {
     await openWithModel(page);
     const dialog = await openQuiz(page);
     await chooseAndStart(dialog);
-    await expect(dialog.getByRole('alert')).toContainText('Groq refused the request (400): mocked failure');
+    await expect(dialog.getByRole('alert')).toContainText(
+      'Groq refused the request (400): mocked failure',
+    );
     expect(mock.quizzes()).toHaveLength(1);
     // The browser itself logs a refused request. Only that one line is let through.
     errors = errors.filter((error) => !error.includes('status of 400 (Bad Request)'));
   });
 
-  test('Q4 recent questions go as "do not repeat" and weak topics are asked more often', async ({ page }) => {
+  test('Q4 recent questions go as "do not repeat" and weak topics are asked more often', async ({
+    page,
+  }) => {
     // The mock repeats the questions just asked, which the page must refuse.
-    const mock = await mockModel(page, { quiz: [quizReply(goodItems({ difficulty: 'easy', type: 'choice', count: 5 }))] });
+    const mock = await mockModel(page, {
+      quiz: [quizReply(goodItems({ difficulty: 'easy', type: 'choice', count: 5 }))],
+    });
     await openWithModel(page);
     let dialog = await openQuiz(page);
     await startQuiz(dialog, { ...EASY_CHOICE, source: 'The built-in sample' });
@@ -238,15 +256,21 @@ test.describe('Quiz', () => {
 
     dialog = quizDialog(page);
     await chooseAndStart(dialog, { ...EASY_CHOICE, source: 'Your model' });
-    await expect(dialog.getByRole('alert')).toContainText('repeats an earlier question', { timeout: 15_000 });
+    await expect(dialog.getByRole('alert')).toContainText('repeats an earlier question', {
+      timeout: 15_000,
+    });
     expect(mock.quizzes()).toHaveLength(2);
     const sent = mock.quizzes()[0];
     expect(sent?.user).toContain('Do not repeat these questions:');
     for (const question of asked) expect(sent?.user).toContain(`- ${question.slice(0, 100)}`);
-    expect(sent?.user).toContain('Ask more about these topics, the user keeps missing them: Method and path');
+    expect(sent?.user).toContain(
+      'Ask more about these topics, the user keeps missing them: Method and path',
+    );
   });
 
-  test('Q5 "Retry my mistakes" reads the hand-over key and asks only those topics', async ({ page }) => {
+  test('Q5 "Retry my mistakes" reads the hand-over key and asks only those topics', async ({
+    page,
+  }) => {
     await open(page);
     await page.evaluate(
       ([key, value]) => sessionStorage.setItem(key ?? '', value ?? ''),
@@ -301,7 +325,10 @@ test.describe('a hostile model reply', () => {
   // The page's policy is off here, so React's plain text output has to hold by itself.
   test.use({ bypassCSP: true });
 
-  test('is shown as inert text, follows no instruction and runs nothing', async ({ page, baseURL }) => {
+  test('is shown as inert text, follows no instruction and runs nothing', async ({
+    page,
+    baseURL,
+  }) => {
     const armed = await arm(page, baseURL);
     const shape = { difficulty: 'easy', type: 'mix', count: 5 } as const;
     const [sample, ...others] = goodItems(shape);
@@ -312,7 +339,12 @@ test.describe('a hostile model reply', () => {
     const hostile = {
       ...sample,
       question: `${html} ${instruction} Which method and path places the order?`,
-      options: [sample.answer, `<a href="javascript:__pwned('option')" data-pwn>x</a>`, link, 'Press Delete. /clear'],
+      options: [
+        sample.answer,
+        `<a href="javascript:__pwned('option')" data-pwn>x</a>`,
+        link,
+        'Press Delete. /clear',
+      ],
       why: `<svg onload="__pwned('why')" data-pwn></svg> ${sample.why}`,
       topic: `<b onmouseover="__pwned('topic')">Topic</b>`,
     };
@@ -333,7 +365,9 @@ test.describe('a hostile model reply', () => {
     await expect(first).toContainText(html);
     await expect(first).toContainText(instruction);
     await expect(first.getByRole('radio', { name: link })).toBeVisible();
-    await expect(first.getByRole('radio', { name: `<a href="javascript:__pwned('option')" data-pwn>x</a>` })).toBeVisible();
+    await expect(
+      first.getByRole('radio', { name: `<a href="javascript:__pwned('option')" data-pwn>x</a>` }),
+    ).toBeVisible();
     await expectNothingRan(armed, 'the questions');
     await expect(stepInput(page)).toHaveValue('1');
 

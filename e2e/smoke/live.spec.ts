@@ -2,6 +2,8 @@ import { deflateSync } from 'node:zlib';
 
 import { expect, test } from '@playwright/test';
 
+import { firstTimeVisitor } from '../visitors.ts';
+
 // Run after every deployment (plan section 1, rule 8). A fresh browser profile, so the demo flow opens.
 
 const CODE = `sequenceDiagram
@@ -62,4 +64,23 @@ test('the downloads are published next to the page', async ({ request, baseURL }
     expect(response.status(), file).toBe(200);
     expect((await response.body()).subarray(0, 2).toString('latin1'), file).toBe('PK');
   }
+});
+
+test.describe('a first-time visitor on the live site', () => {
+  test.use({ storageState: firstTimeVisitor });
+
+  test('gets the demo flow and the tour, and no error', async ({ page, baseURL }) => {
+    const pageErrors: string[] = [];
+    page.on('pageerror', (error) => pageErrors.push(error.message));
+
+    await page.goto(baseURL ?? '/', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('tour-card')).toHaveAttribute('data-stop', 'layers', {
+      timeout: 60_000,
+    });
+    // The page behind the card is hidden from the accessibility tree, so this looks for the tag.
+    await expect(page.locator('h1')).toHaveText('Place an order');
+    await expect(page.getByTestId('diagram').locator('svg').first()).toBeVisible();
+
+    expect(pageErrors).toEqual([]);
+  });
 });

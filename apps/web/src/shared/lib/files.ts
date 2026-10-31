@@ -14,7 +14,7 @@ interface ClaudeHost {
 }
 
 /** The artifact host object, when this page runs inside a Claude artifact. */
-export function claudeHost(): ClaudeHost | null {
+function claudeHost(): ClaudeHost | null {
   const host: unknown = Reflect.get(window, 'claude');
   if (typeof host !== 'object' || host === null) return null;
   return typeof (host as { use?: unknown }).use === 'function' ? (host as ClaudeHost) : null;
@@ -101,7 +101,7 @@ export async function copyWithFallback(text: string, message: string): Promise<b
   return false;
 }
 
-export const SKILL_KIT_FILE = 'sequence-walkthrough-skill-kit.zip';
+const SKILL_KIT_FILE = 'sequence-walkthrough-skill-kit.zip';
 
 /** Only the one-file build carries the kit inside the page, so it has nothing next to it to link to. */
 export const IS_ONE_FILE_BUILD = __SKILL_KIT__ !== '';

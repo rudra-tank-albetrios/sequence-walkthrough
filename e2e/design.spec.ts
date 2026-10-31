@@ -40,7 +40,7 @@ test.describe('header, Flow Rail and dock', () => {
       await expect(page.locator(`[data-tour="${name}"]`), name).toHaveCount(1);
     }
     await expect(page.locator('#topbar')).toHaveCSS('backdrop-filter', /blur/);
-    await expect(page.locator('#flowMeta')).toHaveText(/^42 steps/);
+    await expect(page.locator('#flowMeta')).toHaveText(/^43 steps/);
   });
 
   test('the Flow Rail marks errors, side parts and bookmarks, previews on hover and jumps on click', async ({
@@ -49,8 +49,8 @@ test.describe('header, Flow Rail and dock', () => {
     await openFocused(page);
     await expect(rail(page).locator('[data-marker="error"]')).toHaveCount(3);
     expect(await rail(page).locator('[data-marker="side"]').count()).toBeGreaterThan(0);
-    // The demo flow has no @threat lines yet, so the rail shows no threat marker.
-    await expect(rail(page).locator('[data-marker="threat"]')).toHaveCount(0);
+    // The demo flow has one labelled sample threat, so the rail shows one threat marker.
+    await expect(rail(page).locator('[data-marker="threat"]')).toHaveCount(1);
     await expect(rail(page).locator('[data-marker="star"]')).toHaveCount(0);
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('b');

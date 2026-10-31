@@ -193,7 +193,10 @@ test.describe('a hostile model reply', () => {
     const dialog = await openAskOn(page, FLOW);
     await dialog.getByTitle('Models, keys and limits').click();
     const settings = page.getByRole('dialog', { name: 'AI settings', exact: true });
-    const status = settings.getByTestId('model-row').filter({ hasText: 'Groq' }).getByRole('status');
+    const status = settings
+      .getByTestId('model-row')
+      .filter({ hasText: 'Groq' })
+      .getByRole('status');
 
     await settings.getByRole('button', { name: 'Test Groq' }).click();
     await expect(status).toContainText('onerror=');
@@ -226,7 +229,10 @@ test.describe('a hostile model reply', () => {
 
   test('an answer changed in the saved answers is still plain text', async ({ page, baseURL }) => {
     const armed = await arm(page, baseURL);
-    await seedStorage(page, { 'swv:ai': storedAi('groq', { autoNote: false }), 'swv:ai:consent': storedConsent() });
+    await seedStorage(page, {
+      'swv:ai': storedAi('groq', { autoNote: false }),
+      'swv:ai:consent': storedConsent(),
+    });
     await mockModel(armed, GROQ, 'A plain answer.');
     const first = await openAskOn(page, FLOW);
     await first.getByRole('button', { name: CHIP }).click();

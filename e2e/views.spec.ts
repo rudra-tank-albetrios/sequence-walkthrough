@@ -102,7 +102,7 @@ test.describe('table view', () => {
     await expect(row(page, 21).locator('[title^="Conflict"]')).toBeVisible();
     await expect(row(page, 9).locator('b', { hasText: 'else' })).toBeVisible();
     await expect(row(page, 0)).toContainText('hook useCart');
-    await expect(row(page, 3)).toContainText('src/frontend/api/client.ts:50');
+    await expect(row(page, 3)).toContainText('src/frontend/api/client.ts:60');
     await row(page, 2).click();
     await expect(row(page, 2)).toHaveAttribute('aria-current', 'step');
     await row(page, 5).dblclick();

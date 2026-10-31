@@ -33,9 +33,9 @@ test.describe('step details', () => {
     await goToStep(page, 7);
     await expect(card(page).getByText(/^retry/)).toBeVisible();
     await openFocused(page, { code: demoFlow() });
-    await goToStep(page, 27);
+    await goToStep(page, 28);
     await expect(card(page).getByText(/^async/)).toBeVisible();
-    await expect(card(page).getByText(/· 5 of \d+ in Save the order/)).toBeVisible();
+    await expect(card(page).getByText(/6 of \d+ in Save the order/)).toBeVisible();
   });
 
   test('S1 unconfirmed and proposed show as chips', async ({ page }) => {
@@ -57,7 +57,7 @@ test.describe('step details', () => {
     await goToStep(page, 11);
     await expect(card(page)).toContainText('↻ itself');
     await expect(card(page).getByText('self', { exact: true })).toBeVisible();
-    await goToStep(page, 32);
+    await goToStep(page, 33);
     await expect(card(page).getByText('reply', { exact: true })).toBeVisible();
     const pair = page.getByTestId('pair-chip');
     await expect(pair).toHaveText(/^answers step 4: POST \/api\/orders/);
@@ -109,7 +109,7 @@ test.describe('step details', () => {
     await expect(replies).toContainText('401 Unauthorized');
     await expect(replies).toContainText('201 Created');
     await replies.getByRole('button', { name: /201 Created/ }).click();
-    await expect(stepInput(page)).toHaveValue('32');
+    await expect(stepInput(page)).toHaveValue('33');
     await openFocused(page, { code: 'sequenceDiagram\n  A->>B: GET /users' });
     await page.keyboard.press('ArrowRight');
     await expect(card(page)).toContainText('No reply arrow for this request yet.');
@@ -152,7 +152,7 @@ test.describe('step details', () => {
   test('S10 S11 schema and state', async ({ page }) => {
     await openFocused(page);
     await goToStep(page, 11);
-    const schema = card(page).locator('summary', { hasText: 'Schema (6)' });
+    const schema = card(page).locator('summary', { hasText: 'Schema (7)' });
     await expect(schema).toBeVisible();
     await schema.click();
     await expect(card(page).locator('td', { hasText: 'shippingAddress.line1' })).toBeVisible();
@@ -184,7 +184,7 @@ test.describe('step details', () => {
     await label.getByRole('button', { name: 'step 3' }).click();
     await expect(stepInput(page)).toHaveValue('3');
     await openFocused(page, { code: demoFlow() });
-    await goToStep(page, 27);
+    await goToStep(page, 28);
     await expect(page.getByTestId('effects')).toContainText(
       'A confirmation job is queued for the mail worker',
     );
@@ -194,7 +194,7 @@ test.describe('step details', () => {
     await openFocused(page);
     await goToStep(page, 4);
     const ref = card(page).getByTitle('Source').first();
-    await expect(ref).toHaveText('src/frontend/api/client.ts:50');
+    await expect(ref).toHaveText('src/frontend/api/client.ts:60');
     await openFocused(page, { code: fixture('v1-format') });
     await page.keyboard.press('ArrowRight');
     for (let i = 0; i < 6; i++) {
