@@ -74,6 +74,14 @@ function sanitize(svg: string): string {
     .replace(/\sstyle="([^"]*)"/gi, (_, css: string) => ` style="${inertCss(css)}"`);
 }
 
+/**
+ * Mermaid puts its drawing in the document before the sanitiser sees it, and the browser would
+ * fetch what the theme CSS of an `%%{init}%%` directive or front matter names at that moment. So
+ * the config inside the code is made inert first; the arrows and lines stay as they were.
+ */
+const inertConfig = (code: string): string =>
+  code.replace(/%%\{[\s\S]*?\}%%/g, inertCss).replace(/^---\r?\n[\s\S]*?\r?\n---/, inertCss);
+
 /** Mermaid's own default limit, checked here before Mermaid parses, so huge code is refused at once. */
 const MAX_TEXT_SIZE = 50_000;
 
@@ -103,14 +111,15 @@ export async function renderDiagram(code: string, theme: string, id: string): Pr
       `Maximum text size in diagram exceeded: ${code.length} characters, the limit is ${MAX_TEXT_SIZE}`,
     );
   }
+  const safeCode = inertConfig(code);
   try {
-    await mermaid.parse(code);
+    await mermaid.parse(safeCode);
   } catch (error) {
     throw new DiagramSyntaxError(error instanceof Error ? error.message : String(error));
   }
   let rendered: { svg: string };
   try {
-    rendered = await mermaid.render(id, code);
+    rendered = await mermaid.render(id, safeCode);
   } catch (error) {
     document.getElementById(`d${id}`)?.remove();
     throw new DiagramSyntaxError(error instanceof Error ? error.message : String(error));

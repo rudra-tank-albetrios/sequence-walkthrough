@@ -255,16 +255,50 @@ export async function seedStorage(page: Page, values: Record<string, string>): P
 async function pointAt(page: Page, targets: Locator): Promise<void> {
   const viewport = page.viewportSize();
   if (!viewport) throw new Error('No viewport');
+  const tried: string[] = [];
   for (const target of await targets.all()) {
     const box = await target.boundingBox();
-    if (!box) continue;
-    const x = box.x + box.width / 2;
-    const y = box.y + box.height / 2;
-    if (x < 0 || y < 0 || x > viewport.width || y > viewport.height) continue;
+    if (!box) {
+      tried.push('not rendered');
+      continue;
+    }
+    // The centre of the part that is on screen: a wide arrow's middle may be off to the side.
+    const left = Math.max(box.x, 0);
+    const top = Math.max(box.y, 0);
+    const right = Math.min(box.x + box.width, viewport.width);
+    const bottom = Math.min(box.y + box.height, viewport.height);
+    if (right - left < 4 || bottom - top < 2) {
+      tried.push(`(${Math.round(box.x)}, ${Math.round(box.y)}) is outside the viewport`);
+      continue;
+    }
+    const x = (left + right) / 2;
+    const y = (top + bottom) / 2;
+    // The pinned header draws a copy of the actor row over the original: either one answers.
+    const under = await target.evaluate(
+      (el, point) => {
+        const scope = globalThis as unknown as {
+          document: {
+            elementFromPoint: (
+              x: number,
+              y: number,
+            ) => { closest: (s: string) => unknown; tagName: string; className: unknown } | null;
+          };
+        };
+        const hit = scope.document.elementFromPoint(point.x, point.y);
+        if (hit === null) return 'nothing';
+        if (hit === el || hit.closest('.swv-actor, .swv-hit') !== null) return 'ok';
+        return `${hit.tagName}.${String(hit.className)}`;
+      },
+      { x, y },
+    );
+    if (under !== 'ok') {
+      tried.push(`(${Math.round(x)}, ${Math.round(y)}) is covered by ${under}`);
+      continue;
+    }
     await page.mouse.move(x, y);
     return;
   }
-  throw new Error('No target is inside the viewport');
+  throw new Error(`No target is inside the viewport and uncovered: ${tried.join('; ')}`);
 }
 
 /**

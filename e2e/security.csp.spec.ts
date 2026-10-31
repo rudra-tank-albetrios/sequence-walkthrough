@@ -14,8 +14,8 @@ interface Attack {
   fires: boolean;
   /** The address it would ask for, on another site. */
   asks?: string;
-  /** The directive Chromium names when it blocks this. */
-  directive: string;
+  /** The directive Chromium names when it blocks this; absent when another document reports it. */
+  directive?: string;
 }
 
 const add = (tag: string, props: Record<string, string>): string =>
@@ -113,7 +113,7 @@ const ATTACKS: Attack[] = [
       f.srcdoc = "<script>top.__pwned('frame')</scr" + "ipt>";
       document.body.append(f);`,
     fires: true,
-    directive: 'script-src',
+    // The frame's own document gets the report; the page only sees that nothing ran.
   },
   {
     name: 'a frame from another site',
@@ -208,7 +208,7 @@ for (const attack of ATTACKS) {
       expect(report.fired).toEqual([]);
       expect(armed.outside).toEqual([]);
       // The report's wording differs between browsers, and the phone project is Chromium too.
-      if (browserName === 'chromium' && testInfo.project.name === 'chromium') {
+      if (attack.directive && browserName === 'chromium' && testInfo.project.name === 'chromium') {
         expect(report.csp.map((c) => c.directive).join()).toContain(attack.directive);
       }
     });
@@ -270,7 +270,7 @@ test.describe('the built page', () => {
         .split(';')
         .map((part) => part.trim().split(/\s+/))
         .filter((parts) => parts[0])
-        .map(([name = '', ...sources]): [string, string[]] => [name, sources]),
+        .map(([name, ...sources]): [string, string[]] => [name ?? '', sources]),
     );
     expect(directives).toEqual(POLICY);
 
