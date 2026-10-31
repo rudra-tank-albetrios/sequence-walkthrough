@@ -25,3 +25,6 @@ __pycache__/
 Thumbs.db
 .vscode/
 .idea/
+
+# Local comparison output (tools/golden/src/compare.ts)
+tmp/

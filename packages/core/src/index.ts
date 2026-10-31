@@ -1,9 +1,12 @@
-export { parseAnnotations, parseUses } from './annotations.ts';
+export { parseAnnotations, parseThreat, parseUses } from './annotations.ts';
 export { findArrow, parseArrowLeft } from './arrows.ts';
 export { bodyText, dataTouched, joinPayloads, payloadDiff, type PayloadDiff } from './data.ts';
 export { buildFlow } from './flow.ts';
 export { parseFlow, type ParsedFlow } from './parse.ts';
+export { REVIEW_AREA_LABEL, REVIEW_RULES, reviewFlow } from './review/index.ts';
+export type * from './review/types.ts';
 export { cutHash, parseSequence } from './sequence.ts';
+export { skipFrontMatter, splitStatements } from './statements.ts';
 export { decodeEntities, isCodeRef, isFollowable, normLabel, splitLabel, tokens } from './text.ts';
 export type * from './types.ts';
 export { APP_VERSION, SPEC_VERSION } from './version.ts';
@@ -21,6 +24,8 @@ export {
   STATUS_RE,
   STATUS_TEXT,
   STEP_TAGS,
+  THREAT_LEVELS,
+  THREAT_MAX_CHARS,
   USES_KINDS,
   layerZone,
 } from './vocabulary.ts';

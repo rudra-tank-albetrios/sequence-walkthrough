@@ -12,9 +12,20 @@ import type {
   SchemaRule,
   StateText,
   StepUses,
+  Threat,
+  ThreatLevel,
   Uses,
 } from './types.ts';
-import { FLAG_TAGS, KNOWN_TAGS, PAYLOAD_PARTS, SEQ_KEYWORD, STEP_TAGS } from './vocabulary.ts';
+import {
+  FLAG_TAGS,
+  KNOWN_TAGS,
+  PAYLOAD_PARTS,
+  SEQ_KEYWORD,
+  STEP_TAGS,
+  THREAT_LEVELS,
+  THREAT_MAX_CHARS,
+  wordTable,
+} from './vocabulary.ts';
 
 /** Step-level tags collected while waiting for the next arrow. */
 interface Pending {
@@ -29,6 +40,7 @@ interface Pending {
   state: { before: string[]; after: string[] };
   flags: Flags;
   unconfirmed: string[];
+  threats: Threat[];
   section: string | null;
   sectionLine: number;
   firstLine: number;
@@ -48,6 +60,7 @@ function newPending(): Pending {
     state: { before: [], after: [] },
     flags: {},
     unconfirmed: [],
+    threats: [],
     section: null,
     sectionLine: -1,
     firstLine: -1,
@@ -67,8 +80,22 @@ function hasStepContent(p: Pending): boolean {
     p.state.before.length > 0 ||
     p.state.after.length > 0 ||
     Object.keys(p.flags).length > 0 ||
-    p.unconfirmed.length > 0
+    p.unconfirmed.length > 0 ||
+    p.threats.length > 0
   );
+}
+
+const isThreatLevel = (word: string): word is ThreatLevel =>
+  (THREAT_LEVELS as readonly string[]).includes(word);
+
+/** `@threat <high|medium|low> <short text>`: null when the level or the text is missing. */
+export function parseThreat(value: string): Threat | null {
+  const trimmed = value.trim();
+  const gap = trimmed.search(/\s/);
+  if (gap < 0) return null;
+  const level = trimmed.slice(0, gap).toLowerCase();
+  const text = trimmed.slice(gap).trim();
+  return text && isThreatLevel(level) ? { level, text } : null;
 }
 
 /** `@uses <kind> <name> [path:line] <text>` */
@@ -105,7 +132,7 @@ export function parseAnnotations(code: string): Annotations {
     trigger: '',
     summary: [],
     terms: [],
-    layers: {},
+    layers: wordTable({}),
     sectionSummaries: {},
     arrows: [],
     lint: [],
@@ -115,6 +142,8 @@ export function parseAnnotations(code: string): Annotations {
     frontMatterEnd: -1,
   };
   const warn = (line: number, msg: string, code: string) => res.lint.push({ line, msg, code });
+  // Where each lower-cased term sits in res.terms, so a repeated @term replaces the earlier one.
+  const termAt = new Map<string, number>();
 
   let i = 0;
   // Front matter (--- ... ---) at the very top.
@@ -167,9 +196,12 @@ export function parseAnnotations(code: string): Annotations {
         if (m?.[1] && m[2]) {
           const term = m[1].trim();
           const entry = { term, def: m[2].trim(), line };
-          const prev = res.terms.findIndex((x) => x.term.toLowerCase() === term.toLowerCase());
-          if (prev >= 0) res.terms[prev] = entry;
-          else res.terms.push(entry);
+          const prev = termAt.get(term.toLowerCase());
+          if (prev !== undefined) res.terms[prev] = entry;
+          else {
+            termAt.set(term.toLowerCase(), res.terms.length);
+            res.terms.push(entry);
+          }
         } else warn(line, '@term needs a word and a definition: @term tombstone: …', 'term-empty');
         break;
       }
@@ -244,6 +276,26 @@ export function parseAnnotations(code: string): Annotations {
       case 'unconfirmed':
         pending.unconfirmed.push(val || 'Not confirmed from the code');
         break;
+      case 'threat': {
+        const threat = parseThreat(val);
+        if (!threat) {
+          warn(
+            line,
+            '@threat needs a level (high, medium or low) and a short text: @threat high Token sent in the URL',
+            'threat-format',
+          );
+          break;
+        }
+        if (threat.text.length > THREAT_MAX_CHARS) {
+          warn(
+            line,
+            `@threat is ${threat.text.length} characters (keep it under ${THREAT_MAX_CHARS})`,
+            'long-threat',
+          );
+        }
+        pending.threats.push(threat);
+        break;
+      }
       default:
         if (isFlagTag(name)) pending.flags[name] = val || true;
         else {
@@ -311,6 +363,7 @@ export function parseAnnotations(code: string): Annotations {
         state: joinState(pending.state),
         flags: { ...pending.flags },
         unconfirmed: pending.unconfirmed.slice(),
+        threats: pending.threats.slice(),
         section: pending.section,
         sectionLine: pending.sectionLine,
         annLines: pending.lines.slice(),

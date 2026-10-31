@@ -1,0 +1,247 @@
+/* The table view covers the canvas; on phones it is a full-screen sheet with stacked rows. */
+.view {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  background: var(--surface);
+}
+
+.scroll {
+  overflow: auto;
+  min-height: 0;
+  outline-offset: -2px;
+}
+
+.tv {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--text-md);
+}
+
+.tv th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: var(--space-2) 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  text-align: left;
+  font-size: var(--text-sm);
+  font-weight: 650;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.tv td {
+  padding: var(--space-2) 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.n {
+  width: 36px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.nBtn {
+  padding: 0 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.ch {
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: hsl(var(--ch, 210) 70% 55%);
+  vertical-align: middle;
+}
+
+.rt {
+  white-space: nowrap;
+}
+
+.sends {
+  min-width: 180px;
+  font-size: 12.5px;
+}
+
+.does {
+  min-width: 220px;
+  max-width: 420px;
+}
+
+.none {
+  color: var(--faint);
+  font-style: italic;
+}
+
+.tv tbody tr {
+  cursor: pointer;
+  box-shadow: inset 3px 0 0 transparent;
+}
+
+.tv tbody tr:hover td {
+  background: var(--surface-2);
+}
+
+.tv tbody tr.cur td {
+  background: var(--marker-soft);
+}
+
+.tv tbody tr.follow {
+  box-shadow: inset 4px 0 0 var(--follow);
+}
+
+.tv tbody tr.findhit td.sends,
+.tv tbody tr.findhit td.does {
+  text-decoration: underline;
+  text-decoration-color: var(--follow);
+  text-decoration-thickness: 2px;
+}
+
+.tv tr.chapStart td {
+  border-top: 2px solid var(--line);
+}
+
+.tv td > :global(.chip),
+.tv td button {
+  margin: 0 4px 2px 0;
+}
+
+.k-reply {
+  border-style: dashed;
+}
+
+.k-self {
+  background: var(--follow-soft);
+  border-color: transparent;
+}
+
+.br {
+  background: transparent;
+}
+
+.br b {
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.status {
+  padding: 0 4px;
+  border-radius: 4px;
+  font-weight: 800;
+}
+
+.s-2xx {
+  color: var(--s-2xx);
+}
+
+.s-3xx {
+  color: var(--s-3xx);
+}
+
+.s-4xx {
+  color: var(--s-4xx);
+}
+
+.s-5xx {
+  color: var(--s-5xx);
+}
+
+.ref {
+  display: inline-block;
+  max-width: 240px;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-variation-settings: var(--mono);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.foot {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  padding: var(--space-2) max(16px, env(safe-area-inset-right, 0px)) var(--space-2)
+    max(16px, env(safe-area-inset-left, 0px));
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.foot label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-right: auto;
+  font-size: var(--text-md);
+  color: var(--muted);
+}
+
+@media (max-width: 720px) {
+  .view {
+    position: fixed;
+    inset: 0;
+    z-index: 75;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .tv thead {
+    display: none;
+  }
+
+  .tv,
+  .tv tbody,
+  .tv tr,
+  .tv td {
+    display: block;
+    width: auto;
+  }
+
+  .tv tr {
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .tv td {
+    border: 0;
+    padding: 2px 0;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .tv td:empty {
+    display: none;
+  }
+
+  .tv td[data-l]::before {
+    content: attr(data-l) ' ';
+    font-family: var(--font-ui);
+    font-variation-settings: var(--sans);
+    font-size: var(--text-xs);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+}

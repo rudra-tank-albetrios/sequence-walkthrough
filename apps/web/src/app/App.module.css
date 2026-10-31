@@ -1,23 +1,126 @@
-.page {
-  min-height: 100dvh;
+/* One-screen tool: top bar, stage, step bar. Fixed rows, so a folded header or step bar leaves its
+   row empty instead of shifting the stage. */
+.app {
+  height: 100%;
   display: grid;
-  place-content: center;
-  gap: var(--space-3);
-  padding: var(--space-6) var(--space-4);
-  text-align: center;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
-.title {
-  margin: 0;
-  font-size: var(--text-2xl);
-  font-weight: 700;
-  letter-spacing: -0.01em;
+.stage {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.lead {
-  margin: 0;
-  max-width: 40ch;
-  color: var(--color-text-muted);
-  font-size: var(--text-md);
-  line-height: 1.5;
+.showControls {
+  position: absolute;
+  right: max(12px, env(safe-area-inset-right, 0px));
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  z-index: 40;
+  box-shadow: var(--shadow-1), var(--shadow-2);
+}
+
+/* Edge tabs: fold the header, the step bar or the code panel away; the tab stays to bring it back */
+.edge {
+  position: absolute;
+  z-index: 35;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 14px;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+.edge:hover {
+  opacity: 1;
+}
+
+.edge svg {
+  width: 10px;
+  height: 6px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.top {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top: 0;
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
+}
+
+.top[aria-expanded='false'] svg {
+  transform: rotate(180deg);
+}
+
+.bottom {
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-bottom: 0;
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+}
+
+.bottom[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
+.left {
+  left: 0;
+  top: 50%;
+  width: 14px;
+  height: 36px;
+  transform: translateY(-50%);
+  border-left: 0;
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+
+.left svg {
+  transform: rotate(90deg);
+}
+
+.left[aria-expanded='true'] svg {
+  transform: rotate(-90deg);
+}
+
+/* The tabs stay centred over the part of the canvas the panels leave free. */
+.stage[data-code-open] {
+  --cp-w: min(480px, 92%);
+}
+
+.stage[data-code-open] .left {
+  left: var(--cp-w);
+}
+
+.stage[data-code-open] .top,
+.stage[data-code-open] .bottom {
+  left: calc(var(--cp-w) + (100% - var(--cp-w)) / 2);
+}
+
+.stage[data-insight-open]:not([data-code-open]) .top,
+.stage[data-insight-open]:not([data-code-open]) .bottom {
+  left: calc((100% - min(520px, 92%)) / 2);
+}
+
+@media (max-width: 720px) {
+  .stage[data-code-open] .left {
+    display: none;
+  }
+
+  .stage[data-code-open] .top,
+  .stage[data-code-open] .bottom,
+  .stage[data-insight-open]:not([data-code-open]) .top,
+  .stage[data-insight-open]:not([data-code-open]) .bottom {
+    left: 50%;
+  }
 }

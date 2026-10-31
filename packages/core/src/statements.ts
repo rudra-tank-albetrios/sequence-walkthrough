@@ -29,3 +29,14 @@ export function splitStatements(line: string): string[] {
   out.push(current);
   return out.map((s) => s.trim()).filter(Boolean);
 }
+
+/** The index of the first line after a `--- ... ---` front matter block, or 0. */
+export function skipFrontMatter(lines: string[]): number {
+  let i = 0;
+  while (i < lines.length && !lines[i]?.trim()) i++;
+  if (lines[i]?.trim() !== '---') return 0;
+  for (let j = i + 1; j < lines.length; j++) {
+    if (lines[j]?.trim() === '---') return j + 1;
+  }
+  return 0;
+}
