@@ -59,6 +59,20 @@ export type FlagTag = 'async' | 'retry' | 'timeout' | 'idempotent';
 /** `@async`, `@retry 3×` and so on: the text, or `true` when the tag has none. */
 export type Flags = Partial<Record<FlagTag, string | true>>;
 
+/** How serious a `@threat` line says a possible problem is. */
+export type ThreatLevel = 'high' | 'medium' | 'low';
+
+/** `@threat <high|medium|low> <short text>`: a possible problem seen in the code, on its step. */
+export interface Threat {
+  level: ThreatLevel;
+  text: string;
+}
+
+/** A `@threat` line with the step it belongs to, collected over the whole flow. */
+export interface FlowThreat extends Threat {
+  step: number;
+}
+
 export interface LintEntry {
   line: number;
   msg: string;
@@ -101,6 +115,7 @@ export interface AnnotatedArrow {
   state: StateText;
   flags: Flags;
   unconfirmed: string[];
+  threats: Threat[];
   section: string | null;
   sectionLine: number;
   annLines: number[];
@@ -234,6 +249,7 @@ export interface Step {
   state: StateText;
   flags: Flags;
   unconfirmed: string[];
+  threats: Threat[];
   http: HttpCall | null;
   status: Status | null;
   section: number;
@@ -289,6 +305,7 @@ export interface Flow {
   /** Step indexes of the replies to the main request. */
   endings: number[];
   unconfirmed: number;
+  threats: FlowThreat[];
   boundaries: Boundary[];
   main: number;
   syntax: SyntaxIssue[];

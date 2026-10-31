@@ -1,4 +1,4 @@
-export { parseAnnotations, parseUses } from './annotations.ts';
+export { parseAnnotations, parseThreat, parseUses } from './annotations.ts';
 export { findArrow, parseArrowLeft } from './arrows.ts';
 export { bodyText, dataTouched, joinPayloads, payloadDiff, type PayloadDiff } from './data.ts';
 export { buildFlow } from './flow.ts';
@@ -22,6 +22,8 @@ export {
   STATUS_RE,
   STATUS_TEXT,
   STEP_TAGS,
+  THREAT_LEVELS,
+  THREAT_MAX_CHARS,
   USES_KINDS,
   layerZone,
 } from './vocabulary.ts';

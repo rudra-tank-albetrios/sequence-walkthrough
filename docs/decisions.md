@@ -38,3 +38,8 @@ Decisions the plan (`docs/IMPLEMENTATION-PLAN.md`) does not already make, one or
 - **Feature folders own their screens; shared state lives in Zustand stores under `shared/state`.** Features talk through the stores (`ui` flags such as `askOpen`, `importOpen`) and never import each other; `dependency-cruiser` checks it. The one hand-over outside the stores is the right-click menu's "Ask AI: what is X?", which leaves the question in `sessionStorage` under `swv:ask:prefill`.
 - **The keyboard map is the shell's** (`app/useGlobalKeys.ts`), including the Esc cascade in version 2's order; widgets handle only their local keys.
 - **Version 2 behaviours kept as they really were, not as the README said:** `Home` goes to step 1 (the overview is reached with Esc or at load), and the Claude provider has no consent step of its own in the page (the host's prompt is the consent).
+
+## Phase 11: structure review and threats (2026-10-31)
+
+- **`@threat` is a step tag.** `%% @threat <high|medium|low> <short text>` belongs to the next arrow like `@unconfirmed`, and shows up as `step.threats` and `flow.threats`. A missing level or text is lint code `threat-format` and the line is dropped; text over 160 characters is `long-threat` and is still shown.
+- **Seventh recorded difference from version 2** in `packages/core/src/golden.test.ts`: every step and flow has `threats`, and the "known tags" lint message names `@threat`.
