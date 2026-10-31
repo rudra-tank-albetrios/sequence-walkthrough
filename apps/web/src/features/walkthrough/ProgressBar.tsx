@@ -49,6 +49,7 @@ export function ProgressBar({ flow }: { flow: Flow }) {
                     hidden && styles.off,
                     threat && styles.threat,
                   )}
+                  {...(step.idx <= cur ? { 'data-done': '' } : {})}
                   {...(hidden ? { 'data-hidden': '' } : {})}
                   {...(threat ? { 'data-threat': '' } : {})}
                 />

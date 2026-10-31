@@ -69,7 +69,11 @@ describe('code panel', () => {
     fireEvent.change(textarea, { target: { value: `${CODE}\n  B-->>A: 500 Boom` } });
     expect(useFlowStore.getState().flow?.steps.length).toBe(2);
     act(() => {
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(299);
+    });
+    expect(useFlowStore.getState().flow?.steps.length).toBe(2);
+    act(() => {
+      vi.advanceTimersByTime(1);
     });
     expect(useFlowStore.getState().flow?.steps.length).toBe(3);
     expect(screen.getByText(/3 steps · Rendered in/)).toBeInTheDocument();

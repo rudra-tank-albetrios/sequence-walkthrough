@@ -8,6 +8,35 @@ import { CSV_COLUMNS, csvText, markdownText, tableRows } from './stepTable.ts';
 const flow = parseFlow(DEFAULT_DIAGRAM).flow;
 const BOM = String.fromCharCode(0xfeff);
 
+const HOSTILE = parseFlow(`sequenceDiagram
+  %% @title =1+1 <img src=x onerror=alert(1)> [a](javascript:alert(2))
+  %% @trigger <script>alert(3)</script>
+  %% @term <b>t</b>: [d](javascript:alert(4))
+  %% @step @SUM(1+1) ![i](https://evil.example/i.png)
+  %% @uses hook name\`<i>x</i> [u](javascript:alert(5))
+  A->>B: x\` <img src=x onerror=alert(6)>
+`).flow;
+
+describe('hostile text in the step table', () => {
+  it('cannot start a formula in a CSV cell', () => {
+    const cells = tableRows(HOSTILE).rows.flat();
+    expect(cells).toContain('@SUM(1+1) ![i](https://evil.example/i.png)');
+    const csv = csvText(HOSTILE);
+    expect(csv).toContain("'@SUM(1+1) ![i](https://evil.example/i.png)");
+    expect(csv).not.toMatch(/(?:^|,|")[=+\-@]/m);
+  });
+
+  it('cannot open a tag, a link or an image in Markdown, outside a code span', () => {
+    const md = markdownText(HOSTILE);
+    const words = md.replace(/`[^`\n]*`/g, '');
+    expect(words).not.toMatch(/<[a-z]/i);
+    expect(words).not.toMatch(/(?<!\\)\[/);
+    expect(words).toContain('&lt;img src=x');
+    expect(words).toContain('\\[a](javascript:alert(2))');
+    expect(md).toContain("`x' <img src=x onerror=alert(6)>`");
+  });
+});
+
 describe('step table exports', () => {
   it('writes the documented CSV columns with a BOM and CRLF line ends', () => {
     const csv = csvText(flow);

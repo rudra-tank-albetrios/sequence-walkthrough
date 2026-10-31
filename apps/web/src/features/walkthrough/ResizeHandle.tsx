@@ -20,7 +20,7 @@ export function ResizeHandle({ barRef }: { barRef: RefObject<HTMLElement | null>
   };
   const apply = (h: number) => {
     barRef.current?.style.setProperty('--card-h', `${h}px`);
-    barRef.current?.setAttribute('data-sized', '');
+    barRef.current?.classList.add(styles.sized ?? '');
   };
 
   return (

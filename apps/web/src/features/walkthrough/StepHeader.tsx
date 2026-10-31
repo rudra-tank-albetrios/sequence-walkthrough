@@ -26,11 +26,14 @@ function StepInput({ n, total }: { n: number; total: number }) {
         e.target.select();
       }}
       onKeyDown={(e) => {
+        e.stopPropagation();
         if (e.key === 'Enter') {
           e.preventDefault();
           const v = Number.parseInt(value, 10);
-          if (v >= 1 && v <= total) go(v - 1);
-          else setValue(String(n));
+          if (v >= 1) {
+            go(Math.min(v, total) - 1);
+            setValue(String(Math.min(v, total)));
+          } else setValue(String(n));
         } else if (e.key === 'Escape') {
           e.preventDefault();
           setValue(String(n));
