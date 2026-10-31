@@ -1,0 +1,11 @@
+.tip {
+  max-width: 320px;
+  padding: 6px 9px;
+  background: var(--ink);
+  color: var(--surface);
+  border-radius: var(--r-sm);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  box-shadow: var(--shadow-1);
+  z-index: var(--z-tooltip);
+}

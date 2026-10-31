@@ -4,6 +4,7 @@ export { bodyText, dataTouched, joinPayloads, payloadDiff, type PayloadDiff } fr
 export { buildFlow } from './flow.ts';
 export { parseFlow, type ParsedFlow } from './parse.ts';
 export { cutHash, parseSequence } from './sequence.ts';
+export { skipFrontMatter, splitStatements } from './statements.ts';
 export { decodeEntities, isCodeRef, isFollowable, normLabel, splitLabel, tokens } from './text.ts';
 export type * from './types.ts';
 export type { Severity } from './validate-rules.ts';

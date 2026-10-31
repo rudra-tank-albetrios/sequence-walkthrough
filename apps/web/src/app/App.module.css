@@ -1,23 +1,111 @@
-.page {
-  min-height: 100dvh;
+/* One screen. The diagram fills it and the header and dock float over it, so a folded part gives
+   its space straight back to the diagram. useChromeInsets publishes how much they cover. */
+.app {
+  --chrome-top: 0px;
+  --chrome-bottom: 0px;
+  --chrome-left: 0px;
+  position: relative;
+  height: 100dvh;
+  overflow: hidden;
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.app[data-code-open] {
+  --chrome-left: min(480px, 92%);
+}
+
+.stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.showControls {
+  position: absolute;
+  right: max(12px, env(safe-area-inset-right, 0px));
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  z-index: var(--z-chrome);
+  box-shadow: var(--shadow-float);
+}
+
+/* Edge tabs: fold the header, the step bar or the code panel away; the tab stays to bring it back */
+.edge {
+  position: absolute;
+  z-index: var(--z-chrome);
   display: grid;
-  place-content: center;
-  gap: var(--space-3);
-  padding: var(--space-6) var(--space-4);
-  text-align: center;
+  place-items: center;
+  width: 36px;
+  height: 14px;
+  padding: 0;
+  border: 1px solid var(--glass-edge);
+  background: var(--glass);
+  backdrop-filter: var(--glass-filter);
+  color: var(--muted);
+  transition: color var(--t-fast);
 }
 
-.title {
-  margin: 0;
-  font-size: var(--text-2xl);
-  font-weight: 700;
-  letter-spacing: -0.01em;
+.edge:hover {
+  color: var(--ink);
 }
 
-.lead {
-  margin: 0;
-  max-width: 40ch;
-  color: var(--color-text-muted);
-  font-size: var(--text-md);
-  line-height: 1.5;
+.edge svg {
+  width: 10px;
+  height: 6px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.top,
+.bottom {
+  left: calc(var(--chrome-left) + (100% - var(--chrome-left)) / 2);
+  transform: translateX(-50%);
+}
+
+.top {
+  top: var(--chrome-top);
+  border-top: 0;
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
+}
+
+.top[aria-expanded='false'] svg {
+  transform: rotate(180deg);
+}
+
+.bottom {
+  bottom: var(--chrome-bottom);
+  border-bottom: 0;
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+}
+
+.bottom[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
+.left {
+  left: var(--chrome-left);
+  top: calc(var(--chrome-top) + (100% - var(--chrome-top)) / 2);
+  width: 14px;
+  height: 36px;
+  transform: translateY(-50%);
+  border-left: 0;
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+
+.left svg {
+  transform: rotate(-90deg);
+}
+
+@media (max-width: 720px) {
+  .left {
+    display: none;
+  }
+
+  .top,
+  .bottom {
+    left: 50%;
+  }
 }

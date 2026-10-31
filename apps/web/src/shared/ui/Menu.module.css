@@ -1,0 +1,112 @@
+.menu {
+  min-width: 240px;
+  max-width: min(360px, calc(100vw - 16px));
+  max-height: calc(100dvh - 80px);
+  overflow: auto;
+  padding: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-float);
+  z-index: var(--z-popover);
+  transform-origin: var(--radix-dropdown-menu-content-transform-origin);
+  animation: menuIn var(--t-fast) var(--ease-out);
+}
+
+@keyframes menuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-3px) scale(0.985);
+  }
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  font-size: var(--text-md);
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+}
+
+.item[data-highlighted] {
+  background: var(--surface-2);
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--muted);
+}
+
+.item[data-highlighted] .icon {
+  color: var(--ink);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.item[data-disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.heading {
+  padding: 8px 10px 4px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 650;
+}
+
+.separator {
+  height: 1px;
+  margin: 6px 4px;
+  background: var(--line);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 10px;
+}
+
+.rowLabel {
+  margin-right: var(--space-1);
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+/* The items of a row: small buttons side by side */
+.compact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--text-md);
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+}
+
+.compact[data-highlighted] {
+  background: var(--surface-2);
+}

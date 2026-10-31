@@ -1,7 +1,7 @@
-import { STOPWORDS } from './vocabulary.ts';
+import { STOPWORDS, wordTable } from './vocabulary.ts';
 
 /** Named entities Mermaid labels use as `#name;`. Unknown names stay as written. */
-const NAMED_ENTITIES: Record<string, string> = {
+const NAMED_ENTITIES: Record<string, string> = wordTable({
   quot: '"',
   amp: '&',
   lt: '<',
@@ -27,7 +27,7 @@ const NAMED_ENTITIES: Record<string, string> = {
   pound: '£',
   yen: '¥',
   check: '✓',
-};
+});
 
 /** Mermaid writes entities as `#59;` or `#quot;` inside labels. */
 export function decodeEntities(text: string): string {
