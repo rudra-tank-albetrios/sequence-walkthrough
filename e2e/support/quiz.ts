@@ -159,7 +159,7 @@ export async function mockModel(page: Page, replies: MockReplies): Promise<Model
     const user = body.messages?.find((m) => m.role === 'user')?.content ?? '';
     const kind = system.startsWith('You mark') ? 'mark' : 'quiz';
     sent.push({
-      authorization: request.headers()['authorization'] ?? '',
+      authorization: request.headers().authorization ?? '',
       model: body.model ?? '',
       maxTokens: body.max_tokens ?? 0,
       system,
@@ -195,9 +195,10 @@ export const quizDialog = (page: Page) => page.getByRole('dialog', { name: 'Quiz
 export const weakPointsDialog = (page: Page) => page.getByRole('dialog', { name: 'Weak points' });
 export const settingsDialog = (page: Page) => page.getByRole('dialog', { name: 'Ask AI', exact: true });
 
-/** Opens the quiz from the top bar and waits for its set-up screen. */
+/** Opens the quiz from the Learn menu and waits for its set-up screen. */
 export async function openQuiz(page: Page): Promise<Locator> {
-  await page.getByRole('button', { name: 'Quiz', exact: true }).click();
+  await page.getByRole('button', { name: 'Learn', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Quiz' }).click();
   const dialog = quizDialog(page);
   await expect(dialog).toBeVisible();
   return dialog;
@@ -220,7 +221,7 @@ const TYPE_LABELS: Record<TypeChoice, string> = {
 export interface SetupChoices extends Partial<QuizShape> {
   time?: 'Off' | 'Timer' | 'Stopwatch';
   /** With `time: 'Timer'`: a preset, or a custom number of minutes. */
-  minutes?: 5 | 10 | 15 | number;
+  minutes?: number;
   source?: 'Your model' | 'The built-in sample';
 }
 

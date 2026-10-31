@@ -26,18 +26,24 @@
   --space-5: 24px;
   --space-6: 32px;
 
-  --r: 8px;
+  /* The shape rule: floating chrome --r-xl, cards inside it --r-lg, controls --r, small parts
+     --r-sm. Chips and the round transport buttons are full pills. */
   --r-sm: 6px;
+  --r: 8px;
   --r-lg: 12px;
+  --r-xl: 16px;
 
   --bg: light-dark(#e9edf2, #0e1117);
-  --surface: light-dark(#ffffff, #171b23);
-  --surface-2: light-dark(#f4f6f9, #1e232d);
-  --ink: light-dark(#161d29, #e8ebf1);
-  --muted: light-dark(#566072, #a7afbd);
-  --faint: light-dark(#626c7d, #8e97a7);
+  --surface: light-dark(#fcfdfe, #171b23);
+  --surface-2: light-dark(#f1f3f7, #1e232d);
+  --surface-3: light-dark(#e5e9ef, #272d39);
+  --ink: light-dark(#141a24, #e8ebf1);
+  --muted: light-dark(#4d5869, #aab2c0);
+  --faint: light-dark(#535d6e, #9aa3b2);
   --line: light-dark(#d5dbe3, #2c333f);
+  --line-strong: light-dark(#b9c1cd, #434b59);
   --marker: #ffd43b;
+  --marker-strong: #e6b400;
   --marker-soft: light-dark(#fff1b8, #4b3d07);
   --marker-ink: light-dark(#3a2c00, #fff4c7);
   --on-marker: #2a2000;
@@ -49,13 +55,41 @@
   --ok: light-dark(#217a3c, #6fd08c);
   --focus: light-dark(#1d5bd0, #82aaff);
   --canvas: light-dark(#ffffff, #171b23);
+
+  /* What the Flow Rail marks besides errors: side parts in teal, threats in amber */
+  --side: light-dark(#0f766e, #5eead4);
+  --side-soft: light-dark(#d5f3ee, #123b37);
+  --threat: light-dark(#b45309, #fbbf24);
+
+  /* Dialogs dim lightly; the tool overlay uses the strong 75% dim of the plan (decision 19) */
   --scrim: light-dark(rgba(15, 20, 30, 0.45), rgba(0, 0, 0, 0.6));
-  --shadow: light-dark(
-    0 1px 2px rgba(16, 24, 40, 0.06) 0 6px 20px rgba(16, 24, 40, 0.1),
-    0 1px 2px rgba(0, 0, 0, 0.4) 0 8px 24px rgba(0, 0, 0, 0.45)
-  );
-  --shadow-1: light-dark(0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 2px rgba(0, 0, 0, 0.4));
-  --shadow-2: light-dark(0 6px 20px rgba(16, 24, 40, 0.1), 0 8px 24px rgba(0, 0, 0, 0.45));
+  --scrim-strong: light-dark(rgba(12, 16, 24, 0.75), rgba(4, 6, 10, 0.75));
+
+  /* Frosted chrome. Opaque enough that text keeps its contrast over any diagram theme. */
+  --glass: light-dark(rgba(250, 251, 253, 0.88), rgba(23, 27, 35, 0.88));
+  --glass-edge: light-dark(rgba(20, 26, 36, 0.13), rgba(232, 235, 241, 0.13));
+  --glass-sheen: light-dark(rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.05));
+  --glass-filter: blur(18px) saturate(165%);
+
+  /* light-dark() takes colours only, so each shadow keeps its geometry outside it */
+  --shadow-1: 0 1px 2px light-dark(rgba(16, 24, 40, 0.08), rgba(0, 0, 0, 0.4));
+  --shadow-2: 0 8px 24px -6px light-dark(rgba(16, 24, 40, 0.16), rgba(0, 0, 0, 0.5));
+  --shadow: var(--shadow-1), var(--shadow-2);
+  --shadow-float: var(--shadow-1), 0 14px 36px -10px light-dark(rgba(16, 24, 40, 0.28), rgba(0, 0, 0, 0.65));
+
+  /* Layers, lowest first. Everything in a portal sits above the tool overlay. */
+  --z-canvas-ui: 8;
+  --z-panel: 20;
+  --z-chrome: 30;
+  --z-overlay: 50;
+  --z-dialog: 60;
+  --z-popover: 70;
+  --z-tooltip: 80;
+  --z-toast: 90;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 120ms;
+  --t-med: 200ms;
 
   /* Status code families, used by chips and the tooltip */
   --s-2xx: light-dark(#217a3c, #6fd08c);
@@ -70,6 +104,15 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
+}
+
+/* Solid chrome for people who asked for less transparency */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass: light-dark(#fafbfd, #171b23);
+    --glass-filter: none;
+    --scrim-strong: light-dark(#2a2f38, #05070a);
+  }
 }
 
 *,

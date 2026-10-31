@@ -3,14 +3,14 @@
   position: absolute;
   left: 50%;
   bottom: max(24px, env(safe-area-inset-bottom, 0px));
-  z-index: 42;
+  z-index: var(--z-chrome);
   width: min(900px, calc(100% - 48px));
   padding: 16px 22px;
   transform: translateX(-50%);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-1), var(--shadow-2);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-float);
   font-size: 18px;
   line-height: 1.5;
 }

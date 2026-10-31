@@ -111,7 +111,7 @@ function letter(key: string, s: ReturnType<typeof useFlowStore.getState>, steps:
       s.setView(s.view === 'diagram' ? 'table' : 'diagram');
       return true;
     case 'i':
-      s.setUi({ insightOpen: !s.ui.insightOpen });
+      s.setUi({ overlayTool: 'layers' });
       return true;
     case 'a':
       if (steps && s.cur >= 0) s.setUi({ askOpen: true });

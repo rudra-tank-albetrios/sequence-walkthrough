@@ -1,9 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
-  DEMO_STEPS,
   camera,
+  closeOverlay,
   copied,
+  DEMO_STEPS,
   diagram,
   download,
   fixture,
@@ -12,8 +13,11 @@ import {
   notice,
   open,
   openFocused,
+  openPanel,
+  overlay,
   stepInput,
   svg,
+  topActor,
   toastBox,
 } from './helpers.ts';
 
@@ -22,11 +26,16 @@ const row = (page: Page, index: number) => table(page).locator(`tr[data-step="${
 const insight = (page: Page) => page.getByTestId('insight');
 const code = (page: Page) => page.locator('#code');
 
+// Glossary lives in Learn; the other panes are Analyze tools, which I opens (plan 8.5).
 const openTab = async (page: Page, name: RegExp) => {
-  await diagram(page).focus();
-  await page.keyboard.press('i');
-  await insight(page).getByRole('tab', { name }).click();
-  return insight(page).getByRole('tabpanel');
+  if (name.test('Glossary')) {
+    await openPanel(page, 'Learn', 'Glossary');
+  } else {
+    await diagram(page).focus();
+    await page.keyboard.press('i');
+    await overlay(page).getByRole('tab', { name }).click();
+  }
+  return overlay(page).getByRole('tabpanel');
 };
 
 test.describe('table view', () => {
@@ -110,7 +119,8 @@ test.describe('table view', () => {
 
   test('V2 spotlight, path, Follow and Find reach the rows', async ({ page }) => {
     await openFocused(page);
-    await svg(page).locator('.swv-actor[data-alias="RD"]').first().click({ force: true });
+    await (await topActor(page, 'RD')).click();
+    await expect(page.getByText('Showing only')).toBeVisible();
     await page.keyboard.press('t');
     const spotCount = await table(page).locator('tbody tr').count();
     expect(spotCount).toBeLessThan(DEMO_STEPS);
@@ -323,34 +333,38 @@ test.describe('code panel', () => {
 });
 
 test.describe('insight', () => {
-  test('V10 I opens the panel with six tabs; × closes; the step links work', async ({ page }) => {
+  test('V10 I opens Analyze with five panes, Learn holds the glossary; × closes; the step links work', async ({
+    page,
+  }) => {
     await openFocused(page);
     await page.keyboard.press('i');
     await expect(insight(page)).toBeVisible();
-    await expect(insight(page).getByRole('heading', { name: 'Insight' })).toBeVisible();
-    const tabs = insight(page).getByRole('tab');
-    await expect(tabs).toHaveCount(6);
-    for (const [i, name] of [
-      'Layers',
-      'Endpoints',
-      'Errors',
-      'Behind the scenes',
-      'Glossary',
-      'Data',
-    ].entries()) {
+    await expect(overlay(page).getByRole('heading', { name: 'Layers' })).toBeVisible();
+    const tabs = overlay(page).getByRole('tab');
+    await expect(tabs).toHaveCount(5);
+    for (const [i, name] of ['Layers', 'Endpoints', 'Errors', 'Data', 'Side parts'].entries()) {
       await expect(tabs.nth(i)).toContainText(name);
     }
     await insight(page).locator('[data-go="3"]').first().click();
     await expect(stepInput(page)).toHaveValue('4');
+    // A step link closes the overlay, since the diagram is what the jump is for; reopened, it marks the step.
+    await expect(insight(page)).toBeHidden();
+    await page.keyboard.press('i');
     await expect(insight(page).locator('[data-go="3"]').first()).toHaveAttribute(
       'aria-current',
       'step',
     );
-    await page.getByRole('button', { name: 'Close the Insight panel' }).click();
+    await closeOverlay(page);
     await expect(insight(page)).toBeHidden();
     await expect(diagram(page)).toBeFocused();
-    await page.getByRole('button', { name: 'Insight', exact: true }).click();
+    await openPanel(page, 'Analyze', 'Layers');
     await expect(insight(page)).toBeVisible();
+    await closeOverlay(page);
+    await openPanel(page, 'Learn', 'Glossary');
+    await expect(overlay(page).getByRole('tab', { name: /Glossary/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 
   test('V10 a non-sequence diagram gets one line', async ({ page }) => {
@@ -373,8 +387,10 @@ test.describe('insight', () => {
     await expect(panel.locator('[data-layer="SVC"]')).toContainText('Files:');
     await expect(panel).toContainText('Trust boundaries:');
     await redis.getByRole('button', { name: 'Only this layer' }).click();
+    // The overlay closes so the spotlight on the diagram can be seen; the notice takes it off again.
+    await expect(overlay(page)).toBeHidden();
     await expect(notice(page)).toContainText('Showing only');
-    await redis.getByRole('button', { name: 'Show all' }).click();
+    await notice(page).getByRole('button', { name: 'Show all' }).click();
     await expect(notice(page)).toBeHidden();
   });
 
@@ -421,14 +437,14 @@ test.describe('insight', () => {
 
   test('V14 Behind groups the side parts and the effects', async ({ page }) => {
     await openFocused(page);
-    const panel = await openTab(page, /Behind the scenes/);
+    const panel = await openTab(page, /Side parts/);
     await expect(panel.locator('details').first()).toHaveAttribute('open', '');
     await expect(panel.locator('summary', { hasText: 'hook' })).toContainText('1 item');
     await expect(panel.locator('summary', { hasText: 'effects' })).toBeVisible();
     await expect(panel).toContainText('useCart');
     await expect(panel).toContainText('src/frontend/hooks/useCart.ts:14');
     await openFocused(page, { code: 'sequenceDiagram\n  A->>B: one' });
-    const empty = await openTab(page, /Behind the scenes/);
+    const empty = await openTab(page, /Side parts/);
     await expect(empty).toContainText('@uses');
     await expect(empty).toContainText('@effect');
   });
@@ -447,10 +463,12 @@ test.describe('insight', () => {
     await panel.getByRole('button', { name: 'Add' }).click();
     const added = panel.locator('[data-term="shopper"]');
     await expect(added).toContainText('saved answer');
+    await closeOverlay(page);
     await goToStep(page, 1);
     await expect(
       page.getByTestId('explain').getByRole('button', { name: 'shopper' }),
     ).toBeVisible();
+    await openPanel(page, 'Learn', 'Glossary');
     await added.getByRole('button', { name: 'Edit' }).click();
     await added.getByLabel('Definition of shopper').fill('The one who buys.');
     await added.getByRole('button', { name: 'Save' }).click();

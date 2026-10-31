@@ -10,14 +10,14 @@ import { followHits } from './search.ts';
 
 export type View = 'diagram' | 'table';
 
-/** The sections of the Insight panel. */
-export type InsightTab = 'layers' | 'endpoints' | 'errors' | 'behind' | 'glossary' | 'data';
-
 /** A word the user is following through the flow (double-click), with the steps that mention it. */
 export interface FollowState {
   token: string;
   hits: number[];
 }
+
+/** Mermaid's own default limit: longer code is refused before anything reads it. */
+export const MAX_CODE_SIZE = 50_000;
 
 export interface FlowState {
   code: string;
@@ -40,8 +40,10 @@ export interface FlowState {
   fitRequest: number;
   ui: {
     codeOpen: boolean;
-    insightOpen: boolean;
-    insightTab: InsightTab;
+    /** The tool shown in the big overlay, by its id in the tool registry; null when closed. */
+    overlayTool: string | null;
+    /** The question to ask before leaving the overlay, set while leaving would lose work (a running quiz). */
+    overlayGuard: string | null;
     controlsHidden: boolean;
     presenter: boolean;
     askOpen: boolean;
@@ -119,8 +121,8 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   settings: loadSettings(),
   ui: {
     codeOpen: false,
-    insightOpen: false,
-    insightTab: 'layers',
+    overlayTool: null,
+    overlayGuard: null,
     controlsHidden: false,
     presenter: false,
     askOpen: false,
@@ -140,6 +142,11 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   fitRequest: 0,
 
   setCode(code) {
+    // Refused when drawn; reading it first and showing its steps would stop the page for seconds.
+    if (code.length > MAX_CODE_SIZE) {
+      set({ code });
+      return;
+    }
     const parsed = parseFlow(code);
     const flow = parsed.flow;
     const steps = flow.isSequence ? flow.steps.length : 0;
@@ -156,7 +163,9 @@ export const useFlowStore = create<FlowState>((set, get) => ({
 
   loadCode(code, theme) {
     const { settings, updateSettings, setCode } = get();
-    if (isDiagramTheme(theme) && theme !== settings.theme) updateSettings({ theme });
+    if (isDiagramTheme(theme) && (theme !== settings.theme || settings.themeAuto)) {
+      updateSettings({ theme, themeAuto: false });
+    }
     setCode(code);
     set((s) => ({ fitRequest: s.fitRequest + 1 }));
   },

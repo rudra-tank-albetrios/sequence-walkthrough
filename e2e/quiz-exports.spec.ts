@@ -90,7 +90,7 @@ test.describe('Quiz downloads', () => {
     expect(pdf.text).toContain(`${DEMO_TITLE}: quiz`);
     expect(pdf.text).toContain('5 questions, with answers');
     for (const sample of samples) {
-      expect(pdf.text).toContain(`${sample.question}`);
+      expect(pdf.text).toContain(sample.question);
       expect(pdf.text).toContain(`Correct answer: ${sample.answer}`);
     }
   });

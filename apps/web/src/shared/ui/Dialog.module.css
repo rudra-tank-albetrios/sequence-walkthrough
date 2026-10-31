@@ -2,7 +2,7 @@
   position: fixed;
   inset: 0;
   background: var(--scrim);
-  z-index: 40;
+  z-index: var(--z-dialog);
 }
 
 .content {
@@ -18,8 +18,8 @@
   color: var(--ink);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
-  box-shadow: var(--shadow-1), var(--shadow-2);
-  z-index: 41;
+  box-shadow: var(--shadow-float);
+  z-index: var(--z-dialog);
   outline: none;
 }
 

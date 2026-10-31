@@ -51,10 +51,10 @@ export function buildSvgDocument(markup: string, options: SvgDocumentOptions): s
   return new XMLSerializer().serializeToString(svg);
 }
 
-/** The live SVG with its highlights, minus the invisible hit areas. */
+/** The live SVG with its highlights, minus the invisible hit areas and the side-part dots. */
 export function buildLiveSvgDocument(live: SVGSVGElement, options: SvgDocumentOptions): string {
   const svg = live.cloneNode(true) as SVGSVGElement;
-  svg.querySelectorAll('.swv-hit').forEach((n) => {
+  svg.querySelectorAll('.swv-hit, .swv-uses-dot').forEach((n) => {
     n.remove();
   });
   decorate(svg, options);

@@ -49,7 +49,7 @@ const GROUPS: Group[] = [
     title: 'Panels and modes',
     rows: [
       { keys: ['T'], does: 'Diagram ↔ Table' },
-      { keys: ['I'], does: 'Insight panel: layers, endpoints, errors, side parts, glossary, data' },
+      { keys: ['I'], does: 'Analyze tools: layers, endpoints, errors, data, side parts' },
       { keys: ['A'], does: 'Ask AI about the current step' },
       { keys: ['H'], does: 'Hide controls' },
       { keys: ['P'], does: 'Presenter mode: one big card, controls hidden' },

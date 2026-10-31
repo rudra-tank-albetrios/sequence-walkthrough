@@ -1,6 +1,6 @@
 import { hasUsableModel } from '@swv/ai';
 import type { Flow } from '@swv/core';
-import { useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useState, type SyntheticEvent } from 'react';
 
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { flowId } from '../../shared/storage/notes.ts';
@@ -154,7 +154,7 @@ export function SetupScreen({ flow }: { flow: Flow }) {
     source === 'sample' ? pickSample(flow, config, { weak: [], recent: [] }).length : count;
   const canStart = timeValid && sampleSize > 0;
 
-  const onSubmit = (ev: FormEvent) => {
+  const onSubmit = (ev: SyntheticEvent) => {
     ev.preventDefault();
     if (source === null) {
       setUi({ aiSettingsOpen: true });

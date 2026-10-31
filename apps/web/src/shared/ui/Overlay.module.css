@@ -1,0 +1,52 @@
+/* The page stays visible around the panel, blurred and dimmed by 75% (decision 19). */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  background: var(--scrim-strong);
+  backdrop-filter: blur(18px) saturate(120%);
+  animation: scrimIn var(--t-med) var(--ease-out);
+}
+
+.panel {
+  position: fixed;
+  top: 7.5dvh;
+  left: 7.5vw;
+  z-index: var(--z-overlay);
+  display: flex;
+  flex-direction: column;
+  width: 85vw;
+  height: 85dvh;
+  overflow: hidden;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-float);
+  outline: none;
+  animation: panelIn var(--t-med) var(--ease-out);
+}
+
+@keyframes scrimIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.995);
+  }
+}
+
+/* Nearly full screen on phones */
+@media (max-width: 720px) {
+  .panel {
+    top: 8px;
+    left: 8px;
+    width: calc(100vw - 16px);
+    height: calc(100dvh - 16px);
+    border-radius: var(--r-lg);
+  }
+}

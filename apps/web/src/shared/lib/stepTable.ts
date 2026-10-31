@@ -80,16 +80,25 @@ export function csvText(flow: Flow, notes?: NoteLookup): string {
 }
 
 /**
- * Diagram text in a Markdown document: any reader shows it as words. With `<` and `[` escaped it
- * cannot open an HTML tag, a link or an image.
+ * Diagram text in a Markdown document: any reader shows it as words. With `<`, `[` and `]` escaped
+ * it cannot open an HTML tag, a link or an image; with the backslash escaped too, one in the text
+ * cannot undo the next escape. One pass, so nothing is escaped twice.
  */
 const mdText = (value: string): string =>
-  value.replace(/</g, '&lt;').replace(/\[/g, '\\[').replace(/\]/g, '\\]');
+  value.replace(/[\\[\]<]/g, (mark) => (mark === '<' ? '&lt;' : `\\${mark}`));
 
-/** A code span, which readers never treat as markup. No backtick inside can end it early. */
-const mdCode = (value: string): string => `\`${value.replace(/`/g, "'")}\``;
+/**
+ * A code span, which readers never treat as markup, so a backslash in it stays as it is. No
+ * backtick inside can end it early and no line end can break the table row.
+ */
+const mdCode = (value: string): string => `\`${value.replace(/`/g, "'").replace(/\r?\n/g, ' ')}\``;
 
-const mdCell = (value: string): string => value.replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
+/**
+ * Makes finished text or a finished code span fit in a table cell, leaving what `mdText` and
+ * `mdCode` wrote alone. A table reads a backslash and a pipe as a pipe in both.
+ */
+const mdCell = (value: string): string =>
+  value.replace(/\||\r?\n/g, (mark) => (mark === '|' ? '\\|' : '<br>'));
 
 export function markdownText(flow: Flow, options: TableOptions = {}): string {
   const { notes } = options;

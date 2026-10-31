@@ -1,0 +1,1 @@
+**The code always goes in the chat message, in one ```mermaid block.** Never an artifact, canvas, document or other file. Only when the code is over about 50 KB, write one `<flow-name>.seq.md` in the project and say where it is.

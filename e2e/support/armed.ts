@@ -104,6 +104,15 @@ export interface Armed {
 const isWeb = (url: string): boolean => /^https?:/i.test(url);
 
 /**
+ * Messages WebKit raises as errors on the page that are not code running: a layout observer that
+ * re-ran, and a cross-site fetch it refused (the refusal is the point of that test).
+ */
+const BROWSER_NOTICES = [
+  /^ResizeObserver loop completed with undelivered notifications\.$/,
+  /due to access control checks\.$/,
+];
+
+/**
  * Starts recording on a page, before it opens anything. Requests to other sites are refused here,
  * so a hostile page cannot reach the network even when an attack gets through.
  */
@@ -121,7 +130,11 @@ export async function arm(page: Page, baseURL: string | undefined): Promise<Arme
     });
   });
   page.on('console', (message) => armed.console.push(message.text()));
-  page.on('pageerror', (error) => armed.pageErrors.push(error.message));
+  page.on('pageerror', (error) => {
+    if (!BROWSER_NOTICES.some((notice) => notice.test(error.message))) {
+      armed.pageErrors.push(error.message);
+    }
+  });
   await page.route(
     (url) => isWeb(url.href) && url.origin !== origin,
     (route) => {
@@ -326,11 +339,20 @@ export async function walkEveryScreen(page: Page, steps: number): Promise<void> 
   await expect(page.getByTestId('note-view')).toContainText('onerror=');
 
   await key('i');
-  const insight = page.getByTestId('insight');
-  await expect(insight).toBeVisible();
-  const tabs = insight.getByRole('tab');
+  const tools = page.getByTestId('overlay');
+  await expect(tools).toBeVisible();
+  const tabs = tools.getByRole('tab');
+  await expect(tabs).not.toHaveCount(0);
   for (let i = 0; i < (await tabs.count()); i++) await tabs.nth(i).click();
-  await insight.getByRole('button', { name: 'Close the Insight panel' }).click();
+  await tools.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(tools).toBeHidden();
+  // The glossary was an Insight tab; it now sits in the Learn group.
+  await page.getByRole('button', { name: 'Learn', exact: true }).click();
+  await page.getByRole('menuitem', { name: /Glossary/ }).click();
+  await expect(tools).toBeVisible();
+  await tools.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(tools).toBeHidden();
+  await page.getByTestId('diagram').focus();
 
   await key('t');
   await expect(page.locator('#tableView table')).toBeVisible();

@@ -12,6 +12,8 @@ import type {
   SchemaRule,
   StateText,
   StepUses,
+  Threat,
+  ThreatLevel,
   Uses,
 } from './types.ts';
 import {
@@ -20,6 +22,8 @@ import {
   PAYLOAD_PARTS,
   SEQ_KEYWORD,
   STEP_TAGS,
+  THREAT_LEVELS,
+  THREAT_MAX_CHARS,
   wordTable,
 } from './vocabulary.ts';
 
@@ -36,6 +40,7 @@ interface Pending {
   state: { before: string[]; after: string[] };
   flags: Flags;
   unconfirmed: string[];
+  threats: Threat[];
   section: string | null;
   sectionLine: number;
   firstLine: number;
@@ -55,6 +60,7 @@ function newPending(): Pending {
     state: { before: [], after: [] },
     flags: {},
     unconfirmed: [],
+    threats: [],
     section: null,
     sectionLine: -1,
     firstLine: -1,
@@ -74,8 +80,22 @@ function hasStepContent(p: Pending): boolean {
     p.state.before.length > 0 ||
     p.state.after.length > 0 ||
     Object.keys(p.flags).length > 0 ||
-    p.unconfirmed.length > 0
+    p.unconfirmed.length > 0 ||
+    p.threats.length > 0
   );
+}
+
+const isThreatLevel = (word: string): word is ThreatLevel =>
+  (THREAT_LEVELS as readonly string[]).includes(word);
+
+/** `@threat <high|medium|low> <short text>`: null when the level or the text is missing. */
+export function parseThreat(value: string): Threat | null {
+  const trimmed = value.trim();
+  const gap = trimmed.search(/\s/);
+  if (gap < 0) return null;
+  const level = trimmed.slice(0, gap).toLowerCase();
+  const text = trimmed.slice(gap).trim();
+  return text && isThreatLevel(level) ? { level, text } : null;
 }
 
 /** `@uses <kind> <name> [path:line] <text>` */
@@ -256,6 +276,26 @@ export function parseAnnotations(code: string): Annotations {
       case 'unconfirmed':
         pending.unconfirmed.push(val || 'Not confirmed from the code');
         break;
+      case 'threat': {
+        const threat = parseThreat(val);
+        if (!threat) {
+          warn(
+            line,
+            '@threat needs a level (high, medium or low) and a short text: @threat high Token sent in the URL',
+            'threat-format',
+          );
+          break;
+        }
+        if (threat.text.length > THREAT_MAX_CHARS) {
+          warn(
+            line,
+            `@threat is ${threat.text.length} characters (keep it under ${THREAT_MAX_CHARS})`,
+            'long-threat',
+          );
+        }
+        pending.threats.push(threat);
+        break;
+      }
       default:
         if (isFlagTag(name)) pending.flags[name] = val || true;
         else {
@@ -323,6 +363,7 @@ export function parseAnnotations(code: string): Annotations {
         state: joinState(pending.state),
         flags: { ...pending.flags },
         unconfirmed: pending.unconfirmed.slice(),
+        threats: pending.threats.slice(),
         section: pending.section,
         sectionLine: pending.sectionLine,
         annLines: pending.lines.slice(),

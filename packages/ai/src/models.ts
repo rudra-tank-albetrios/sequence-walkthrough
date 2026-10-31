@@ -179,7 +179,7 @@ function askAiEntries(): { models: ModelEntry[]; chosenId: string } {
     models.push(entry);
   }
   const first = models[0];
-  return { models, chosenId: first && first.preset === chosen ? first.id : '' };
+  return { models, chosenId: first?.preset === chosen ? first.id : '' };
 }
 
 const isAskAiEntry = (entry: ModelEntry): boolean => entry.id.startsWith(V2_ID_PREFIX);

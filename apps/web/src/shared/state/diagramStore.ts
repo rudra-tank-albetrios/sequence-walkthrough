@@ -17,6 +17,8 @@ export interface DiagramState {
   /** Milliseconds the last render took. */
   lastRenderMs: number;
   zoom: number;
+  /** Pixels the floating header and bottom dock cover at the top and bottom of the canvas. */
+  insets: { top: number; bottom: number };
   /** Commands other features can send to the viewer. */
   commands: {
     zoomIn: () => void;
@@ -31,6 +33,7 @@ export interface DiagramState {
   setCommands: (commands: DiagramState['commands']) => void;
   setRendered: (patch: Partial<Pick<DiagramState, 'cleanSvg' | 'themeBg' | 'themeDark' | 'width' | 'height' | 'error' | 'rendering' | 'lastRenderMs'>>) => void;
   setZoom: (zoom: number) => void;
+  setInsets: (insets: DiagramState['insets']) => void;
 }
 
 const noop = () => {
@@ -47,6 +50,7 @@ export const useDiagramStore = create<DiagramState>((set) => ({
   rendering: false,
   lastRenderMs: 0,
   zoom: 1,
+  insets: { top: 0, bottom: 0 },
   commands: {
     zoomIn: noop,
     zoomOut: noop,
@@ -64,5 +68,8 @@ export const useDiagramStore = create<DiagramState>((set) => ({
   },
   setZoom(zoom) {
     set({ zoom });
+  },
+  setInsets(insets) {
+    set({ insets });
   },
 }));

@@ -1,5 +1,6 @@
 // The version 3 parser must reproduce what version 2 produced for every fixture (plan 7.1).
-// tools/golden records version 2's output; the differences below are deliberate, recorded fixes.
+// The goldens are version 2's recorded output (docs/decisions.md says which commit records more).
+// The differences below are deliberate, recorded fixes.
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -75,6 +76,10 @@ function withAllLayerKinds(golden: Golden): { layers: Record<string, Layer>; bou
   return { layers, boundaries };
 }
 
+/** Recorded difference 7: `@threat` is new, so the "known tags" message names it too. */
+const withThreatTag = (msg: string): string =>
+  msg.replace(/@unconfirmed\)$/, '@unconfirmed, @threat)');
+
 /** Version 2's flow brought to version 3's shape, with each deliberate difference named. */
 function normaliseGolden(golden: Golden): Omit<Flow, 'syntax'> {
   const flow = golden.flow;
@@ -90,7 +95,10 @@ function normaliseGolden(golden: Golden): Omit<Flow, 'syntax'> {
       ...step,
       fromName: flow.layers[step.from]?.name ?? step.fromName,
       toName: flow.layers[step.to]?.name ?? step.toName,
+      threats: [],
     })),
+    threats: [],
+    lint: flow.lint.map((entry) => ({ ...entry, msg: withThreatTag(entry.msg) })),
     // Recorded difference 3: endings are step indexes, not copies of the step objects.
     endings: flow.endings.map((step) => step.idx),
     // Recorded difference 2: a side part used twice on one step lists that step once.
