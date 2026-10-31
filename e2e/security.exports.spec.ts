@@ -73,7 +73,10 @@ async function expectMarkdownInert(
 ) {
   expect(markdown).toContain('onerror=');
   const rest = outsideCodeSpans(markdown);
-  expect(rest, `${what}: a link with a script address`).not.toMatch(/\]\s*\(\s*javascript:/i);
+  // An escaped bracket is text to a Markdown reader, so only a bare `](javascript:` is a link.
+  expect(rest, `${what}: a link with a script address`).not.toMatch(
+    /(?<!\\)\]\s*\(\s*javascript:/i,
+  );
   expect(rest, `${what}: an image`).not.toMatch(/!\[[^\]]*\]\(/);
   expect(rest, `${what}: a tag`).not.toMatch(/<(?!br>)[a-z!/?]/i);
   const armed = await openAsDocument(context, baseURL, rest, 'text/html');
@@ -100,8 +103,10 @@ test.describe('the exports of a hostile flow', () => {
     const text = bytes.toString('utf8');
     expect(text).toContain('<svg');
     expect(text).not.toMatch(/<script|<foreignObject|<iframe|<object|<embed/i);
-    expect(text).not.toMatch(/\son[a-z]+\s*=\s*["']/i);
-    expect(text).not.toMatch(/(?:href|src)\s*=\s*["']\s*(?:javascript|data):/i);
+    // The attack words are allowed as text between tags, never as attributes of a tag.
+    const tagsOnly = text.replace(/>[^<]*</g, '><');
+    expect(tagsOnly).not.toMatch(/\son[a-z]+\s*=\s*["']/i);
+    expect(tagsOnly).not.toMatch(/(?:href|src)\s*=\s*["']\s*(?:javascript|data):/i);
     await expectNothingRan(armed, 'making the SVG');
 
     for (const type of ['image/svg+xml', 'text/html']) {
@@ -142,10 +147,12 @@ sequenceDiagram
     expect(name).toMatch(/\.pdf$/);
     const text = bytes.toString('latin1');
     expect(text.startsWith('%PDF-')).toBe(true);
+    // jsPDF opens the file at page 1 with a plain destination; that is the only action allowed.
+    const openAction = /\/OpenAction\s*\[\s*\d+ 0 R \/(?:Fit|FitH|FitV|XYZ)[^\]]*\]/g;
+    expect(text.replace(openAction, '')).not.toMatch(/\/OpenAction[^A-Za-z]/);
     for (const word of [
       '/JavaScript',
       '/JS',
-      '/OpenAction',
       '/AA',
       '/Launch',
       '/URI',
@@ -161,7 +168,7 @@ sequenceDiagram
 
   test('Code is the exact text, as plain text', async ({ page, baseURL }) => {
     const armed = await openHostile(page, baseURL);
-    const { name, bytes } = await exported(page, 'Code');
+    const { name, bytes } = await exported(page, /^Code/);
     expect(name).toMatch(/\.mmd$/);
     expect(bytes.toString('utf8')).toBe(HOSTILE_FLOW);
     await expectNothingRan(armed, 'the code file');
@@ -259,14 +266,16 @@ sequenceDiagram
     const fromMenu = await exported(page, 'Step table');
     expectNoFormula(fromMenu.bytes.toString('utf8'));
 
-    await page.keyboard.press('t');
-    const table = page.locator('#tableView');
-    await table.getByRole('checkbox', { name: /notes/i }).check();
+    // The note is written on the step bar, which the table view replaces, as in version 2.
     await page.getByTestId('diagram').focus();
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('n');
     await page.getByTestId('note-ta').fill('=7+7');
     await page.keyboard.press('Escape');
+    await page.getByTestId('diagram').focus();
+    await page.keyboard.press('t');
+    const table = page.locator('#tableView');
+    await table.getByRole('checkbox', { name: /notes/i }).check();
     const fromTable = await saved(page, () =>
       table.getByRole('button', { name: 'Download CSV' }).click(),
     );
@@ -281,7 +290,7 @@ sequenceDiagram
   %% @title ../../evil<script>__pwned('name')</script>:*?"|\\
   A->>B: x`;
     const armed = await openHostile(page, baseURL, code);
-    for (const item of ['SVG', 'Code', 'Step table']) {
+    for (const item of ['SVG', /^Code/, 'Step table']) {
       const { name } = await exported(page, item);
       expect(name).not.toMatch(/[\\/:*?"<>|]/);
     }
@@ -351,7 +360,7 @@ test.describe('keys in exports', () => {
     await expect(dialog).toBeHidden();
 
     const made: Record<string, string> = {};
-    for (const item of ['SVG', '1×', 'Step image', 'Code', 'Step table']) {
+    for (const item of ['SVG', '1×', 'Step image', /^Code/, 'Step table']) {
       made[item] = (await exported(page, item)).bytes.toString('latin1');
     }
     made.PDF = (await exportedPdf(page, true)).bytes.toString('latin1');

@@ -46,19 +46,36 @@ function luminance(color: string): number {
 }
 
 /**
+ * CSS that came from the diagram (an `%%{init}%%` directive can set `themeCSS`) may not fetch
+ * anything: `@import` goes, and so does every `url()` that is not a reference into the SVG itself.
+ */
+function inertCss(css: string): string {
+  return css.replace(/@import[^;]*;?/gi, '').replace(/url\(\s*(?!['"]?#)[^)]*\)/gi, 'none');
+}
+
+/**
  * Pasted code is untrusted (plan section 4): Mermaid runs at `securityLevel: 'strict'` and every
  * SVG it produces goes through DOMPurify before it reaches the page. `name` is kept because Mermaid
- * marks participants with it, and `<style>` because the theme lives there.
+ * marks participants with it, and `<style>` because the theme lives there, made inert.
  */
 function sanitize(svg: string): string {
-  return DOMPurify.sanitize(svg, {
+  const clean = DOMPurify.sanitize(svg, {
     USE_PROFILES: { svg: true, svgFilters: true, html: true },
     ADD_TAGS: ['style'],
     ADD_ATTR: ['name', 'dominant-baseline', 'marker-end', 'marker-start'],
     FORBID_TAGS: ['script', 'iframe', 'object', 'embed'],
     FORBID_ATTR: ['onload', 'onerror', 'onclick', 'onmouseover', 'href', 'xlink:href'],
   });
+  return clean
+    .replace(
+      /(<style\b[^>]*>)([\s\S]*?)(<\/style>)/gi,
+      (_, open: string, css: string, close: string) => `${open}${inertCss(css)}${close}`,
+    )
+    .replace(/\sstyle="([^"]*)"/gi, (_, css: string) => ` style="${inertCss(css)}"`);
 }
+
+/** Mermaid's own default limit, checked here before Mermaid parses, so huge code is refused at once. */
+const MAX_TEXT_SIZE = 50_000;
 
 /** Draws the code with the given theme. Throws DiagramSyntaxError when Mermaid refuses it. */
 export async function renderDiagram(code: string, theme: string, id: string): Promise<RenderedDiagram> {
@@ -67,8 +84,7 @@ export async function renderDiagram(code: string, theme: string, id: string): Pr
     startOnLoad: false,
     theme: theme as NonNullable<MermaidConfig['theme']>,
     securityLevel: 'strict',
-    // Mermaid's own default, stated so the limit on pasted and dropped code is visible here.
-    maxTextSize: 50000,
+    maxTextSize: MAX_TEXT_SIZE,
   });
   let themeBg = theme.includes('dark') ? '#1e1e1e' : '#ffffff';
   try {
@@ -81,6 +97,11 @@ export async function renderDiagram(code: string, theme: string, id: string): Pr
     if (typeof background === 'string' && background !== 'transparent') themeBg = background;
   } catch {
     /* keep the fallback */
+  }
+  if (code.length > MAX_TEXT_SIZE) {
+    throw new DiagramSyntaxError(
+      `Maximum text size in diagram exceeded: ${code.length} characters, the limit is ${MAX_TEXT_SIZE}`,
+    );
   }
   try {
     await mermaid.parse(code);

@@ -93,6 +93,9 @@ export function endpointFor(settings: AiSettings): Endpoint {
 
 // A reply is untrusted data (plan section 4): only these shapes are read, and only as text. The
 // tree-shakeable zod/mini keeps the schemas a few hundred bytes within the first-load budget.
+// Zod would probe `Function('')` once to decide on compiling schemas; the page's policy forbids
+// eval and would report the probe, so it is told not to try.
+z.config({ jitless: true });
 
 /** The answer every OpenAI-style endpoint returns. */
 const ANSWER = z.object({

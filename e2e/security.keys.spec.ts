@@ -82,7 +82,12 @@ const keysInBrowser = (page: Page, keys: readonly string[] = ALL_SENTINELS) =>
       }
       if (holds(document.cookie)) found.push('cookie');
       if (holds(location.href)) found.push('address');
+      // The key field itself holds what was typed while its dialog is open; nothing else may.
+      const fields = [...document.querySelectorAll('input[type="password"]')];
+      const values = fields.map((el) => el.getAttribute('value'));
+      for (const el of fields) el.removeAttribute('value');
       if (holds(document.documentElement.outerHTML)) found.push('page markup');
+      fields.forEach((el, i) => { if (values[i] !== null) el.setAttribute('value', values[i]); });
       if (holds(document.title)) found.push('title');
       const asked = (request) =>
         new Promise((resolve, reject) => {
