@@ -58,6 +58,8 @@ function toBase64(bytes: Uint8Array): string {
 }
 
 function fontBase64(url: string): Promise<string> {
+  // The one-file build inlines the font files, and its policy allows no fetch of a data: URL.
+  if (url.startsWith('data:')) return Promise.resolve(url.slice(url.indexOf(',') + 1));
   let pending = cache.get(url);
   if (!pending) {
     pending = fetch(url).then(async (response) => {

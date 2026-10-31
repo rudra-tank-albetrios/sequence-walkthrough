@@ -1,5 +1,6 @@
 // The version 3 parser must reproduce what version 2 produced for every fixture (plan 7.1).
-// tools/golden records version 2's output; the differences below are deliberate, recorded fixes.
+// The goldens are version 2's recorded output (docs/decisions.md says which commit records more).
+// The differences below are deliberate, recorded fixes.
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 

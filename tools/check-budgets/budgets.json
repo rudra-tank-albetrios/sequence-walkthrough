@@ -5,6 +5,18 @@
       "kind": "first-load-js",
       "html": "apps/web/dist/index.html",
       "maxBytesGzip": 204800
+    },
+    {
+      "name": "One-file page to open from disk",
+      "kind": "file",
+      "path": "apps/web/dist-single/sequence-walkthrough.html",
+      "maxBytes": 16000000
+    },
+    {
+      "name": "One-file page for the Claude artifact",
+      "kind": "file",
+      "path": "apps/web/dist-single/sequence-viewer.html",
+      "maxBytes": 16000000
     }
   ]
 }

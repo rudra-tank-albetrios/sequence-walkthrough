@@ -12,8 +12,10 @@ import type { Plugin } from 'vite';
  * Same layout as version 2's kit: the skill-kit files at the root, the skill folder as
  * `sequence-walkthrough/` (what the install scripts expect) and `sequence-walkthrough.zip` for the
  * Claude app. Entries are sorted with a fixed timestamp, so the same sources give the same bytes.
+ * The website also publishes `sequence-walkthrough.zip` on its own, as version 2's did.
  */
 export const SKILL_KIT_FILE = 'sequence-walkthrough-skill-kit.zip';
+const SKILL_ZIP_FILE = 'sequence-walkthrough.zip';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const SKILL_DIR = resolve(ROOT, 'skill/sequence-walkthrough');
@@ -36,7 +38,7 @@ function walk(dir: string, base = dir): string[] {
   return out.sort();
 }
 
-function zipEntries(files: [name: string, data: Uint8Array][]): Uint8Array {
+export function zipEntries(files: [name: string, data: Uint8Array][]): Uint8Array {
   const entries: Zippable = {};
   for (const [name, data] of [...files].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))) {
     const mode = /\.(sh|py)$/.test(name) ? 0o100755 : 0o100644;
@@ -45,17 +47,23 @@ function zipEntries(files: [name: string, data: Uint8Array][]): Uint8Array {
   return zipSync(entries, { level: 9 });
 }
 
-export function buildSkillKit(): Uint8Array {
-  const skill: [string, Uint8Array][] = walk(SKILL_DIR).map((rel) => [
+const skillFiles = (): [string, Uint8Array][] =>
+  walk(SKILL_DIR).map((rel) => [
     `sequence-walkthrough/${rel}`,
     new Uint8Array(readFileSync(resolve(SKILL_DIR, rel))),
   ]);
+
+function buildSkillKit(): Uint8Array {
+  const skill = skillFiles();
   const kit: [string, Uint8Array][] = walk(KIT_DIR).map((rel) => [
     rel,
     new Uint8Array(readFileSync(resolve(KIT_DIR, rel))),
   ]);
-  return zipEntries([...kit, ...skill, ['sequence-walkthrough.zip', zipEntries(skill)]]);
+  return zipEntries([...kit, ...skill, [SKILL_ZIP_FILE, zipEntries(skill)]]);
 }
+
+/** The kit as text, for the one-file build to carry inside the page. */
+export const skillKitBase64url = (): string => Buffer.from(buildSkillKit()).toString('base64url');
 
 export function skillKit(): Plugin {
   // emitFile exists only in a build; the dev server (and Vitest) serve the zip through the middleware.
@@ -66,8 +74,9 @@ export function skillKit(): Plugin {
       building = config.command === 'build';
     },
     buildStart() {
-      if (building)
-        this.emitFile({ type: 'asset', fileName: SKILL_KIT_FILE, source: buildSkillKit() });
+      if (!building) return;
+      this.emitFile({ type: 'asset', fileName: SKILL_KIT_FILE, source: buildSkillKit() });
+      this.emitFile({ type: 'asset', fileName: SKILL_ZIP_FILE, source: zipEntries(skillFiles()) });
     },
     configureServer(server) {
       server.middlewares.use((req, res, next) => {

@@ -1,7 +1,6 @@
 # Build output
 dist/
 dist-single/
-dist-claude/
 coverage/
 
 # Dependencies
@@ -16,15 +15,11 @@ blob-report/
 .serena/
 *.tsbuildinfo
 
-# Python (version 2 build, removed in phase 4)
-__pycache__/
-*.pyc
-
 # OS and editor files
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
 
-# Local comparison output (tools/golden/src/compare.ts)
+# Local scratch output
 tmp/

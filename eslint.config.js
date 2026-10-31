@@ -52,11 +52,9 @@ export default defineConfig(
     '**/coverage/**',
     'playwright-report/**',
     'test-results/**',
-    // The version 2 app and skill, replaced phase by phase (plan section 6)
-    'src/**',
+    // The version 2 skill, replaced in phase 5
     'skill/**',
     'skill-kit/**',
-    'build.py',
     '**/*.d.ts',
   ]),
   js.configs.recommended,
