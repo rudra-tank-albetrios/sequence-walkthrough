@@ -47,7 +47,7 @@ const findingLine = (finding: ReviewFinding, index: number): string =>
     LINE_CHARS,
   );
 
-export interface ExplainedFinding {
+interface ExplainedFinding {
   finding: ReviewFinding;
   plain: string;
 }

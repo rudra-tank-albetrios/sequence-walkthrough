@@ -42,7 +42,7 @@ function parseJson(text: string): unknown {
   const body = text
     .trim()
     .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/, '');
+    .replace(/```$/, '');
   try {
     return JSON.parse(body) as unknown;
   } catch {

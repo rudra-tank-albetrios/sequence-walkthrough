@@ -71,10 +71,10 @@ async function errorDetail(res: Response): Promise<string> {
   }
 }
 
-export const TIMEOUT_MS = 45_000;
+const TIMEOUT_MS = 45_000;
 
 /** Reply tokens for one Ask AI answer, as version 2 set it. */
-export const ASK_MAX_TOKENS = 220;
+const ASK_MAX_TOKENS = 220;
 
 export interface CompleteOptions {
   /** Aborts the request, for example when a newer question replaces it. */
@@ -152,7 +152,7 @@ async function completeClaude(user: string, options: CompleteOptions): Promise<s
   return parsed.success ? parsed.data.text : '';
 }
 
-export const NETWORK_FAILURE = /failed to fetch|networkerror|load failed/i;
+const NETWORK_FAILURE = /failed to fetch|networkerror|load failed/i;
 
 /** The message shown when the browser could not reach the provider at all (CORS, offline). */
 export const unreachable = (provider: Provider): string =>

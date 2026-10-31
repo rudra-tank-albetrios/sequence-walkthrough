@@ -278,6 +278,15 @@ describe('known problems are found', () => {
     expect(new Set(cases.map(([rule]) => rule))).toEqual(new Set(REVIEW_RULES.map((r) => r.id)));
   });
 
+  it('reads a secret name inside a query key, but not three letters inside another word', () => {
+    const inside = cleanWith('API->>RT: POST /api/payments', 'API->>RT: POST /pay?client_secret=1');
+    expect(rulesFound(review(inside))).toContain('secret-exposed');
+    const whole = cleanWith('API->>RT: POST /api/payments', 'API->>RT: POST /pay?ssn=1');
+    expect(rulesFound(review(whole))).toContain('secret-exposed');
+    const word = cleanWith('API->>RT: POST /api/payments', 'API->>RT: POST /pay?businessName=x');
+    expect(rulesFound(review(word))).not.toContain('secret-exposed');
+  });
+
   it('finds a token in a queue and a real-looking credential', () => {
     const queued = review(
       small(

@@ -1,7 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page, type Route } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { DEMO_TITLE, demoFlow, open } from './helpers.ts';
+import { PROVIDER_URLS, storedAi } from './support/models.ts';
 
 // Plan section 10, row Review: known problems are found and a clean sample has no false threat.
 // Plan 8.11: two separate results, the rules on screen, the model cannot change the score, the
@@ -58,128 +59,88 @@ const PROBLEM_RULES = [
   'secret-exposed',
 ];
 
-/** Every layer in order, each step linked to code, and nothing wrong: the core tests' clean flow. */
+/** Every layer in order, kinds read from the names, every call linked to code, nothing wrong. */
 const CLEAN = `sequenceDiagram
-    %% @title Pay an invoice
-    %% @layer U kind=person The shopper.
-    %% @layer API kind=client Sends the request.
-    %% @layer RT kind=router Matches the path.
-    %% @layer MW kind=middleware Checks the session.
-    %% @layer VAL kind=validator Checks the body.
-    %% @layer CTL kind=controller Picks the status.
-    %% @layer SVC kind=service Holds the rules.
-    %% @layer REPO kind=repository Reads and writes.
-    %% @layer DB kind=db Stores rows.
-    %% @layer SER kind=serializer Shapes the reply.
-    %% @layer PAY kind=external Takes the money.
-    actor U as Shopper
-    participant API as API Client
-    participant RT as Routes
-    participant MW as Auth Middleware
-    participant VAL as Validator
-    participant CTL as Controller
-    participant SVC as Service
-    participant REPO as Repository
-    participant DB as Database
-    participant SER as Serializer
-    participant PAY as Payment Provider
-    %% @step The shopper presses Pay.
-    %% @ref src/pages/pay.ts:1
-    U->>API: Press Pay
-    %% @step The client posts the invoice id with the session header.
-    %% @payload.headers Authorization: Bearer abc
-    %% @payload.body { "invoiceId": "i_1" }
-    %% @ref src/api/client.ts:1
-    API->>RT: POST /api/payments
-    %% @step The route runs its middleware.
-    %% @ref src/routes/payments.ts:1
-    RT->>MW: requireUser
-    %% @step The session is valid, so the body is checked.
-    %% @ref src/middleware/auth.ts:1
-    MW->>VAL: next()
-    %% @step The body is valid, so the controller runs.
-    %% @ref src/validators/pay.ts:1
-    VAL->>CTL: pay(ctx)
-    %% @step The controller asks the service to pay.
-    %% @ref src/controllers/pay.ts:1
-    CTL->>SVC: pay(user, dto)
-    %% @step The service charges the card, with one retry.
-    %% @retry once on a network error
-    %% @ref src/services/pay.ts:1
-    SVC->>PAY: charge(i_1)
-    %% @step The provider answers.
-    %% @ref src/services/pay.ts:2
-    PAY-->>SVC: charged
-    %% @step The repository saves the payment and the invoice in one transaction.
-    %% @ref src/services/pay.ts:3
-    SVC->>REPO: save(payment, invoice)
-    %% @step Both rows are written together.
-    %% @payload.sql INSERT INTO payments (id) VALUES ('p_1')
-    %% @ref src/repositories/pay.ts:1
-    REPO->>DB: transaction: insert payment, update invoice
-    %% @step The saved rows come back.
-    %% @ref src/repositories/pay.ts:2
-    DB-->>REPO: rows
-    %% @step The repository returns the payment.
-    %% @ref src/repositories/pay.ts:3
-    REPO-->>SVC: payment
+    %% @spec walkthrough/2
+    %% @title Show an order
+    participant W as Web Client
+    participant RT as Router
+    participant AU as Auth Guard
+    participant VA as Validator
+    participant OC as Orders Controller
+    participant OS as Orders Service
+    participant OR as Orders Repository
+    participant PG as Postgres
+    participant SE as Order Serializer
+    %% @step The client asks for one order, with its session header.
+    %% @payload.headers Authorization: Bearer <session>
+    %% @ref src/web/orders.ts:10
+    W->>RT: GET /api/orders/42
+    %% @step The guard checks the session.
+    %% @ref src/http/guard.ts:5
+    RT->>AU: requireUser
+    %% @step The id is checked to be a number.
+    %% @ref src/http/validate.ts:8
+    AU->>VA: next()
+    %% @step The controller runs.
+    %% @ref src/orders/controller.ts:20
+    VA->>OC: show(ctx)
+    %% @step The service loads the order for this user.
+    %% @ref src/orders/service.ts:30
+    OC->>OS: findOrder(42, user)
+    %% @step The repository reads the row.
+    %% @ref src/orders/repository.ts:12
+    OS->>OR: findById(42)
+    %% @step One row is read.
+    %% @payload.sql SELECT * FROM orders WHERE id = 42
+    %% @ref src/orders/repository.ts:14
+    OR->>PG: SELECT order 42
+    %% @step The row comes back.
+    %% @ref src/orders/repository.ts:15
+    PG-->>OR: row
+    %% @step The order comes back.
+    %% @ref src/orders/repository.ts:16
+    OR-->>OS: order
     %% @step The service returns it.
-    %% @ref src/services/pay.ts:4
-    SVC-->>CTL: payment
-    %% @step The controller asks for the public shape.
-    %% @ref src/controllers/pay.ts:2
-    CTL->>SER: serializePayment(payment)
-    %% @step The public shape comes back.
-    %% @ref src/serializers/pay.ts:1
-    SER-->>CTL: public payment
-    %% @step The shopper's client gets the answer.
-    %% @payload.body { "id": "p_1", "status": "paid" }
-    %% @ref src/controllers/pay.ts:3
-    RT-->>API: 201 Created
-    %% @step The shopper sees it.
-    %% @ref src/pages/pay.ts:2
-    API-->>U: Paid`;
+    %% @ref src/orders/service.ts:33
+    OS-->>OC: order
+    %% @step The public shape is made.
+    %% @ref src/orders/serializer.ts:4
+    OC->>SE: toPublic(order)
+    %% @step The shape comes back.
+    %% @ref src/orders/serializer.ts:9
+    SE-->>OC: public order
+    %% @step The client gets the order.
+    %% @payload.body { "id": 42, "status": "shipped" }
+    %% @ref src/orders/controller.ts:24
+    RT-->>W: 200 OK`;
 
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
+const GROQ_URL = PROVIDER_URLS.groq;
 /** `swv:ai` as an earlier visit left it: Groq with a made-up key. */
-const AI_SETTINGS = JSON.stringify({
-  provider: 'groq',
-  keys: { groq: 'gsk_e2e' },
-  models: {},
-  customUrl: '',
-  includePayload: true,
-  autoNote: true,
-  mode: 'project',
-});
+const AI_SETTINGS = storedAi('groq', { keys: { groq: 'gsk_e2e' }, customUrl: '' });
 
 interface Sent {
   headers: Record<string, string>;
   body: { max_tokens: number; messages: { role: string; content: string }[] };
 }
 
-/** Answers the provider's address with one reply body and records what the page sent. */
+/** Answers Groq's address with one reply text and records every POST the page sent there. */
 async function mockModel(page: Page, content: string): Promise<Sent[]> {
   const sent: Sent[] = [];
-  await page.route(GROQ_URL, async (route: Route) => {
-    if (route.request().method() === 'OPTIONS') {
-      await route.fulfill({ status: 204, headers: CORS });
-      return;
-    }
-    sent.push({
-      headers: route.request().headers(),
-      body: JSON.parse(route.request().postData() ?? '{}') as Sent['body'],
-    });
-    await route.fulfill({
+  const allow = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+  await page.route(GROQ_URL, (route) => {
+    const request = route.request();
+    if (request.method() !== 'POST') return route.fulfill({ status: 204, headers: allow });
+    const body = JSON.parse(request.postData() ?? '{}') as Sent['body'];
+    sent.push({ headers: request.headers(), body });
+    return route.fulfill({
       status: 200,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ choices: [{ message: { content } }] }),
+      headers: { ...allow, 'Content-Type': 'application/json' },
+      json: { choices: [{ message: { content } }] },
     });
   });
   return sent;
@@ -280,7 +241,7 @@ test.describe('structure review', () => {
     await expect(findings(page)).toHaveText('The rules found nothing in this flow.');
     await expect(rules(page).locator('[data-status="found"]')).toHaveCount(0);
     await expect(dialog.getByTestId('review-explain')).toHaveCount(0);
-    // Every step links to code and every layer has a kind, but it is the first flow reviewed.
+    // Every call links to code and every layer has a kind, but it is the first flow reviewed.
     await expect(dialog.getByTestId('review-confidence')).toHaveText('Medium');
     await dialog.getByRole('tab', { name: 'Threats (0)' }).click();
     await expect(dialog.getByTestId('review-threats')).toContainText('does not mean it is safe');

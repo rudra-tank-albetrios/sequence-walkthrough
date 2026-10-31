@@ -2,15 +2,20 @@ import type { Step } from '../types.ts';
 import { kindOf, labelOf, payloadText, REAL_SECRET, repliesToCaller, type Facts } from './facts.ts';
 import type { Rule, RuleFinding } from './rule.ts';
 
-/** Names of values that must never travel in the open. `\w*` also catches `client_secret`, `passwordHash`. */
-const SECRET = String.raw`\w*(?:pass(?:word|wd|phrase)|pwd|secret|api[_-]?key|access[_-]?key|private[_-]?key|credential|cvv|card[_-]?number|ssn)\w*`;
+/**
+ * Names of values that must never travel in the open, found anywhere inside a name, so
+ * `client_secret` and `passwordHash` count. `ssn` alone is too short to look for inside words.
+ * No `\w*` around them: a quantifier next to text it could also match backtracks polynomially.
+ */
+const SECRET = String.raw`pass(?:word|wd|phrase)|pwd|secret|api[_-]?key|access[_-]?key|private[_-]?key|credential|cvv|card[_-]?number|(?<![a-z0-9])ssn(?![a-z0-9])`;
 /** Tokens are normal in a login reply or a header, but not in a URL, a log or a queue. */
-const SECRET_OR_TOKEN = String.raw`(?:${SECRET}|\w*token\w*|session[_-]?id)`;
+const SECRET_OR_TOKEN = String.raw`(?:${SECRET}|token|session[_-]?id)`;
 
-const IN_URL = new RegExp(String.raw`[?&]${SECRET_OR_TOKEN}=`, 'i');
-const NAMED = new RegExp(String.raw`\b${SECRET_OR_TOKEN}\b`, 'i');
-/** A field holding a secret in a reply: `"password": …`, `apiKey=…`. */
-const SECRET_FIELD = new RegExp(String.raw`["']?\b${SECRET}\b["']?\s*[:=]`, 'i');
+/** Every key of a query string: `?a=1&b=2` gives `a` and `b`. A key holds no `=`, so this is linear. */
+const QUERY_KEY = /[?&]([^=&\s]+)=/g;
+const NAMED = new RegExp(SECRET_OR_TOKEN, 'i');
+/** A field holding a secret in a reply: `"password": …`, `apiKey=…`, `passwordHash: …`. */
+const SECRET_FIELD = new RegExp(String.raw`(?:${SECRET})\w*["']?\s*[:=]`, 'i');
 
 /** "Logs the password" is a log. "Logs the user in" is not. */
 const LOG_WORD = /\b(logger|logging|logs?|logged)\b(?!\s+(?:\w+\s+){0,2}(?:in|out)\b)/i;
@@ -18,8 +23,9 @@ const LOGGER_NAME = /\b(logger|logs?|logging|audit)\b/i;
 
 /** Everything a step writes in a URL: the path in its label and its query payload. */
 function urlProblem(step: Step): boolean {
+  const keys = [...step.label.join(' ').matchAll(QUERY_KEY)].map((match) => match[1] ?? '');
   return (
-    IN_URL.test(step.label.join(' ')) ||
+    keys.some((key) => NAMED.test(key)) ||
     step.payloads.some((p) => p.part === 'query' && NAMED.test(p.text))
   );
 }

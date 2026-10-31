@@ -90,9 +90,11 @@ const isThreatLevel = (word: string): word is ThreatLevel =>
 
 /** `@threat <high|medium|low> <short text>`: null when the level or the text is missing. */
 export function parseThreat(value: string): Threat | null {
-  const match = /^(\S+)\s+(.+)$/.exec(value.trim());
-  const level = match?.[1]?.toLowerCase() ?? '';
-  const text = match?.[2]?.trim();
+  const trimmed = value.trim();
+  const gap = trimmed.search(/\s/);
+  if (gap < 0) return null;
+  const level = trimmed.slice(0, gap).toLowerCase();
+  const text = trimmed.slice(gap).trim();
   return text && isThreatLevel(level) ? { level, text } : null;
 }
 

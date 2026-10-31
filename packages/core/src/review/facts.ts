@@ -68,7 +68,7 @@ export const payloadText = (step: Step): string => step.payloads.map((p) => p.te
 
 /** Shapes of real credentials from well-known services, and private key blocks. */
 export const REAL_SECRET =
-  /\b(?:[sr]k_live_[0-9a-z]{8,}|AKIA[0-9A-Z]{16}|gh[pousr]_[0-9A-Za-z]{20,}|xox[abprs]-[0-9A-Za-z-]{10,}|eyJ[\w-]{10,}\.[\w-]{10,}\.[\w-]{5,})\b|-----BEGIN [A-Z ]*PRIVATE KEY-----/i;
+  /\b(?:[sr]k_live_[0-9a-z]{8,}|AKIA[0-9A-Z]{16}|gh[pousr]_[0-9A-Za-z]{20,}|xox[abprs]-[0-9A-Za-z-]{10,}|eyJ[\w-]{10,}\.[\w-]{10,}\.[\w-]{5,})\b|-----BEGIN [A-Z ]{0,40}PRIVATE KEY-----/i;
 
 const ANY_REAL_SECRET = new RegExp(REAL_SECRET.source, 'gi');
 
