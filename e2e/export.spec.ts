@@ -40,7 +40,7 @@ const MENU_ITEMS = [
 ];
 
 const CSV_HEADER =
-  'Step,Chapter,From,To,Kind,Status,Sends,Does,Branch,Payload,Also involved,Effects,Unconfirmed,Ref';
+  'Step,Chapter,From,To,Kind,Status,Sends,Does,Branch,Payload,Also involved,Effects,Unconfirmed,Threats,Ref';
 
 const BOM = String.fromCharCode(0xfeff);
 
@@ -407,7 +407,8 @@ test.describe('import', () => {
 test.describe('saving and copying', () => {
   test('F16 without a drawing there is nothing to export', async ({ page }) => {
     await page.route(/\/assets\/.*\.js$/, async (route) => {
-      if (/\/assets\/index-[^/]*\.js$/.test(route.request().url())) await route.continue();
+      if (/\/assets\/(?:index|rolldown-runtime)-[^/]*\.js$/.test(route.request().url()))
+        await route.continue();
       else await route.abort();
     });
     await page.goto('/');

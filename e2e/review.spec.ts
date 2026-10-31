@@ -301,12 +301,19 @@ test.describe('structure review', () => {
 
   test('Esc closes it and focus goes back to the button that opened it', async ({ page }) => {
     await open(page, { code: FLOW });
-    await openReview(page);
+    // By keyboard: WebKit does not focus a button on a mouse click, so there would be nothing to
+    // give back. The other browsers do, and the shared Dialog treats both ways the same.
+    const opener = page.getByRole('button', { name: 'Review this flow' });
+    await opener.focus();
+    await page.keyboard.press('Enter');
+    await expect(review(page)).toBeVisible();
+    // The open dialog hides the page from the accessibility tree, so this one looks by attribute.
+    await expect(page.locator('[data-open="review"]')).not.toBeFocused();
 
     await page.keyboard.press('Escape');
 
     await expect(review(page)).toBeHidden();
-    await expect(page.getByRole('button', { name: 'Review this flow' })).toBeFocused();
+    await expect(opener).toBeFocused();
   });
 
   test('the ⋯ menu opens it too, on a narrow window', async ({ page }) => {

@@ -467,9 +467,11 @@ test.describe('diagram', () => {
   });
 
   test('D28 says so when Mermaid cannot be loaded', async ({ page }) => {
-    // Only the page's own entry may load: the drawing library comes in a later chunk.
+    // Only the page's own entry and the runtime it imports may load: the drawing library comes in
+    // a later chunk.
     await page.route(/\/assets\/.*\.js$/, async (route) => {
-      if (/\/assets\/index-[^/]*\.js$/.test(route.request().url())) await route.continue();
+      if (/\/assets\/(?:index|rolldown-runtime)-[^/]*\.js$/.test(route.request().url()))
+        await route.continue();
       else await route.abort();
     });
     await page.goto('/');

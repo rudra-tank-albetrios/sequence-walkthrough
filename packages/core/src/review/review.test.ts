@@ -327,6 +327,25 @@ describe('what a finding says', () => {
     expect(said).not.toContain('hunter2');
     expect(said).not.toContain(fake);
   });
+
+  it('never repeats a label that names a secret, or a password inside an address', () => {
+    const { findings } = review(
+      small(
+        'participant S as Service',
+        'participant L as Logger',
+        'participant E as Payment Provider',
+        '%% @layer E kind=external Takes the money.',
+        'S->>L: password=hunter2',
+        'S->>E: GET https://ann:hunter3@pay.example/charge',
+      ),
+    );
+    expect(findings.map((finding) => finding.rule)).toContain('secret-exposed');
+    const said = findings.map((finding) => finding.message).join(' ');
+    expect(said).toContain('This call: a secret or token is written to a log.');
+    expect(said).toContain('GET https://pay.example/charge');
+    expect(said).not.toContain('hunter2');
+    expect(said).not.toContain('hunter3');
+  });
 });
 
 describe('the rating', () => {

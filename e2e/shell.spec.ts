@@ -126,6 +126,7 @@ test.describe('layout, theme and motion', () => {
       'Switch to table view',
       'Insight panel',
       'Ask AI settings',
+      'Review this flow',
       'Find',
       'Fit width',
       'Fit all',

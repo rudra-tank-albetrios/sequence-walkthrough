@@ -73,12 +73,37 @@ export const REAL_SECRET =
 const ANY_REAL_SECRET = new RegExp(REAL_SECRET.source, 'gi');
 
 /**
- * A step as a finding names it: the method and path, or its label on one line. Findings go on
- * screen and to the user's model, so query values and credential-like text stay out of them.
+ * Names of values that must never travel in the open, found anywhere inside a name, so
+ * `client_secret` and `passwordHash` count. `ssn` alone is too short to look for inside words.
+ * No `\w*` around them: a quantifier next to text it could also match backtracks polynomially.
+ */
+export const SECRET = String.raw`pass(?:word|wd|phrase)|pwd|secret|api[_-]?key|access[_-]?key|private[_-]?key|credential|cvv|card[_-]?number|(?<![a-z0-9])ssn(?![a-z0-9])`;
+/** Tokens are normal in a login reply or a header, but not in a URL, a log or a queue. */
+const SECRET_OR_TOKEN = String.raw`(?:${SECRET}|token|session[_-]?id)`;
+
+/** Names a secret or a token anywhere in a text. */
+export const NAMED = new RegExp(SECRET_OR_TOKEN, 'i');
+
+/** A word without its query string, when it has one: `/a?b=c` gives `/a`. */
+const withoutQuery = (word: string): string => {
+  const mark = word.indexOf('?');
+  return mark >= 0 && word.includes('=') ? word.slice(0, mark) : word;
+};
+
+/**
+ * A step as a finding names it. Findings go on screen and to the user's model, so a query string,
+ * a password inside an address, credential-like text and any label that names a secret stay out:
+ * `password=hunter2` as a label is said as "This call".
  */
 export function labelOf(step: Step): string {
-  const label = step.http ? `${step.http.method} ${step.http.path}` : step.label.join(' ').trim();
-  return label.replace(/\?[^\s=]+=\S*/g, '').replace(ANY_REAL_SECRET, '[hidden]') || 'This call';
+  if (step.http) {
+    const address = withoutQuery(step.http.path).replace(/\/\/[^/@\s]*@/, '//');
+    return `${step.http.method} ${address}`.replace(ANY_REAL_SECRET, '[hidden]');
+  }
+  const label = step.label.join(' ').trim();
+  if (NAMED.test(label)) return 'This call';
+  const words = label.split(/\s+/).map(withoutQuery).join(' ');
+  return words.replace(ANY_REAL_SECRET, '[hidden]') || 'This call';
 }
 
 /** Whether a reply leaves the backend: it goes to the client, or it answers an HTTP call. */

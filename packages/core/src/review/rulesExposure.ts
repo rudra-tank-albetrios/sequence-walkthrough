@@ -1,19 +1,18 @@
 import type { Step } from '../types.ts';
-import { kindOf, labelOf, payloadText, REAL_SECRET, repliesToCaller, type Facts } from './facts.ts';
+import {
+  kindOf,
+  labelOf,
+  NAMED,
+  payloadText,
+  REAL_SECRET,
+  repliesToCaller,
+  SECRET,
+  type Facts,
+} from './facts.ts';
 import type { Rule, RuleFinding } from './rule.ts';
-
-/**
- * Names of values that must never travel in the open, found anywhere inside a name, so
- * `client_secret` and `passwordHash` count. `ssn` alone is too short to look for inside words.
- * No `\w*` around them: a quantifier next to text it could also match backtracks polynomially.
- */
-const SECRET = String.raw`pass(?:word|wd|phrase)|pwd|secret|api[_-]?key|access[_-]?key|private[_-]?key|credential|cvv|card[_-]?number|(?<![a-z0-9])ssn(?![a-z0-9])`;
-/** Tokens are normal in a login reply or a header, but not in a URL, a log or a queue. */
-const SECRET_OR_TOKEN = String.raw`(?:${SECRET}|token|session[_-]?id)`;
 
 /** Every key of a query string: `?a=1&b=2` gives `a` and `b`. A key holds no `=`, so this is linear. */
 const QUERY_KEY = /[?&]([^=&\s]+)=/g;
-const NAMED = new RegExp(SECRET_OR_TOKEN, 'i');
 /** A field holding a secret in a reply: `"password": …`, `apiKey=…`, `passwordHash: …`. */
 const SECRET_FIELD = new RegExp(String.raw`(?:${SECRET})\w*["']?\s*[:=]`, 'i');
 
