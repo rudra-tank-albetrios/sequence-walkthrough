@@ -402,7 +402,7 @@ const App = {
 Keep every arrow, label and the arrow order exactly as they are. Only add or fix annotations.
 
 ${missing.length ? `Add a %% @step line (what happens and why, 1-2 sentences) directly above these arrows:\n${missing.map((s) => `- Step ${s.n}, line ${s.line + 1}: ${route(s)}: ${s.label.join(' / ')}`).join('\n')}\n` : 'Every arrow already has a @step.\n'}${other.length ? `\nAlso fix these notes from the viewer:\n${other.map((l) => `- Line ${l.line + 1}: ${l.msg}`).join('\n')}\n` : ''}
-Check it by piping it into validate.py on stdin (don't create a file), then return the full updated code in one \`\`\`mermaid block.
+Return the full updated code in one \`\`\`mermaid block.
 
 \`\`\`mermaid
 ${el.code.value}
