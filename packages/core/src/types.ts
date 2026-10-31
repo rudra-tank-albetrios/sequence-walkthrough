@@ -59,6 +59,20 @@ export type FlagTag = 'async' | 'retry' | 'timeout' | 'idempotent';
 /** `@async`, `@retry 3×` and so on: the text, or `true` when the tag has none. */
 export type Flags = Partial<Record<FlagTag, string | true>>;
 
+/** How serious a `@threat` line says a possible problem is. */
+export type ThreatLevel = 'high' | 'medium' | 'low';
+
+/** `@threat <high|medium|low> <short text>`: a possible problem seen in the code, on its step. */
+export interface Threat {
+  level: ThreatLevel;
+  text: string;
+}
+
+/** A `@threat` line with the step it belongs to, collected over the whole flow. */
+export interface FlowThreat extends Threat {
+  step: number;
+}
+
 export interface LintEntry {
   line: number;
   msg: string;
@@ -85,14 +99,8 @@ export interface LayerAnnotation {
   line: number;
 }
 
-/** One arrow line with the step-level annotations that were written above it. */
-export interface AnnotatedArrow {
-  line: number;
-  left: string;
-  text: string;
-  step: string;
-  stepLine: number;
-  payloads: AnnotatedPayload[];
+/** The step-level tags written above one arrow, as the annotations collect them and the step keeps them. */
+export interface StepTags {
   refs: string[];
   uses: StepUses[];
   effects: string[];
@@ -101,6 +109,17 @@ export interface AnnotatedArrow {
   state: StateText;
   flags: Flags;
   unconfirmed: string[];
+  threats: Threat[];
+}
+
+/** One arrow line with the step-level annotations that were written above it. */
+export interface AnnotatedArrow extends StepTags {
+  line: number;
+  left: string;
+  text: string;
+  step: string;
+  stepLine: number;
+  payloads: AnnotatedPayload[];
   section: string | null;
   sectionLine: number;
   annLines: number[];
@@ -211,7 +230,7 @@ export interface Status {
 
 export type StepKind = 'request' | 'reply' | 'self';
 
-export interface Step {
+export interface Step extends StepTags {
   idx: number;
   n: number;
   line: number;
@@ -226,14 +245,6 @@ export interface Step {
   explain: string;
   payloads: Payload[];
   payload: string;
-  refs: string[];
-  uses: StepUses[];
-  effects: string[];
-  fields: FieldNote[];
-  schema: SchemaRule[];
-  state: StateText;
-  flags: Flags;
-  unconfirmed: string[];
   http: HttpCall | null;
   status: Status | null;
   section: number;
@@ -289,6 +300,7 @@ export interface Flow {
   /** Step indexes of the replies to the main request. */
   endings: number[];
   unconfirmed: number;
+  threats: FlowThreat[];
   boundaries: Boundary[];
   main: number;
   syntax: SyntaxIssue[];

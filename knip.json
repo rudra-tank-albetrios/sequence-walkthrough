@@ -28,6 +28,10 @@
         "src/**/*.ts"
       ]
     },
+    "tools/build-skills": {
+      "entry": ["src/index.ts", "src/*-cli.ts"],
+      "project": ["src/**/*.ts"]
+    },
     "examples/*": {
       "entry": [
         "src/backend/app/app.ts",

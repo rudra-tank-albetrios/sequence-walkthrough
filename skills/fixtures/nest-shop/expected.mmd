@@ -1,0 +1,115 @@
+sequenceDiagram
+    %% @spec walkthrough/2
+    %% @title Place an order
+    %% @trigger The client posts a new order to the shop API.
+    %% @layer FE kind=client The caller of the API, outside this project.
+    %% @layer APP kind=app src/main.ts boots Nest with the api prefix and the global pipe.
+    %% @layer MW kind=middleware src/auth/jwt-auth.guard.ts the guard on the route.
+    %% @layer VAL kind=validator src/orders/dto/create-order.dto.ts checked by the ValidationPipe.
+    %% @layer CTRL kind=controller src/orders/orders.controller.ts the route decorators and handler.
+    %% @layer SVC kind=service src/orders/orders.service.ts business rules.
+    %% @layer REPO kind=repository src/orders/orders.repository.ts the only Prisma calls.
+    %% @layer DB kind=db Postgres, through Prisma in src/prisma/prisma.service.ts.
+    %% @layer DTO kind=dto src/orders/dto/order-response.dto.ts the reply shape.
+    autonumber
+    participant FE as Client
+    participant APP as App
+    participant MW as Middleware
+    participant VAL as Validator
+    participant CTRL as Controller
+    participant SVC as Service
+    participant REPO as Repository
+    participant DB as Database
+    participant DTO as DTO
+
+    %% @section Check the request
+    %% @summary The guard and the pipe run before the handler.
+    %% @step The client sends the new order with its bearer token.
+    %% @payload.headers Authorization: Bearer <token>
+    %% @payload.body { sku, qty }
+    %% @ref src/main.ts:8
+    FE->>APP: POST /api/orders
+    %% @step The route's guard runs first.
+    %% @ref src/orders/orders.controller.ts:13
+    APP->>MW: JwtAuthGuard.canActivate()
+    %% @step The guard turns the Authorization header into the session.
+    %% @uses util readSession src/auth/session.ts:3 Looks the bearer token up in the sessions map.
+    %% @ref src/auth/jwt-auth.guard.ts:9
+    MW->>MW: readSession(request.headers.authorization)
+    alt no session for the token
+        %% @step The guard throws, and Nest answers with the exception's status.
+        %% @ref src/auth/jwt-auth.guard.ts:11
+        MW-->>APP: throw new UnauthorizedException("Invalid session")
+        %% @step The client gets 401 with the message.
+        %% @payload.body { statusCode, message, error }
+        %% @ref src/auth/jwt-auth.guard.ts:11
+        APP-->>FE: 401 Unauthorized<br/>"Invalid session"
+    end
+    %% @step The global ValidationPipe checks the body against the DTO's rules.
+    %% @ref src/main.ts:9
+    APP->>VAL: ValidationPipe({ whitelist: true })
+    %% @step sku must be a string and qty a whole number of at least 1.
+    %% @ref src/orders/dto/create-order.dto.ts:3
+    VAL->>VAL: CreateOrderDto rules
+    alt the body breaks a rule
+        %% @step The pipe rejects the request before the handler runs.
+        %% @ref src/main.ts:9
+        VAL-->>APP: throw new BadRequestException(messages)
+        %% @step The client gets 400 with one message per broken rule.
+        %% @ref src/main.ts:9
+        APP-->>FE: 400 Bad Request<br/>validation messages
+    end
+    %% @step The handler receives the user set by the guard and the typed body.
+    %% @ref src/orders/orders.controller.ts:15
+    APP->>CTRL: OrdersController.create(req, dto)
+
+    %% @section Place the order
+    %% @summary The service checks stock, then saves the order.
+    %% @step The controller passes the user id and the DTO to the service.
+    %% @ref src/orders/orders.controller.ts:16
+    CTRL->>SVC: OrdersService.place(req.user.id, dto)
+    %% @step The service needs the item's stock and price.
+    %% @ref src/orders/orders.service.ts:12
+    SVC->>REPO: findItem(dto.sku)
+    %% @step One Prisma query reads the item.
+    %% @ref src/orders/orders.repository.ts:10
+    REPO->>DB: prisma.item.findUnique({ where: { sku } })
+    %% @step The item comes back, or null when the sku is unknown.
+    DB-->>REPO: item or null
+    %% @step The item decides whether the order can be placed.
+    REPO-->>SVC: item or null
+    alt no item, or stock below qty
+        %% @step The service throws a conflict, and Nest answers with it.
+        %% @ref src/orders/orders.service.ts:14
+        SVC-->>APP: throw new ConflictException("Sold out")
+        %% @step The client gets 409 with the message.
+        %% @ref src/orders/orders.service.ts:14
+        APP-->>FE: 409 Conflict<br/>"Sold out"
+    end
+    %% @step The order is saved with state open and amount price × qty.
+    %% @ref src/orders/orders.service.ts:16
+    SVC->>REPO: create(userId, sku, qty, amount)
+    %% @step One Prisma create writes the order and returns the row.
+    %% @ref src/orders/orders.repository.ts:14
+    REPO->>DB: prisma.order.create({ data: { userId, sku, qty, amount, state } })
+    %% @step The saved row comes back.
+    DB-->>REPO: order
+    %% @step The service gets the saved order.
+    REPO-->>SVC: order
+
+    %% @section Reply
+    %% @summary The response DTO shapes what the client sees.
+    %% @step The service maps the row to the reply shape.
+    %% @ref src/orders/orders.service.ts:17
+    SVC->>DTO: OrderResponseDto.from(order)
+    %% @step Three fields, nothing internal.
+    DTO-->>SVC: { ref, state, amount }
+    %% @step The controller gets the DTO to return.
+    SVC-->>CTRL: OrderResponseDto
+    %% @step The handler returns the DTO, and HttpCode sets the status.
+    %% @ref src/orders/orders.controller.ts:14
+    CTRL-->>APP: return dto with @HttpCode(201)
+    %% @step The client gets 201 Created with the new order.
+    %% @payload.body { ref, state, amount }
+    %% @ref src/orders/orders.controller.ts:14
+    APP-->>FE: 201 Created

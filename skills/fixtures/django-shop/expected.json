@@ -1,0 +1,27 @@
+{
+  "framework": "Django",
+  "prompt": "Diagram this flow: placing an order.",
+  "request": {
+    "method": "POST",
+    "path": "/api/orders/",
+    "evidence": [
+      ["shop/urls.py", "path('api/', include('orders.urls'))"],
+      ["orders/urls.py", "path('orders/', views.create_order)"]
+    ]
+  },
+  "layers": ["middleware", "router", "validator", "controller", "service", "db", "serializer"],
+  "statuses": {
+    "201": ["orders/views.py", "status=201"],
+    "400": ["orders/views.py", "status=400"],
+    "401": ["orders/middleware.py", "status=401"],
+    "409": ["orders/views.py", "status=409"]
+  },
+  "messages": {
+    "401": ["orders/middleware.py", "Session required"],
+    "409": ["orders/views.py", "No stock left"]
+  },
+  "requestFields": { "file": "orders/serializers.py", "fields": ["item_code", "amount"] },
+  "replyFields": { "file": "orders/serializers.py", "fields": ["reference", "state", "grand_total"] },
+  "names": ["SessionTokenMiddleware", "create_order", "NewOrderSerializer", "place_order", "OrderSerializer"],
+  "offPath": ["reports/views.py", "reports/urls.py", "orders/tests.py"]
+}
