@@ -1,0 +1,43 @@
+.pop {
+  position: absolute;
+  top: 10px;
+  right: 16px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-1), var(--shadow-2);
+}
+
+.pop input {
+  width: 260px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+
+.count {
+  min-width: 64px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .pop {
+    left: 16px;
+    right: 16px;
+  }
+
+  .pop input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+}

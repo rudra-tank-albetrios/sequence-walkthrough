@@ -1,5 +1,5 @@
 import { parseArrowLeft } from './arrows.ts';
-import { ENTITY_AT_START, splitStatements } from './statements.ts';
+import { ENTITY_AT_START, skipFrontMatter, splitStatements } from './statements.ts';
 import type { BlockKind, Branch, Participant, SequenceInfo } from './types.ts';
 import { BLOCK_MID, BLOCK_START, RESERVED_ALIASES } from './vocabulary.ts';
 
@@ -30,6 +30,12 @@ interface OpenBlock {
   first: boolean;
   line: number;
 }
+
+/**
+ * How many open blocks an arrow remembers. No real diagram nests this deep, and every arrow keeps
+ * a copy of its blocks, so without a limit a few kilobytes of `alt` lines fill the browser's memory.
+ */
+const MAX_BRANCH_DEPTH = 32;
 
 const DRAWING_HINTS = new Set([
   'destroy',
@@ -171,6 +177,7 @@ export function parseSequence(code: string): SequenceInfo | null {
     addParticipant(arrow.from, arrow.from, 'participant');
     addParticipant(arrow.to, arrow.to, 'participant');
     const branch: Branch[] = stack
+      .slice(0, MAX_BRANCH_DEPTH)
       .filter((b): b is OpenBlock & { kind: BlockKind } => b.kind !== 'box' && b.kind !== 'rect')
       .map((b) => ({ id: b.id, kind: b.kind, label: b.label, first: b.first }));
     info.arrows.push({
@@ -185,13 +192,3 @@ export function parseSequence(code: string): SequenceInfo | null {
   }
 }
 
-/** The index of the first line after a `--- ... ---` front matter block, or 0. */
-function skipFrontMatter(lines: string[]): number {
-  let i = 0;
-  while (i < lines.length && !lines[i]?.trim()) i++;
-  if (lines[i]?.trim() !== '---') return 0;
-  for (let j = i + 1; j < lines.length; j++) {
-    if (lines[j]?.trim() === '---') return j + 1;
-  }
-  return 0;
-}
