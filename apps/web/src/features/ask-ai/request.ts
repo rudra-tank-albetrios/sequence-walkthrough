@@ -1,4 +1,5 @@
 import type { Flow, Step } from '@swv/core';
+import { z } from 'zod';
 
 import type { GlossaryEntry } from '../../shared/state/glossaryStore.ts';
 import { hasClaudeHost, modelFor, type AiSettings } from './aiSettings.ts';
@@ -90,18 +91,28 @@ export function endpointFor(settings: AiSettings): Endpoint {
   return { provider, url, model: modelFor(settings), key: settings.keys[provider.id] ?? '' };
 }
 
-const get = (value: unknown, ...keys: (string | number)[]): unknown =>
-  keys.reduce<unknown>(
-    (v, k) => (typeof v === 'object' && v !== null ? (v as Record<string | number, unknown>)[k] : undefined),
-    value,
-  );
+// A reply is untrusted data (plan section 4): only these shapes are read, and only as text.
+
+/** The answer every OpenAI-style endpoint returns. */
+const ANSWER = z.object({
+  choices: z.array(z.object({ message: z.object({ content: z.string() }) })).min(1),
+});
+
+/** The two shapes providers use for an error body. */
+const ERROR_BODY = z.union([
+  z.object({ error: z.object({ message: z.string() }) }).transform((v) => v.error.message),
+  z.object({ message: z.string() }).transform((v) => v.message),
+]);
+
+/** What the artifact host's sampler resolves with. */
+const HOST_REPLY = z.object({ text: z.string() });
 
 async function errorDetail(res: Response): Promise<string> {
   const text = await res.text().catch(() => '');
   try {
     const json: unknown = JSON.parse(text);
-    const message = get(json, 'error', 'message') ?? get(json, 'message');
-    return typeof message === 'string' ? message : JSON.stringify(json).slice(0, 200);
+    const message = ERROR_BODY.safeParse(json);
+    return message.success ? message.data : JSON.stringify(json).slice(0, 200);
   } catch {
     return text.slice(0, 200);
   }
@@ -151,8 +162,9 @@ async function completeHttp(endpoint: Endpoint, user: string, options: CompleteO
       const detail = await errorDetail(res);
       throw new Error(`${res.status} ${res.statusText}${detail ? `: ${detail.slice(0, 240)}` : ''}`);
     }
-    const text = get((await res.json()) as unknown, 'choices', 0, 'message', 'content');
-    if (typeof text !== 'string' || !text) throw new Error('The provider sent no answer text');
+    const answer = ANSWER.safeParse((await res.json()) as unknown);
+    const text = answer.success ? (answer.data.choices[0]?.message.content ?? '') : '';
+    if (!text) throw new Error('The provider sent no answer text');
     return text;
   } finally {
     clearTimeout(timer);
@@ -164,7 +176,7 @@ async function completeHttp(endpoint: Endpoint, user: string, options: CompleteO
 type ClaudeSampler = (
   messages: readonly { role: 'user'; content: string }[],
   options: { modelTier: 'quick'; cache: boolean },
-) => Promise<{ text?: string }>;
+) => Promise<unknown>;
 interface ClaudeHost {
   use(capability: 'sample'): Promise<ClaudeSampler>;
 }
@@ -176,7 +188,8 @@ async function completeClaude(user: string): Promise<string> {
   const host = (window as unknown as { claude: ClaudeHost }).claude;
   const sample = await host.use('sample');
   const reply = await sample([{ role: 'user', content: `${AI_SYSTEM}\n\n${user}` }], { modelTier: 'quick', cache: false });
-  return typeof reply.text === 'string' ? reply.text : '';
+  const parsed = HOST_REPLY.safeParse(reply);
+  return parsed.success ? parsed.data.text : '';
 }
 
 export const NETWORK_FAILURE = /failed to fetch|networkerror|load failed/i;

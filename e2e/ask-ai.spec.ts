@@ -286,7 +286,7 @@ test.describe('Ask AI', () => {
     await key.fill('test-key-123');
     await settings.getByRole('button', { name: 'Show the key' }).click();
     await expect(key).toHaveAttribute('type', 'text');
-    await expect(settings.getByLabel('Model')).toHaveValue('gemini-2.5-flash');
+    await expect(settings.getByLabel('Model', { exact: true })).toHaveValue('gemini-2.5-flash');
 
     await settings.getByRole('radio', { name: /Ollama/ }).check();
     await expect(settings.getByLabel('API key')).toBeHidden();
@@ -300,7 +300,7 @@ test.describe('Ask AI', () => {
     await expect(settings).toContainText(
       'Works only when this page is opened as a Claude artifact; the viewer asks the person for consent on the first question.',
     );
-    await expect(settings.getByLabel('Model')).toBeHidden();
+    await expect(settings.getByLabel('Model', { exact: true })).toBeHidden();
   });
 
   test('A3 Test reports what the model said or why it failed', async ({ page }) => {
@@ -414,7 +414,8 @@ test.describe('Ask AI', () => {
     await openWithAi(page, { provider: 'ollama', keys: {} });
     const dialog = await askOnStep1(page);
     await dialog.getByRole('button', { name: 'Why this step?' }).click();
-    await expect(dialog.getByTestId('ask-answer')).toContainText('Ollama · llama3.2');
+    // The footer names the provider as version 2 did: its name up to the bracket.
+    await expect(dialog.getByTestId('ask-answer')).toContainText('Ollama on this computer · llama3.2');
     expect(sent[0]?.headers.authorization).toBeUndefined();
     expect(sent[0]?.body.model).toBe('llama3.2');
   });
@@ -594,6 +595,20 @@ test.describe('Ask AI', () => {
 
     const cache = await page.evaluate(() => localStorage.getItem('swv:ai:cache') ?? '');
     expect(cache).not.toContain('gsk_e2e');
+
+    // A changed step is a different question to the model: the cache does not answer it.
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await page.keyboard.press('c');
+    const code = page.getByRole('textbox', { name: 'Diagram code' });
+    await code.fill((await code.inputValue()).replace('%% @step ', '%% @step Changed: '));
+    await page.keyboard.press('Escape');
+    await goToStep(page, 1);
+    await page.keyboard.press('a');
+    const again = page.getByRole('dialog', { name: 'Ask AI about step 1' });
+    await again.getByRole('button', { name: 'Why this step?' }).click();
+    await expect.poll(() => sent.length).toBe(4);
+    await expect(again.getByTestId('ask-answer').getByText('Saved answer')).toBeHidden();
   });
 
   test('A8 an answer version 2 cached in project mode still counts', async ({ page }) => {

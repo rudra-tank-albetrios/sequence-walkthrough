@@ -112,7 +112,8 @@ test.describe('table view', () => {
     const spotCount = await table(page).locator('tbody tr').count();
     expect(spotCount).toBeLessThan(DEMO_STEPS);
     expect(spotCount).toBeGreaterThan(0);
-    await page.getByRole('button', { name: 'Show all' }).click();
+    // The notice with Show all is on the canvas, behind the table as in version 2: Esc clears it.
+    await page.keyboard.press('Escape');
     await expect(table(page).locator('tbody tr')).toHaveCount(DEMO_STEPS);
     await page.getByTestId('path-select').selectOption('happy');
     const happy = await table(page).locator('tbody tr').count();
@@ -162,11 +163,13 @@ test.describe('code panel', () => {
     await expect(code(page)).toBeFocused();
     const button = page.getByRole('button', { name: /^(<\/> )?Code/ }).first();
     await expect(button).toHaveAttribute('aria-expanded', 'true');
-    await button.click();
+    // The open panel covers the canvas button, as it did in version 2, so the panel's × closes it.
+    await page.getByRole('button', { name: 'Close the code panel' }).click();
     await expect(panel).toBeHidden();
+    await expect(button).toHaveAttribute('aria-expanded', 'false');
     await button.click();
     await expect(panel).toBeVisible();
-    await page.getByRole('button', { name: 'Close the code panel' }).click();
+    await page.keyboard.press('Escape');
     await expect(panel).toBeHidden();
   });
 
@@ -212,7 +215,7 @@ test.describe('code panel', () => {
     await expect(layer.locator('.t-tag')).toContainText(['@title']);
     await expect(layer.locator('.t-cm').first()).toBeAttached();
     await expect(layer.locator('.t-kw').first()).toBeAttached();
-    await expect(layer.locator('.t-arr').first()).toHaveText('->>');
+    await expect(layer.locator('.t-ar').first()).toHaveText('->>');
     await expect(layer.locator('.t-al').first()).toHaveText('A');
   });
 

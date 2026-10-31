@@ -1,13 +1,15 @@
+/* Above popovers, dialogs and the step bar, as in version 2; only the toast itself takes clicks. */
 .host {
   position: fixed;
   left: 50%;
   bottom: 16px;
   transform: translateX(-50%);
-  z-index: 60;
+  z-index: 100;
   pointer-events: none;
 }
 
 .toast {
+  pointer-events: auto;
   padding: 8px 14px;
   background: var(--ink);
   color: var(--surface);

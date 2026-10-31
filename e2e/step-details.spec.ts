@@ -119,7 +119,9 @@ test.describe('step details', () => {
     const payload = page.getByTestId('payload');
     await expect(payload.getByText('Body', { exact: true })).toBeHidden();
     await payload.getByText('Show payload').click();
-    await expect(payload.getByText('Headers', { exact: true })).toBeVisible();
+    // Two @payload.headers lines give two labelled boxes, as version 2 drew them.
+    await expect(payload.getByText('Headers', { exact: true })).toHaveCount(2);
+    await expect(payload.getByText('Headers', { exact: true }).first()).toBeVisible();
     await expect(payload.getByText('Body', { exact: true })).toBeVisible();
     await expect(payload).toContainText('Authorization: Bearer demo-token');
     await goToStep(page, 7);

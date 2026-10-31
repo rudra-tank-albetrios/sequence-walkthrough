@@ -247,7 +247,7 @@ test.describe('old settings', () => {
     const key = settings.getByLabel('API key');
     await expect(key).toHaveAttribute('type', 'password');
     await expect(key).toHaveValue('old-test-key');
-    await expect(settings.getByLabel('Model')).toHaveValue('gemini-old');
+    await expect(settings.getByLabel('Model', { exact: true })).toHaveValue('gemini-old');
     await expect(settings.getByLabel(/Include the step/)).not.toBeChecked();
     await expect(settings.getByLabel(/Save every answer/)).not.toBeChecked();
     await settings.getByRole('radio', { name: /Custom/ }).check();
@@ -287,7 +287,7 @@ test.describe('old settings', () => {
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('a');
     const ask = page.getByRole('dialog', { name: 'Ask AI about step 1' });
-    await ask.getByLabel('Question').fill(question);
+    await ask.getByRole('textbox', { name: 'Question' }).fill(question);
     await ask.getByRole('button', { name: 'Ask', exact: true }).click();
     const answer = ask.getByTestId('ask-answer');
     await expect(answer).toContainText('A cached answer.');
