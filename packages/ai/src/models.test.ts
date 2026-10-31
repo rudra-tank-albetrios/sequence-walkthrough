@@ -23,7 +23,7 @@ const seedV2 = (value: object) => {
   localStorage.setItem('swv:ai', JSON.stringify(value));
 };
 
-describe('moving version 2 settings over', () => {
+describe("reading Ask AI's provider and keys", () => {
   const v2 = {
     provider: 'gemini',
     keys: { gemini: 'AIza-old', groq: 'gsk_old' },
@@ -42,6 +42,7 @@ describe('moving version 2 settings over', () => {
       ['groq', 'gsk_old', 'llama-3.3-70b-versatile'],
     ]);
     expect(state.activeId).toBe(state.models[0]?.id);
+    expect(hasUsableModel()).toBe(true);
   });
 
   it('marks nothing as a fallback: only the person chooses that', () => {
@@ -49,27 +50,43 @@ describe('moving version 2 settings over', () => {
     expect(loadModelState().models.every((m) => !m.fallback)).toBe(true);
   });
 
-  it('removes the keys from the old place and leaves the other settings', () => {
+  it('leaves the settings exactly as Ask AI wrote them, and copies no key anywhere', () => {
     seedV2(v2);
     loadModelState();
-    expect(readStored('swv:ai')).toEqual({ includePayload: false, autoNote: true, mode: 'general' });
-    expect(JSON.stringify(readStored('swv:ai'))).not.toContain('AIza-old');
-    expect(JSON.stringify(readStored('swv:ai:models'))).toContain('AIza-old');
+    expect(readStored('swv:ai')).toEqual(v2);
+    expect(readStored('swv:ai:models')).toBeUndefined();
+    saveModelState(loadModelState());
+    expect(JSON.stringify(readStored('swv:ai:models'))).not.toContain('AIza-old');
+    expect(JSON.stringify(readStored('swv:ai:models'))).not.toContain('gsk_old');
   });
 
-  it('runs once: loading again changes nothing', () => {
+  it('follows every change made in Ask AI: a removed key is gone, a new one appears', () => {
     seedV2(v2);
     const first = loadModelState();
     expect(loadModelState()).toEqual(first);
+    seedV2({ ...v2, keys: { groq: 'gsk_new' } });
+    const state = loadModelState();
+    expect(state.models.map((m) => [m.preset, m.key])).toEqual([['groq', 'gsk_new']]);
+    expect(state.activeId).toBe(state.models[0]?.id);
+    seedV2({ ...v2, keys: {} });
+    expect(loadModelState().models).toEqual([]);
+    expect(hasUsableModel()).toBe(false);
   });
 
-  it('moves a custom link with its key', () => {
+  it('keeps the same id for a provider, so its usage stays attached', () => {
+    seedV2(v2);
+    const before = loadModelState().models.map((m) => m.id);
+    seedV2({ ...v2, keys: { ...v2.keys, groq: 'gsk_changed' } });
+    expect(loadModelState().models.map((m) => m.id)).toEqual(before);
+  });
+
+  it('reads a custom link with its key', () => {
     seedV2({ provider: 'custom', keys: { custom: 'k' }, customUrl: ' https://proxy.example/v1/chat/completions ' });
     const [entry] = loadModelState().models;
     expect(entry).toMatchObject({ preset: 'custom', url: 'https://proxy.example/v1/chat/completions', key: 'k' });
   });
 
-  it('moves a chosen provider that needs no key', () => {
+  it('reads a chosen provider that needs no key', () => {
     seedV2({ provider: 'ollama', keys: {} });
     const state = loadModelState();
     expect(state.models.map((m) => m.preset)).toEqual(['ollama']);
@@ -81,12 +98,16 @@ describe('moving version 2 settings over', () => {
     expect(loadModelState().models).toEqual([]);
   });
 
-  it('adds a key to a matching entry instead of duplicating it', () => {
-    const saved = { ...newModel('groq'), key: '' };
+  it('keeps a saved list beside it, and the saved active model stays active', () => {
+    const saved = { ...newModel('groq'), key: 'saved' };
     saveModelState({ models: [saved], activeId: saved.id, switchAt: 5, forgetKeys: false });
-    seedV2({ provider: 'groq', keys: { groq: 'gsk_new' } });
+    seedV2({ provider: 'gemini', keys: { gemini: 'AIza' } });
     const state = loadModelState();
-    expect(state.models.map((m) => [m.id, m.key])).toEqual([[saved.id, 'gsk_new']]);
+    expect(state.models.map((m) => [m.id, m.key])).toEqual([
+      [saved.id, 'saved'],
+      [state.models[1]?.id, 'AIza'],
+    ]);
+    expect(state.activeId).toBe(saved.id);
   });
 
   it('ignores odd data', () => {

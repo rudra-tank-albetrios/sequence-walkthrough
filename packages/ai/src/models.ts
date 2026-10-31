@@ -37,9 +37,11 @@ export interface ModelState {
 /** The ordered list. Keys are held here, unless `forgetKeys` moves them to `TAB_KEYS`. */
 const MODELS_KEY = 'swv:ai:models';
 const TAB_KEYS = 'swv:ai:tab-keys';
-/** Version 2's settings. Its model fields move to the list; the rest stays for Ask AI. */
+/** Ask AI's settings, in version 2's shape. Read here, owned there. */
 const V2_KEY = 'swv:ai';
 const V2_MODEL_FIELDS = ['provider', 'keys', 'models', 'customUrl'] as const;
+/** Entries read from `swv:ai` carry this prefix and are never saved. */
+const V2_ID_PREFIX = 'ask-ai-';
 
 export const DEFAULT_SWITCH_AT = 5;
 
@@ -147,12 +149,17 @@ export function applyEdit(previous: ModelEntry, next: ModelEntry): ModelEntry {
   return moved ? { ...next, key: '' } : next;
 }
 
-/** Moves version 2's providers and keys into the list. Safe to run on every load. */
-function migrateV2(state: ModelState): ModelState {
+/**
+ * Ask AI's provider and keys (`swv:ai`, the shape version 2 wrote) as model entries. The model
+ * list screen of plan section 8.1 was not built, so that dialog is the only place a key is typed:
+ * it is read on every load and never written, so a key removed there is gone here at once. The
+ * ids are fixed per preset, so usage stays attached, and nothing here is saved to the list.
+ */
+function askAiEntries(): { models: ModelEntry[]; chosenId: string } {
   const v2 = readJson(V2_KEY);
-  if (typeof v2 !== 'object' || v2 === null) return state;
+  if (typeof v2 !== 'object' || v2 === null) return { models: [], chosenId: '' };
   const fields = v2 as Record<string, unknown>;
-  if (!V2_MODEL_FIELDS.some((field) => field in fields)) return state;
+  if (!V2_MODEL_FIELDS.some((field) => field in fields)) return { models: [], chosenId: '' };
 
   const keys = readStringMap(fields.keys);
   const overrides = readStringMap(fields.models);
@@ -163,59 +170,54 @@ function migrateV2(state: ModelState): ModelState {
     (id === chosen && (presetFor(id).key === 'none' || (id === 'custom' && customUrl !== '')));
   const order = [...PRESETS.filter((p) => p.id === chosen), ...PRESETS.filter((p) => p.id !== chosen)];
 
-  const models = state.models.map((m) => ({ ...m }));
-  let activeId = state.activeId;
+  const models: ModelEntry[] = [];
   for (const { id } of order) {
     if (!wanted(id)) continue;
-    const key = (keys[id] ?? '').trim();
-    const url = id === 'custom' ? customUrl : '';
-    const existing = models.find((m) => m.preset === id && m.url === url);
-    if (existing) {
-      if (!existing.key) existing.key = key;
-    } else {
-      const entry = { ...newModel(id), url, key };
-      const override = overrides[id]?.trim();
-      if (override) entry.model = override;
-      models.push(entry);
-    }
-    if (!activeId && id === chosen) activeId = models.find((m) => m.preset === id)?.id ?? '';
+    const entry = { ...newModel(id), id: V2_ID_PREFIX + id, url: id === 'custom' ? customUrl : '', key: (keys[id] ?? '').trim() };
+    const override = overrides[id]?.trim();
+    if (override) entry.model = override;
+    models.push(entry);
   }
-
-  const rest = Object.fromEntries(
-    Object.entries(fields).filter(([field]) => !(V2_MODEL_FIELDS as readonly string[]).includes(field)),
-  );
-  writeJson(V2_KEY, rest);
-  const migrated = { ...state, models, activeId };
-  saveModelState(migrated);
-  return migrated;
+  const first = models[0];
+  return { models, chosenId: first?.preset === chosen ? first.id : '' };
 }
+
+const isAskAiEntry = (entry: ModelEntry): boolean => entry.id.startsWith(V2_ID_PREFIX);
 
 /**
  * `loadModelState(): ModelState`
  *
- * The saved list with its keys, after moving over anything version 2 left in `swv:ai`. Reads
- * storage every time, so several tabs and later features stay in step.
+ * The saved list with its keys, plus Ask AI's provider and key as read from `swv:ai` right now.
+ * Reads storage every time, so several tabs and later features stay in step. Ask AI's chosen
+ * provider is the active model unless the saved list names one.
  */
 export function loadModelState(): ModelState {
   const parsed = StoredState.safeParse(readJson(MODELS_KEY) ?? {});
   const stored = parsed.success ? parsed.data : StoredState.parse({});
   const tabKeys = readStringMap(readJson(TAB_KEYS, 'session'));
-  const models = stored.models.flatMap((raw) => {
+  const saved = stored.models.flatMap((raw) => {
     const entry = StoredModel.safeParse(raw);
-    if (!entry.success) return [];
+    if (!entry.success || isAskAiEntry(entry.data)) return [];
     return [{ ...entry.data, key: tabKeys[entry.data.id] ?? entry.data.key }];
   });
-  const state = migrateV2({ ...stored, models });
-  const activeId = state.models.some((m) => m.id === state.activeId) ? state.activeId : (state.models[0]?.id ?? '');
-  return { ...state, activeId };
+  const askAi = askAiEntries();
+  const models = [...saved, ...askAi.models];
+  const activeId = models.some((m) => m.id === stored.activeId)
+    ? stored.activeId
+    : askAi.chosenId || (models[0]?.id ?? '');
+  return { ...stored, models, activeId };
 }
 
-/** Saves the list. With `forgetKeys`, the keys go to this tab only and leave localStorage. */
+/**
+ * Saves the list. With `forgetKeys`, the keys go to this tab only and leave localStorage. Ask AI's
+ * entries are left out: their key lives in `swv:ai` and nowhere else.
+ */
 export function saveModelState(state: ModelState): void {
   const { forgetKeys } = state;
-  writeJson(MODELS_KEY, { ...state, models: state.models.map((m) => (forgetKeys ? { ...m, key: '' } : m)) });
+  const own = state.models.filter((m) => !isAskAiEntry(m));
+  writeJson(MODELS_KEY, { ...state, models: own.map((m) => (forgetKeys ? { ...m, key: '' } : m)) });
   if (forgetKeys) {
-    const held = state.models.filter((m) => m.key).map((m) => [m.id, m.key] as const);
+    const held = own.filter((m) => m.key).map((m) => [m.id, m.key] as const);
     writeJson(TAB_KEYS, Object.fromEntries(held), 'session');
   } else {
     removeKey(TAB_KEYS, 'session');

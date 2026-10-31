@@ -12,7 +12,15 @@ import type {
   SequenceInfo,
   Step,
 } from './types.ts';
-import { CHAPTER_HUES, DEFAULT_TITLE, HTTP_RE, LAYER_KINDS, STATUS_RE, layerZone } from './vocabulary.ts';
+import {
+  CHAPTER_HUES,
+  DEFAULT_TITLE,
+  HTTP_RE,
+  LAYER_KINDS,
+  STATUS_RE,
+  layerZone,
+  wordTable,
+} from './vocabulary.ts';
 
 /** Joins the annotation parse with Mermaid's view of the arrows into the Flow the UI uses. */
 export function buildFlow(ann: Annotations, info: SequenceInfo | null): Flow {
@@ -30,7 +38,7 @@ export function buildFlow(ann: Annotations, info: SequenceInfo | null): Flow {
     trigger: ann.trigger,
     summary: ann.summary.join('\n'),
     terms: ann.terms.slice(),
-    layers: {},
+    layers: wordTable({}),
     participants: [],
     sections: [],
     steps: [],
@@ -41,6 +49,7 @@ export function buildFlow(ann: Annotations, info: SequenceInfo | null): Flow {
     data: [],
     endings: [],
     unconfirmed: 0,
+    threats: [],
     boundaries: [],
     main: -1,
     syntax: info?.syntax ?? [],
@@ -86,6 +95,7 @@ export function buildFlow(ann: Annotations, info: SequenceInfo | null): Flow {
     const step = makeStep(idx, m, a, flow, sectionIdx, keyCount);
     flow.steps.push(step);
     flow.unconfirmed += step.unconfirmed.length;
+    flow.threats.push(...step.threats.map((threat) => ({ ...threat, step: idx })));
     if (a && !a.step) {
       flow.lint.push({ line: a.line, msg: `Step ${step.n} (${step.fromName} → ${step.toName}) has no @step`, code: 'no-step', step: idx });
     }
@@ -145,19 +155,22 @@ type Pair = [SequenceArrow, AnnotatedArrow | null];
 function pairArrows(mArrows: SequenceArrow[], annArrows: AnnotatedArrow[], flow: Flow): Pair[] {
   if (mArrows.length === annArrows.length) return mArrows.map((m, i) => [m, annArrows[i] ?? null]);
   flow.mismatch = true;
+  // The lines of each label, last line first, so the earliest usable one is at the end of its list.
+  const linesByLabel = new Map<string, number[]>();
+  for (let j = annArrows.length - 1; j >= 0; j--) {
+    const label = normLabel(annArrows[j]?.text ?? '');
+    const lines = linesByLabel.get(label);
+    if (lines) lines.push(j);
+    else linesByLabel.set(label, [j]);
+  }
   const pairs: Pair[] = [];
   let p = 0;
   for (const m of mArrows) {
-    const want = normLabel(m.text);
-    let hit: AnnotatedArrow | null = null;
-    for (let j = p; j < annArrows.length; j++) {
-      const candidate = annArrows[j];
-      if (candidate && normLabel(candidate.text) === want) {
-        hit = candidate;
-        p = j + 1;
-        break;
-      }
-    }
+    const lines = linesByLabel.get(normLabel(m.text)) ?? [];
+    let j = lines.pop();
+    while (j !== undefined && j < p) j = lines.pop();
+    const hit = j === undefined ? null : (annArrows[j] ?? null);
+    if (j !== undefined) p = j + 1;
     pairs.push([m, hit]);
   }
   return pairs;
@@ -203,6 +216,7 @@ function makeStep(
     state: a ? a.state : { before: '', after: '' },
     flags: a ? a.flags : {},
     unconfirmed: a ? a.unconfirmed : [],
+    threats: a ? a.threats : [],
     http: http?.[1] && http[2] ? { method: http[1], path: http[2] } : null,
     status: statusCode !== null ? { code: statusCode, reason: (status?.[2] ?? '').trim() } : null,
     section: sectionIdx,
@@ -235,15 +249,14 @@ function finishSections(flow: Flow): void {
 
 /** A dashed B→A answers the nearest earlier solid A→B. */
 function pairReplies(flow: Flow): void {
+  const latestRequest = new Map<string, Step>();
   for (const s of flow.steps) {
+    if (s.kind === 'request') latestRequest.set(`${s.from} ${s.to}`, s);
     if (s.kind !== 'reply') continue;
-    for (let j = s.idx - 1; j >= 0; j--) {
-      const r = flow.steps[j];
-      if (r?.kind === 'request' && r.from === s.to && r.to === s.from) {
-        s.answers = j;
-        r.replies.push(s.idx);
-        break;
-      }
+    const r = latestRequest.get(`${s.to} ${s.from}`);
+    if (r) {
+      s.answers = r.idx;
+      r.replies.push(s.idx);
     }
   }
 }
@@ -257,7 +270,7 @@ function collectSideParts(flow: Flow): void {
       const e = usesMap.get(k) ?? { kind: u.kind, name: u.name, ref: '', text: '', steps: [] };
       if (!e.ref && u.ref) e.ref = u.ref;
       if (u.text && (!e.text || u.text.length > e.text.length)) e.text = u.text;
-      if (!e.steps.includes(s.idx)) e.steps.push(s.idx);
+      if (e.steps[e.steps.length - 1] !== s.idx) e.steps.push(s.idx);
       usesMap.set(k, e);
     }
     for (const t of s.effects) flow.effects.push({ text: t, step: s.idx });

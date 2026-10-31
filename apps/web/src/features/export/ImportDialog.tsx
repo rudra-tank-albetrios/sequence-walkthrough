@@ -64,6 +64,7 @@ function PasteDialog() {
     >
       <textarea
         ref={areaRef}
+        autoFocus
         className={styles.textarea}
         aria-label={IMPORT_LABEL}
         placeholder="https://mermaid.live/edit#pako:..."

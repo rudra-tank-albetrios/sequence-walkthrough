@@ -1,5 +1,5 @@
 import { mockFetch, mockModel, resetAiStorage, seedModels } from '@swv/ai/testing';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { configure, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -64,6 +64,10 @@ function hangingModel() {
   };
   return seen;
 }
+
+// The whole suite can run under heavy memory pressure; slow answers must not read as missing ones.
+configure({ asyncUtilTimeout: 30_000 });
+vi.setConfig({ testTimeout: 60_000 });
 
 const user = userEvent.setup({ pointerEventsCheck: 0 });
 

@@ -55,6 +55,9 @@ declare const indexedDB: {
 };
 
 /** A record in the shape `shared/storage/weakPoints.ts` keeps, dated relative to this moment. */
+// One clock for the run: seeding a record again must not read as a new miss.
+const SEEDED_AT = Date.now();
+
 const weakPoint = ({ id, question, daysAgo = 0, ...rest }: Seed) => ({
   id,
   flowId: DEMO_FLOW,
@@ -66,7 +69,7 @@ const weakPoint = ({ id, question, daysAgo = 0, ...rest }: Seed) => ({
   userAnswer: `My answer to ${id}`,
   correctAnswer: `The correct answer to ${id}`,
   whyWrong: `Why ${id} was wrong`,
-  date: new Date(Date.now() - daysAgo * DAY_MS).toISOString(),
+  date: new Date(SEEDED_AT - daysAgo * DAY_MS).toISOString(),
   timesMissed: 1,
   ...rest,
 });
@@ -105,14 +108,9 @@ async function openDemo(page: Page) {
   await expect(page.getByTestId('diagram').locator('svg').first()).toBeVisible({ timeout: 30_000 });
 }
 
-/**
- * The one place that knows how the recap is reached: the header's More menu, which shows at 1100
- * pixels and below, until the Learn group replaces it.
- */
+/** The one place that knows how the recap is reached: the header's Learn menu. */
 async function openRecap(page: Page) {
-  const size = page.viewportSize();
-  if (size && size.width > 1100) await page.setViewportSize({ width: 1000, height: size.height });
-  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('button', { name: 'Learn', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Day recap' }).click();
   const dialog = page.getByRole('dialog', { name: 'Day recap' });
   await expect(dialog.getByRole('group', { name: 'Period' })).toBeVisible();
@@ -120,6 +118,14 @@ async function openRecap(page: Page) {
 }
 
 async function expectAccessibleDialog(page: Page) {
+  // A button that just changed is still fading to its colours; axe must measure them at rest.
+  await page.getByRole('dialog').evaluate((el) =>
+    Promise.all(
+      (el as unknown as { getAnimations: (o: object) => { finished: Promise<unknown> }[] })
+        .getAnimations({ subtree: true })
+        .map((animation) => animation.finished),
+    ),
+  );
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .include('[role="dialog"]')
@@ -258,7 +264,7 @@ test.describe('day recap', () => {
     await expect(dialog.getByText('Missed long ago?')).toBeVisible();
     await dialog.getByRole('button', { name: 'All flows' }).click();
     await expect(mistakes(page)).toHaveCount(4);
-    await expect(dialog.getByText('Other flow')).toBeVisible();
+    await expect(dialog.getByText('Other flow', { exact: true })).toBeVisible();
     await dialog.getByRole('button', { name: 'Today · 2' }).click();
     await expect(mistakes(page)).toHaveCount(2);
     await expectAccessibleDialog(page);

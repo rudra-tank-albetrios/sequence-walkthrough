@@ -1,6 +1,6 @@
 # Version 2 internals the React viewer must keep
 
-Facts copied from `src/js/*.js`, `src/body.html`, `src/style.css` and `build.py` of the version 2 page. Strings in code font are exact. Parser facts (tags, lint codes, `STATUS_TEXT`, `CHAPTER_HUES`, `LAYER_KINDS`, `LAYER_ZONE`, step `key`) already live in `packages/core`; they are referenced, not repeated. Where the code has no answer this document says so.
+Facts copied from `src/js/*.js`, `src/body.html`, `src/style.css` and `build.py` of the version 2 page. Those files left the tree in Phase 4 and stay in git history at commit `398d08e` (`docs/decisions.md`). Strings in code font are exact. Parser facts (tags, lint codes, `STATUS_TEXT`, `CHAPTER_HUES`, `LAYER_KINDS`, `LAYER_ZONE`, step `key`) already live in `packages/core`; they are referenced, not repeated. Where the code has no answer this document says so.
 
 ---
 

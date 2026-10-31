@@ -65,7 +65,9 @@ export function FindPopover() {
             e.preventDefault();
             step(e.shiftKey ? -1 : 1);
           } else if (e.key === 'Escape') {
+            // Handled here, so the page's Esc cascade does not also close the next thing.
             e.preventDefault();
+            e.stopPropagation();
             setUi({ findOpen: false });
           }
         }}

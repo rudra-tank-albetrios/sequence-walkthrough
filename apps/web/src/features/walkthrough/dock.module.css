@@ -1,0 +1,244 @@
+/* The floating dock. Glass over the diagram, with the transport at its centre and Play as the one
+   large round control on the page. */
+.dock {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  padding: 6px 14px 8px;
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-xl);
+  background: var(--glass);
+  backdrop-filter: var(--glass-filter);
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen),
+    var(--shadow-float);
+  pointer-events: auto;
+  container: dock / inline-size;
+}
+
+/* Chapter names line up with their stretch of the rail: same ratios, same gap */
+.chapters {
+  display: flex;
+  gap: 3px;
+  height: 20px;
+  min-width: 0;
+}
+
+.chapter {
+  display: flex;
+  flex-basis: 0;
+  align-items: center;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.chapter span {
+  overflow: hidden;
+  padding: 0 2px;
+  text-overflow: ellipsis;
+}
+
+.chapter:hover {
+  color: var(--ink);
+}
+
+/* The current name may run over its neighbours: it is the one that must stay readable */
+.chapter.cur {
+  position: relative;
+  z-index: 1;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.chapter.cur span {
+  flex: none;
+  overflow: visible;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  box-shadow: inset 0 -2px 0 light-dark(hsl(var(--ch) 72% 38%), hsl(var(--ch) 74% 62%));
+}
+
+.chapter.cur:last-child {
+  justify-content: flex-end;
+}
+
+.pathSel {
+  flex: 0 1 auto;
+  min-width: 0;
+  height: 30px;
+  max-width: 180px;
+  padding: 0 4px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: transparent;
+  font-size: var(--text-sm);
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.tools,
+.end,
+.transport {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.end {
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.transport {
+  gap: 6px;
+}
+
+.speed {
+  width: 62px;
+  height: 30px;
+  padding: 0 4px 0 10px;
+  border-color: var(--line);
+  border-radius: 999px;
+  background: transparent;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.stepper {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+
+.play {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--marker);
+  color: var(--on-marker);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(120, 90, 0, 0.35),
+    0 3px 10px -2px light-dark(rgba(120, 90, 0, 0.55), rgba(0, 0, 0, 0.7));
+  transition:
+    transform var(--t-fast) var(--ease-out),
+    box-shadow var(--t-fast);
+}
+
+.play:hover {
+  background: #ffdc5c;
+}
+
+.play:active {
+  transform: scale(0.95);
+}
+
+.play[aria-pressed='true'] {
+  outline: 2px solid var(--marker);
+  outline-offset: 2px;
+}
+
+.play:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+
+.readout {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-variation-settings: var(--mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.readout i {
+  color: var(--muted);
+  font-style: normal;
+  font-weight: 400;
+}
+
+/* Phone: Play keeps the middle, the tools take a second row */
+@media (max-width: 720px) {
+  .pathSel {
+    min-width: 112px;
+  }
+
+  .dock {
+    padding: 4px 10px 6px;
+    border-radius: var(--r-lg);
+  }
+
+  .controls {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-areas:
+      'transport transport transport'
+      'tools tools end';
+    gap: 2px var(--space-2);
+  }
+
+  .transport {
+    grid-area: transport;
+    justify-content: center;
+  }
+
+  .tools {
+    grid-area: tools;
+  }
+
+  .end {
+    grid-area: end;
+  }
+
+
+  .chapters {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .chapters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .chapter {
+    flex: none !important;
+  }
+
+  .chapter span {
+    overflow: visible;
+    padding: 0 6px;
+  }
+
+  .readout {
+    display: none;
+  }
+}
+
+@media (max-height: 520px) {
+  .chapters {
+    display: none;
+  }
+
+  .play {
+    width: 38px;
+    height: 38px;
+  }
+}

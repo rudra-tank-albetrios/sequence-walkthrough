@@ -8,7 +8,8 @@ import { TermText } from '../../shared/ui/TermText.tsx';
 export function PayloadBox({ step }: { step: Step }) {
   if (step.payloads.length === 0) return null;
   return (
-    <details data-testid="payload">
+    // Keyed by step so the box starts closed on every step, as version 2's re-drawn card did.
+    <details key={step.idx} data-testid="payload">
       <summary>Show payload</summary>
       {step.payloads.map((p, i) => (
         <div key={i} className={styles.plPart}>
@@ -26,7 +27,7 @@ export function PayloadBox({ step }: { step: Step }) {
 export function SchemaBox({ step }: { step: Step }) {
   if (step.schema.length === 0) return null;
   return (
-    <details>
+    <details key={step.idx}>
       <summary>Schema ({step.schema.length})</summary>
       <table className={styles.mini}>
         <tbody>
