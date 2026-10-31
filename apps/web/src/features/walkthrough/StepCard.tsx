@@ -1,5 +1,5 @@
 import type { Flow, Step } from '@swv/core';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 import { cx } from '../../shared/lib/util.ts';
 import { TermText } from '../../shared/ui/TermText.tsx';
@@ -32,7 +32,7 @@ function Explanation({ step }: { step: Step }) {
 }
 
 /** The centre card for one step. */
-export function StepCard({ flow, step }: { flow: Flow; step: Step }) {
+export function StepCard({ flow, step, besideAsk }: { flow: Flow; step: Step; besideAsk?: ReactNode }) {
   const section = flow.sections[step.section];
   const summary = section?.summary && step.idx === section.firstStep ? section : undefined;
   const hasExtra =
@@ -47,30 +47,36 @@ export function StepCard({ flow, step }: { flow: Flow; step: Step }) {
     step.answers >= 0;
   return (
     <div data-testid="step-card">
-      <StepHeader flow={flow} step={step} />
-      <RouteLine flow={flow} step={step} />
-      <StepLabel step={step} />
-      {summary ? (
-        <p className={styles.summary} style={{ '--ch': summary.hue } as CSSProperties} data-testid="chapter-summary">
-          <b>{summary.name}:</b> <TermText text={summary.summary} />
-        </p>
-      ) : null}
-      <Explanation step={step} />
-      <RepliesList flow={flow} step={step} />
-      {hasExtra ? (
-        <div className={styles.extra}>
-          <PayloadBox step={step} />
-          <PayloadDiffBox flow={flow} step={step} />
-          <SchemaBox step={step} />
-          <StateBox step={step} />
-          <FieldsRow step={step} />
-          <EffectsRow step={step} />
-          <RefsRow step={step} />
-          <UnconfirmedList step={step} />
+      <StepHeader flow={flow} step={step} besideAsk={besideAsk} />
+      <div className={styles.body}>
+        <div className={styles.primary}>
+          <RouteLine flow={flow} step={step} />
+          <StepLabel step={step} />
+          {summary ? (
+            <p className={styles.summary} style={{ '--ch': summary.hue } as CSSProperties} data-testid="chapter-summary">
+              <b>{summary.name}:</b> <TermText text={summary.summary} />
+            </p>
+          ) : null}
+          <Explanation step={step} />
+          <RepliesList flow={flow} step={step} />
         </div>
-      ) : null}
-      <UsesStrip step={step} />
-      <NoteBlock step={step} />
+        <div className={styles.secondary}>
+          {hasExtra ? (
+            <div className={styles.extra}>
+              <PayloadBox step={step} />
+              <PayloadDiffBox flow={flow} step={step} />
+              <SchemaBox step={step} />
+              <StateBox step={step} />
+              <FieldsRow step={step} />
+              <EffectsRow step={step} />
+              <RefsRow step={step} />
+              <UnconfirmedList step={step} />
+            </div>
+          ) : null}
+          <UsesStrip step={step} />
+          <NoteBlock step={step} />
+        </div>
+      </div>
     </div>
   );
 }

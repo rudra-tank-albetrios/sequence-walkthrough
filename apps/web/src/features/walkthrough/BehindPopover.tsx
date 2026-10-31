@@ -1,5 +1,6 @@
 import * as Popover from '@radix-ui/react-popover';
 import type { Flow, FlowUses } from '@swv/core';
+import { Cog } from 'lucide-react';
 import { useState } from 'react';
 
 import { plural } from '../../shared/lib/util.ts';
@@ -15,7 +16,7 @@ function byKind(uses: FlowUses[]): [string, FlowUses[]][] {
   return [...map.entries()];
 }
 
-/** "⚙ Behind N": hooks, crons, utilities, config and effects that take part without being a layer. */
+/** "Behind N": hooks, crons, utilities, config and effects that take part without being a layer. */
 export function BehindPopover({ flow }: { flow: Flow }) {
   const [open, setOpen] = useState(false);
   const cur = useFlowStore((s) => s.cur);
@@ -24,6 +25,8 @@ export function BehindPopover({ flow }: { flow: Flow }) {
   const count = flow.uses.length + flow.effects.length;
   if (count === 0) return null;
   const step = flow.steps[cur];
+  const usedHere = (u: FlowUses) => step?.uses.some((used) => used.kind === u.kind && used.name === u.name) ?? false;
+  const inUse = flow.uses.filter(usedHere).length;
   const jump = (i: number) => {
     go(i);
     setOpen(false);
@@ -42,12 +45,16 @@ export function BehindPopover({ flow }: { flow: Flow }) {
           className={styles.behind}
           title="Hooks, crons, utilities, config and side effects that take part without being a layer"
           data-testid="behind-btn"
+          data-tour="side-parts"
+          data-in-use={inUse}
         >
-          <span aria-hidden="true">⚙</span> Behind <span className={styles.n}>{count}</span>
+          <Cog size={15} aria-hidden="true" />
+          <span className={styles.toolWord}>Behind</span> <span className={styles.n}>{count}</span>
+          {inUse > 0 ? <span className={styles.here}>{inUse} here</span> : null}
         </Button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content className={styles.pop} align="end" sideOffset={6} collisionPadding={8} aria-label="Behind the scenes">
+        <Popover.Content className={styles.pop} side="top" align="start" sideOffset={8} collisionPadding={8} aria-label="Behind the scenes">
           <h3>Behind the scenes</h3>
           <p className={styles.popIntro}>
             Parts that take part without being a layer.
@@ -60,7 +67,7 @@ export function BehindPopover({ flow }: { flow: Flow }) {
               </summary>
               <ul>
                 {items.map((u) => (
-                  <li key={u.name} className={styles.bh}>
+                  <li key={u.name} className={styles.bh} {...(usedHere(u) ? { 'data-used': '' } : {})}>
                     <div>
                       <b>{u.name}</b>
                       {u.ref ? (
@@ -97,10 +104,10 @@ export function BehindPopover({ flow }: { flow: Flow }) {
               data-open="behind"
               onClick={() => {
                 setOpen(false);
-                setUi({ insightOpen: true, insightTab: 'behind' });
+                setUi({ overlayTool: 'side-parts' });
               }}
             >
-              Open in the Insight panel
+              Open the full list
             </Button>
           </div>
         </Popover.Content>

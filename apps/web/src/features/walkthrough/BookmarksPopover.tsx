@@ -73,14 +73,14 @@ export function BookmarksPopover({ flow }: { flow: Flow }) {
       }}
     >
       <Popover.Trigger asChild>
-        <Button variant="ghost" className={styles.bm} title="Bookmarks and notes" data-testid="bm-btn">
+        <Button variant="ghost" className={styles.bm} title="Bookmarks and notes" data-testid="bm-btn" data-tour="bookmarks">
           ★ {stars}
           <span className="sr-only"> bookmarks</span>
           {orphans.length > 0 ? <Chip title="Notes for steps that changed">{orphans.length} changed</Chip> : null}
         </Button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content className={styles.pop} align="end" sideOffset={6} collisionPadding={8} aria-label="Bookmarks and notes">
+        <Popover.Content className={styles.pop} side="top" align="start" sideOffset={8} collisionPadding={8} aria-label="Bookmarks and notes">
           <h3>Bookmarks and notes</h3>
           {items.length > 0 ? (
             <ul>

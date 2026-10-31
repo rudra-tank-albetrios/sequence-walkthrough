@@ -124,3 +124,23 @@ export function railValueText(flow: Flow, sections: readonly Section[], cur: num
   const marks = markerLines(step, isStarred).map((line) => line.text);
   return [`Step ${String(step.n)} of ${String(n)}${chapter}`, step.label.join(' '), ...marks].join('. ');
 }
+
+/** The closest step the path filter shows, so a click never lands on a step the filter hides. */
+export function nearestShown(flow: Flow, index: number, shown: (step: Step) => boolean): number {
+  for (let distance = 0; distance < flow.steps.length; distance++) {
+    for (const i of [index + distance, index - distance]) {
+      const step = flow.steps[i];
+      if (step && shown(step)) return i;
+    }
+  }
+  return index;
+}
+
+/** Page Down and Page Up on the rail: the next chapter, or the start of this one first. */
+export function chapterJump(sections: readonly Section[], cur: number, direction: 1 | -1): number | null {
+  if (cur < 0) return direction === 1 ? (sections[0]?.firstStep ?? null) : null;
+  const chapter = chapterAt(sections, cur);
+  const here = sections[chapter];
+  if (direction === -1 && here && cur !== here.firstStep) return here.firstStep;
+  return sections[chapter + direction]?.firstStep ?? null;
+}

@@ -1,0 +1,285 @@
+/* The Flow Rail. Every position comes from custom properties set on .wrap and the marker itself:
+   --n steps in --k chapters with --gap between them, and --i, --j for a step and its chapter.
+   A step change only moves --cur, --i and --j, so nothing is laid out again. */
+.wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.rail {
+  position: relative;
+  height: 30px;
+  border-radius: var(--r-sm);
+  container: rail / inline-size;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+}
+
+.track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 11px;
+  display: flex;
+  gap: var(--gap);
+  height: 8px;
+}
+
+.seg {
+  position: relative;
+  flex-basis: 0;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 2px;
+  background: light-dark(hsl(var(--ch) 46% 84%), hsl(var(--ch) 26% 27%));
+  transform: scaleY(0.72);
+  transition: transform var(--t-med) var(--ease-out);
+}
+
+.seg:first-child {
+  border-radius: 4px 2px 2px 4px;
+}
+
+.seg:last-child {
+  border-radius: 2px 4px 4px 2px;
+}
+
+.seg[data-current] {
+  transform: none;
+}
+
+.fill {
+  position: absolute;
+  inset: 0;
+  background: light-dark(hsl(var(--ch) 72% 38%), hsl(var(--ch) 74% 62%));
+  transform-origin: left;
+  transform: scaleX(clamp(0, calc((var(--cur) + 0.5 - var(--first)) / var(--count)), 1));
+  transition: transform var(--t-med) var(--ease-out);
+}
+
+.ticks {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(to right, light-dark(rgba(255, 255, 255, 0.5), rgba(0, 0, 0, 0.32)) 1px, transparent 1px);
+  background-size: calc(100% / var(--count)) 100%;
+}
+
+/* A step the path filter skips is punched out of the line */
+.off {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(100% * var(--at) / var(--count));
+  width: calc(100% / var(--count));
+  background: repeating-linear-gradient(135deg, var(--surface-3) 0 2px, var(--surface) 2px 4px);
+}
+
+/* Anything that sits on a step: a zero-wide column at the centre of step --i */
+.atStep {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 100%;
+  pointer-events: none;
+  transform: translateX(calc((100cqw - var(--gap) * (var(--k) - 1)) * ((var(--i) + 0.5) / var(--n)) + var(--gap) * var(--j)));
+}
+
+.marker::before {
+  content: '';
+  position: absolute;
+}
+
+/* On the line: a red diamond */
+.error::before {
+  left: -4px;
+  top: 11px;
+  width: 8px;
+  height: 8px;
+  border-radius: 1.5px;
+  background: var(--danger);
+  box-shadow: 0 0 0 1.5px var(--surface);
+  transform: rotate(45deg);
+}
+
+/* Below the line: a hollow ring per step with a side part, filled when it is in use right now */
+.side::before,
+.shared::before {
+  left: -3.5px;
+  bottom: 0;
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid var(--side);
+  border-radius: 50%;
+}
+
+.shared::before {
+  background: var(--side);
+  box-shadow: 0 0 0 2px var(--side-soft);
+}
+
+/* Above the line: an amber triangle and a star */
+.threat::before {
+  left: -4px;
+  top: 0;
+  width: 8px;
+  height: 7px;
+  background: var(--threat);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.star::before {
+  left: -4.5px;
+  top: -1px;
+  width: 9px;
+  height: 9px;
+  background: var(--star);
+  clip-path: polygon(50% 0, 62% 35%, 98% 35%, 69% 57%, 79% 91%, 50% 71%, 21% 91%, 31% 57%, 2% 35%, 38% 35%);
+}
+
+.beside::before {
+  left: 5px;
+}
+
+/* The fader cap on the current step */
+.cap {
+  transition: transform var(--t-med) var(--ease-out);
+}
+
+.cap::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 6px;
+  width: 12px;
+  height: 18px;
+  border: 1.5px solid var(--on-marker);
+  border-radius: 4px;
+  background: var(--marker);
+  box-shadow:
+    0 0 0 1.5px var(--surface),
+    0 2px 5px light-dark(rgba(16, 24, 40, 0.35), rgba(0, 0, 0, 0.7));
+}
+
+.cap::after {
+  content: '';
+  position: absolute;
+  left: -0.75px;
+  top: 10px;
+  width: 1.5px;
+  height: 10px;
+  border-radius: 1px;
+  background: var(--on-marker);
+}
+
+/* Where a click would land */
+.ghost::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 7px;
+  width: 10px;
+  height: 16px;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  background: light-dark(rgba(255, 255, 255, 0.55), rgba(0, 0, 0, 0.35));
+}
+
+.preview {
+  --x: calc((100% - var(--gap) * (var(--k) - 1)) * ((var(--i) + 0.5) / var(--n)) + var(--gap) * var(--j));
+  position: absolute;
+  z-index: 3;
+  left: clamp(0px, calc(var(--x) - 160px), calc(100% - 320px));
+  bottom: calc(100% + 10px);
+  display: grid;
+  gap: 2px;
+  width: min(320px, 100%);
+  padding: 8px 12px 10px;
+  border: 1px solid var(--line);
+  border-top: 2px solid light-dark(hsl(var(--ch) 72% 38%), hsl(var(--ch) 74% 62%));
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  font-size: var(--text-sm);
+  pointer-events: none;
+}
+
+.previewHead {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--muted);
+}
+
+.previewHead b {
+  color: var(--ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.previewHead span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.previewRoute {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.previewLabel {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.previewText {
+  display: -webkit-box;
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--muted);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.previewMarks {
+  display: grid;
+  gap: 2px;
+  margin: 4px 0 0;
+  padding: 4px 0 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.previewMarks li {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.previewMarks li[data-kind='error'] {
+  color: var(--danger);
+}
+
+.previewMarks li[data-kind='side'] {
+  color: var(--side);
+}
+
+.previewMarks li[data-kind='threat'] {
+  color: var(--threat);
+}
+
+.previewMarks li[data-kind='star'] {
+  color: var(--star);
+}
+
+@media (max-width: 720px) {
+  .ticks {
+    display: none;
+  }
+}
