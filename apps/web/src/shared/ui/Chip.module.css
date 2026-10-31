@@ -1,0 +1,65 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+button.chip {
+  cursor: pointer;
+}
+
+button.chip:hover {
+  filter: brightness(0.96);
+}
+
+.neutral {
+  color: var(--muted);
+}
+
+.marker {
+  background: var(--marker-soft);
+  border-color: var(--marker);
+  color: var(--marker-ink);
+}
+
+.unconfirmed {
+  background: light-dark(#fff1e0, #4a2d0a);
+  border-color: light-dark(#f0a04b, #c77a2a);
+  color: light-dark(#7a3e00, #ffd2a6);
+}
+
+.error {
+  background: var(--danger-soft);
+  border-color: transparent;
+  color: var(--danger);
+}
+
+.ok {
+  background: light-dark(#e3f5e9, #163b24);
+  border-color: transparent;
+  color: var(--ok);
+}
+
+.follow {
+  background: var(--follow-soft);
+  border-color: transparent;
+  color: var(--follow);
+}
+
+.chapter {
+  background: light-dark(hsl(var(--ch) 85% 92%), hsl(var(--ch) 40% 24%));
+  border-color: transparent;
+  color: light-dark(hsl(var(--ch) 60% 30%), hsl(var(--ch) 70% 85%));
+}

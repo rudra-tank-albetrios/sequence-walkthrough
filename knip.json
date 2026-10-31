@@ -12,6 +12,7 @@
       "project": ["src/**/*.ts"]
     },
     "tools/*": {
+      "entry": ["src/*.ts"],
       "project": ["src/**/*.ts"]
     },
     "tools/build-skills": {

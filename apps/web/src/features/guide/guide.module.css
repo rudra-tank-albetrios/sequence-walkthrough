@@ -1,0 +1,61 @@
+.h3 {
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+.h3:first-child {
+  margin-top: 0;
+}
+
+.points {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: var(--text-md);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.points li {
+  min-width: 0;
+}
+
+.points code {
+  font-size: var(--text-sm);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-md);
+}
+
+.table td {
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.table td:first-child {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.muted {
+  margin: var(--space-3) 0 0;
+  color: var(--muted);
+  font-size: var(--text-md);
+  overflow-wrap: anywhere;
+}
+
+.muted + .muted {
+  margin-top: var(--space-2);
+}
