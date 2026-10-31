@@ -1,7 +1,7 @@
 import type { Flow, Section, Step } from '@swv/core';
 import { memo, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
 
-import { cx } from '../../shared/lib/util.ts';
+import { cx, plural } from '../../shared/lib/util.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { useNotesStore } from '../../shared/state/notesStore.ts';
 import { pathVisible, type PathMode } from '../../shared/state/path.ts';
@@ -42,6 +42,7 @@ const RailTrack = memo(function RailTrack(props: {
           key={sec.idx}
           className={styles.seg}
           data-testid="progress-seg"
+          title={`${sec.name}: ${plural(sec.count, 'step')}`}
           {...(j === chapter ? { 'data-current': '' } : {})}
           style={{ '--ch': sec.hue, '--first': sec.firstStep, '--count': sec.count, flexGrow: sec.count } as CSSProperties}
         >

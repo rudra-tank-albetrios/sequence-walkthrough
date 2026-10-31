@@ -1,15 +1,19 @@
-import DOMPurify from 'dompurify';
+import type DOMPurifyDefault from 'dompurify';
 import type mermaidDefault from 'mermaid';
 import type { MermaidConfig } from 'mermaid';
 
 type Mermaid = typeof mermaidDefault;
+type Purifier = typeof DOMPurifyDefault;
 
-let loading: Promise<Mermaid> | null = null;
+let loading: Promise<[Mermaid, Purifier]> | null = null;
 
-/** Mermaid is large, so it is a separate chunk loaded the first time a diagram is drawn. */
-function loadMermaid(): Promise<Mermaid> {
-  loading ??= import('mermaid').then(
-    (m) => m.default,
+/**
+ * Mermaid is large, so it is a separate chunk loaded the first time a diagram is drawn. DOMPurify is
+ * only ever used on Mermaid's output, so it travels with it and stays out of the first load.
+ */
+function loadMermaid(): Promise<[Mermaid, Purifier]> {
+  loading ??= Promise.all([import('mermaid'), import('dompurify')]).then(
+    ([m, purify]) => [m.default, purify.default],
     () => {
       loading = null;
       throw new MermaidLoadError('Mermaid could not be loaded. Check the connection and reload the page.');
@@ -50,7 +54,7 @@ function luminance(color: string): number {
  * SVG it produces goes through DOMPurify before it reaches the page. `name` is kept because Mermaid
  * marks participants with it, and `<style>` because the theme lives there.
  */
-function sanitize(svg: string): string {
+function sanitize(DOMPurify: Purifier, svg: string): string {
   return DOMPurify.sanitize(svg, {
     USE_PROFILES: { svg: true, svgFilters: true, html: true },
     ADD_TAGS: ['style'],
@@ -62,7 +66,7 @@ function sanitize(svg: string): string {
 
 /** Draws the code with the given theme. Throws DiagramSyntaxError when Mermaid refuses it. */
 export async function renderDiagram(code: string, theme: string, id: string): Promise<RenderedDiagram> {
-  const mermaid = await loadMermaid();
+  const [mermaid, DOMPurify] = await loadMermaid();
   mermaid.initialize({
     startOnLoad: false,
     theme: theme as NonNullable<MermaidConfig['theme']>,
@@ -94,5 +98,5 @@ export async function renderDiagram(code: string, theme: string, id: string): Pr
     document.getElementById(`d${id}`)?.remove();
     throw new DiagramSyntaxError(error instanceof Error ? error.message : String(error));
   }
-  return { svg: sanitize(rendered.svg), themeBg, dark: luminance(themeBg) < 0.4 };
+  return { svg: sanitize(DOMPurify, rendered.svg), themeBg, dark: luminance(themeBg) < 0.4 };
 }

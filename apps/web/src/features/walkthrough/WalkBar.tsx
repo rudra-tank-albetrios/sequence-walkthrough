@@ -1,4 +1,4 @@
-import { useRef, type CSSProperties, type ReactNode } from 'react';
+import { useRef, type CSSProperties } from 'react';
 
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Cards } from './Cards.tsx';
@@ -11,14 +11,10 @@ import styles from './walkbar.module.css';
 export interface WalkBarProps {
   /** The fold tab put the cards away: the dock stays, and the diagram takes the room. */
   deckFolded?: boolean;
-  /** Sits in the transport beside Play: the voice control. */
-  besidePlay?: ReactNode;
-  /** Sits on the step card beside Ask AI: the usage bar. */
-  besideAsk?: ReactNode;
 }
 
 /** The floating bottom of the page: the deck of step cards above the dock with the Flow Rail. */
-export function WalkBar({ deckFolded = false, besidePlay, besideAsk }: WalkBarProps) {
+export function WalkBar({ deckFolded = false }: WalkBarProps) {
   const flow = useFlowStore((s) => s.flow);
   const cardH = useFlowStore((s) => s.settings.cardH);
   const barRef = useRef<HTMLElement | null>(null);
@@ -45,10 +41,10 @@ export function WalkBar({ deckFolded = false, besidePlay, besideAsk }: WalkBarPr
           {deckFolded ? null : (
             <div className={styles.deck} data-tour="deck">
               <ResizeHandle barRef={barRef} />
-              <Cards flow={flow} centreRef={centreRef} besideAsk={besideAsk} />
+              <Cards flow={flow} centreRef={centreRef} />
             </div>
           )}
-          <Dock flow={flow} besidePlay={besidePlay} />
+          <Dock flow={flow} />
         </>
       ) : (
         <div className={styles.offline} role="status">

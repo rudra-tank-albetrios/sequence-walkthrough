@@ -159,11 +159,6 @@
   outline-offset: 2px;
 }
 
-.besidePlay {
-  display: flex;
-  align-items: center;
-  min-width: 62px;
-}
 
 .readout {
   color: var(--ink);
@@ -209,9 +204,6 @@
     grid-area: end;
   }
 
-  .besidePlay {
-    min-width: 62px;
-  }
 
   .chapters {
     overflow-x: auto;

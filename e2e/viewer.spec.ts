@@ -1,18 +1,20 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
+  camera,
   DEMO_STEPS,
   DEMO_TITLE,
-  camera,
   diagram,
   fixture,
   goToStep,
   heading,
   notice,
   openFocused,
+  openPanel,
   seed,
   stepInput,
   svg,
+  themeSelect,
 } from './helpers.ts';
 
 const sized = async (page: Page) => {
@@ -225,7 +227,8 @@ test.describe('diagram', () => {
 
   test('D10 the theme list has eight names and the choice redraws and stays', async ({ page }) => {
     await openFocused(page);
-    const select = page.locator('#themeSel');
+    await openPanel(page, 'Settings', 'Theme and display');
+    const select = themeSelect(page);
     await expect(select.locator('option')).toHaveText([
       'redux-color',
       'redux',
@@ -252,6 +255,8 @@ test.describe('diagram', () => {
     );
     expect(stored.theme).toBe('dark');
     await page.reload();
+    await expect(svg(page)).toBeVisible({ timeout: 30_000 });
+    await openPanel(page, 'Settings', 'Theme and display');
     await expect(select).toHaveValue('dark');
   });
 

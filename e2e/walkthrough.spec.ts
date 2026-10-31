@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
+  closeOverlay,
   DEMO_NOTES_KEY,
   DEMO_STEPS,
   diagram,
@@ -146,17 +147,19 @@ test.describe('walkthrough', () => {
     await expect(stepInput(page)).toHaveValue(String(Number(last) + 1));
   });
 
-  test('W6 the progress bar fills and its segments jump', async ({ page }) => {
+  test('W6 the Flow Rail fills and its chapters jump', async ({ page }) => {
     await openFocused(page);
     const progress = page.getByTestId('progress');
-    await expect(progress).toHaveAttribute('aria-label', `Progress: step 0 of ${DEMO_STEPS}`);
-    await expect(progress.locator('[data-done]')).toHaveCount(0);
+    await expect(progress).toHaveAttribute('aria-valuenow', '0');
+    await expect(progress).toHaveAttribute('aria-valuemax', String(DEMO_STEPS));
+    await expect(progress).toHaveAttribute('aria-valuetext', `Overview, ${DEMO_STEPS} steps`);
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowRight');
-    await expect(progress).toHaveAttribute('aria-label', `Progress: step 2 of ${DEMO_STEPS}`);
-    await expect(progress.locator('[data-done]')).toHaveCount(2);
+    await expect(progress).toHaveAttribute('aria-valuenow', '2');
+    await expect(progress).toHaveAttribute('aria-valuetext', new RegExp(`^Step 2 of ${DEMO_STEPS}, `));
     await expect(page.getByTestId('progress-seg')).toHaveCount(5);
-    await page.getByTestId('progress-seg').last().click();
+    // The start of the last chapter: a click lands on the step under the pointer.
+    await page.getByTestId('progress-seg').last().click({ position: { x: 1, y: 4 } });
     await expect(page.getByTestId('step-card')).toContainText('Send the email');
   });
 
@@ -214,11 +217,11 @@ test.describe('walkthrough', () => {
     await expect(notice(page)).toContainText('Redis');
     await page.keyboard.press('Escape');
     await overview.getByRole('button', { name: /side parts/ }).click();
-    await expect(page.getByRole('tab', { name: /Behind the scenes/ })).toHaveAttribute(
+    await expect(page.getByRole('tab', { name: /Side parts/ })).toHaveAttribute(
       'aria-selected',
       'true',
     );
-    await page.keyboard.press('Escape');
+    await closeOverlay(page);
     await overview.getByRole('button', { name: /terms/ }).click();
     await expect(page.getByRole('tab', { name: /Glossary/ })).toHaveAttribute(
       'aria-selected',
@@ -352,8 +355,8 @@ test.describe('walkthrough', () => {
     await expect(pop.locator('details[open]')).toContainText('hook');
     // The groups are sorted by kind, as version 2 sorted them.
     await expect(pop.locator('details').first()).toContainText('config');
-    await pop.getByRole('button', { name: 'Open in the Insight panel' }).click();
-    await expect(page.getByRole('tab', { name: /Behind the scenes/ })).toHaveAttribute(
+    await pop.getByRole('button', { name: 'Open the full list' }).click();
+    await expect(page.getByRole('tab', { name: /Side parts/ })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -538,11 +541,11 @@ test.describe('walkthrough', () => {
     });
   });
 
-  test('W19 W20 the canvas row has its six buttons and the notice its Show all', async ({
+  test('W19 W20 the canvas row, the dock and the header have their controls and the notice its Show all', async ({
     page,
   }) => {
     await openFocused(page);
-    for (const name of [/Code/, /^Play/, 'Dim others', 'Chapter band', 'Insight', 'Hide']) {
+    for (const name of [/Code/, /^Play/, 'Dim others', 'Chapter band', 'Analyze', 'Hide controls']) {
       await expect(
         page.getByRole('button', { name, exact: typeof name === 'string' }).first(),
       ).toBeVisible();

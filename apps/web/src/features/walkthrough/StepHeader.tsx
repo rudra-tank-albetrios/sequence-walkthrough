@@ -1,6 +1,6 @@
 import { FLAG_TAGS, type Flow, type Step } from '@swv/core';
 import { MessageCircleQuestion, Pencil, Star } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { useNotesStore } from '../../shared/state/notesStore.ts';
@@ -45,7 +45,7 @@ function StepInput({ n, total }: { n: number; total: number }) {
 }
 
 /** The first row of the step card: count, chapter, branches, flags, unconfirmed, and the actions. */
-export function StepHeader({ flow, step, besideAsk }: { flow: Flow; step: Step; besideAsk?: ReactNode }) {
+export function StepHeader({ flow, step }: { flow: Flow; step: Step }) {
   const noteOpen = useFlowStore((s) => s.ui.noteOpen);
   const setUi = useFlowStore((s) => s.setUi);
   const starred = useNotesStore((s) => s.data[step.key]?.star ?? false);
@@ -87,7 +87,6 @@ export function StepHeader({ flow, step, besideAsk }: { flow: Flow; step: Step; 
         </Chip>
       ) : null}
       <span className={styles.spacer} />
-      {besideAsk}
       <Button
         className={styles.ask}
         title="Ask AI about this step (A)"

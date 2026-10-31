@@ -12,8 +12,12 @@ import {
   heading,
   open,
   openFocused,
+  openPanel,
+  openTool,
+  setDiagramTheme,
   stepInput,
   svg,
+  themeSelect,
   toastBox,
 } from './helpers.ts';
 
@@ -226,7 +230,7 @@ test.describe('export menu', () => {
     context,
   }) => {
     await open(page, { clipboard: true, code: 'sequenceDiagram\n  A->>B: one' });
-    await page.locator('#themeSel').selectOption('forest');
+    await setDiagramTheme(page, 'forest');
     await pick(page, /^Copy mermaid.live link/);
     await expect(toastBox(page)).toContainText('Copied the mermaid.live link');
     const link = await copied(page);
@@ -285,11 +289,11 @@ test.describe('import', () => {
       clipboard: true,
       code: 'sequenceDiagram\n  %% @title Linked\n  A->>B: one',
     });
-    await page.locator('#themeSel').selectOption('forest');
+    await setDiagramTheme(page, 'forest');
     await pick(page, /^Copy mermaid.live link/);
     await expect(toastBox(page)).toContainText('Copied the mermaid.live link');
     const link = await copied(page);
-    await page.locator('#themeSel').selectOption('neutral');
+    await setDiagramTheme(page, 'neutral');
     await diagram(page).focus();
     await page.keyboard.press('c');
     await page.locator('#code').fill('sequenceDiagram\n  %% @title Other\n  A->>B: two');
@@ -300,7 +304,8 @@ test.describe('import', () => {
     await dialog.getByRole('button', { name: 'Load' }).click();
     await expect(heading(page)).toHaveText('Linked');
     await expect(toastBox(page)).toContainText('Loaded the diagram from the mermaid.live link');
-    await expect(page.locator('#themeSel')).toHaveValue('forest');
+    await openPanel(page, 'Settings', 'Theme and display');
+    await expect(themeSelect(page)).toHaveValue('forest');
   });
 
   test('F6 a file loads, a Markdown file needs a block, other types are refused', async ({
@@ -462,7 +467,7 @@ test.describe('saving and copying', () => {
     expect(fromMenu.name).toBe('sequence-walkthrough-skill-kit.zip');
     expect(fromMenu.bytes.subarray(0, 2).toString('latin1')).toBe('PK');
     await expect(toastBox(page)).toContainText('Downloaded sequence-walkthrough-skill-kit.zip');
-    await page.getByRole('button', { name: 'How it works' }).click();
+    await openTool(page, 'Learn', 'How it works');
     const fromGuide = await download(page, () =>
       page
         .getByRole('dialog', { name: 'How it works' })

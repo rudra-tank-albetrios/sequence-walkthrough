@@ -1,5 +1,5 @@
 import type { Flow } from '@swv/core';
-import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from 'react';
+import { useEffect, useRef, type CSSProperties, type RefObject } from 'react';
 
 import { cx } from '../../shared/lib/util.ts';
 import { useReducedMotion } from '../../shared/hooks/useMediaQuery.ts';
@@ -11,8 +11,8 @@ import { neighbour } from './steps.ts';
 import styles from './walkbar.module.css';
 
 /** Previous card, centre card, next card. Slides on a step change. */
-export function Cards(props: { flow: Flow; centreRef: RefObject<HTMLDivElement | null>; besideAsk?: ReactNode }) {
-  const { flow, centreRef, besideAsk } = props;
+export function Cards(props: { flow: Flow; centreRef: RefObject<HTMLDivElement | null> }) {
+  const { flow, centreRef } = props;
   const cur = useFlowStore((s) => s.cur);
   const path = useFlowStore((s) => s.path);
   const chapterLock = useFlowStore((s) => s.chapterLock);
@@ -49,7 +49,7 @@ export function Cards(props: { flow: Flow; centreRef: RefObject<HTMLDivElement |
         data-testid="card-cur"
         data-tour="step-card"
       >
-        {step ? <StepCard flow={flow} step={step} besideAsk={besideAsk} /> : <OverviewCard flow={flow} />}
+        {step ? <StepCard flow={flow} step={step} /> : <OverviewCard flow={flow} />}
       </div>
       <SideCard flow={flow} step={nextIndex >= 0 ? flow.steps[nextIndex] : undefined} testId="card-next" />
     </div>

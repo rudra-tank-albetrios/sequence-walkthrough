@@ -1,6 +1,5 @@
 import type { Flow } from '@swv/core';
 import { Lock, LockOpen, Pause, Play, StepBack, StepForward } from 'lucide-react';
-import type { ReactNode } from 'react';
 
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Button } from '../../shared/ui/Button.tsx';
@@ -15,8 +14,8 @@ import { PathSelect } from './PathSelect.tsx';
 
 const SPEEDS = [1000, 2000, 3000, 4000, 5000];
 
-/** Play, the steppers and the speed, in the middle of the dock, with room for the voice control. */
-function Transport({ flow, besidePlay }: { flow: Flow; besidePlay: ReactNode }) {
+/** Play, the steppers and the speed, in the middle of the dock. */
+function Transport({ flow }: { flow: Flow }) {
   const cur = useFlowStore((s) => s.cur);
   const playing = useFlowStore((s) => s.playing);
   const speed = useFlowStore((s) => s.settings.speed);
@@ -89,9 +88,6 @@ function Transport({ flow, besidePlay }: { flow: Flow; besidePlay: ReactNode }) 
       >
         <StepForward size={18} aria-hidden="true" />
       </Button>
-      <div className={styles.besidePlay} data-tour="voice">
-        {besidePlay}
-      </div>
     </>
   );
 }
@@ -123,7 +119,7 @@ function DockEnd({ flow }: { flow: Flow }) {
 }
 
 /** The floating dock: chapters, the Flow Rail, and the transport with Play at its centre. */
-export function Dock({ flow, besidePlay }: { flow: Flow; besidePlay?: ReactNode }) {
+export function Dock({ flow }: { flow: Flow }) {
   return (
     <section id="dock" className={styles.dock} aria-label="Playback" data-tour="dock">
       <ChaptersNav flow={flow} />
@@ -135,7 +131,7 @@ export function Dock({ flow, besidePlay }: { flow: Flow; besidePlay?: ReactNode 
           <BehindPopover flow={flow} />
         </div>
         <div className={styles.transport}>
-          <Transport flow={flow} besidePlay={besidePlay} />
+          <Transport flow={flow} />
         </div>
         <DockEnd flow={flow} />
       </div>

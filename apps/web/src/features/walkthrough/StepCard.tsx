@@ -1,5 +1,5 @@
 import type { Flow, Step } from '@swv/core';
-import type { CSSProperties, ReactNode } from 'react';
+import type { CSSProperties } from 'react';
 
 import { cx } from '../../shared/lib/util.ts';
 import { TermText } from '../../shared/ui/TermText.tsx';
@@ -32,7 +32,7 @@ function Explanation({ step }: { step: Step }) {
 }
 
 /** The centre card for one step. */
-export function StepCard({ flow, step, besideAsk }: { flow: Flow; step: Step; besideAsk?: ReactNode }) {
+export function StepCard({ flow, step }: { flow: Flow; step: Step }) {
   const section = flow.sections[step.section];
   const summary = section?.summary && step.idx === section.firstStep ? section : undefined;
   const hasExtra =
@@ -47,7 +47,7 @@ export function StepCard({ flow, step, besideAsk }: { flow: Flow; step: Step; be
     step.answers >= 0;
   return (
     <div data-testid="step-card">
-      <StepHeader flow={flow} step={step} besideAsk={besideAsk} />
+      <StepHeader flow={flow} step={step} />
       <div className={styles.body}>
         <div className={styles.primary}>
           <RouteLine flow={flow} step={step} />

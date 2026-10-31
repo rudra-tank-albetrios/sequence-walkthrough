@@ -1,6 +1,14 @@
 import { expect, test } from '@playwright/test';
 
-import { diagram, expectNoAxeViolations, openFocused } from './helpers.ts';
+import {
+  closeOverlay,
+  diagram,
+  expectNoAxeViolations,
+  openFocused,
+  openPanel,
+  openTool,
+  overlay,
+} from './helpers.ts';
 
 // Plan section 9: axe on the main screens with each dialog, panel and popover open. The overview
 // alone is checked in app.spec.ts and the bare step bar in walkthrough.spec.ts.
@@ -40,14 +48,17 @@ test.describe('accessibility with things open', () => {
     await page.keyboard.press('i');
     const insight = page.getByTestId('insight');
     await expect(insight).toBeVisible();
-    for (const tab of await insight.getByRole('tab').all()) {
+    for (const tab of await overlay(page).getByRole('tab').all()) {
       await tab.click();
       await expect(tab).toHaveAttribute('aria-selected', 'true');
       await expectNoAxeViolations(page);
     }
-    await diagram(page).focus();
     await page.keyboard.press('Escape');
     await expect(insight).toBeHidden();
+    await openPanel(page, 'Learn', 'Glossary');
+    await expectNoAxeViolations(page);
+    await closeOverlay(page);
+    await diagram(page).focus();
     await page.keyboard.press('c');
     await expect(page.locator('#codePanel')).toBeVisible();
     await expectNoAxeViolations(page);
@@ -66,7 +77,7 @@ test.describe('accessibility with things open', () => {
 
   test('each dialog and the export menu', async ({ page }) => {
     await openFocused(page);
-    await page.getByRole('button', { name: 'How it works' }).click();
+    await openTool(page, 'Learn', 'How it works');
     const guide = page.getByRole('dialog', { name: 'How it works' });
     await expect(guide).toBeVisible();
     await expectNoAxeViolations(page);

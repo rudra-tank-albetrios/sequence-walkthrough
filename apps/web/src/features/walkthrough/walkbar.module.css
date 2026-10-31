@@ -343,6 +343,11 @@
   transform: translateY(1px);
 }
 
+/* A side step the path filter hides stays in place, faded, so the deck keeps its rhythm. */
+.side.off {
+  opacity: 0.3;
+}
+
 .side.empty {
   visibility: hidden;
 }

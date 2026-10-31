@@ -248,7 +248,7 @@ sequenceDiagram
   }
 
   const expectNoFormula = (csv: string) => {
-    const cells = parseCsv(csv.replace(/^﻿/, '')).flat();
+    const cells = parseCsv(csv.replace(/^\uFEFF/, '')).flat();
     expect(cells.length).toBeGreaterThan(14);
     expect(cells).toContain("'=5+5");
     expect(cells.filter((cell) => /^[=+\-@\t\r]/.test(cell))).toEqual([]);

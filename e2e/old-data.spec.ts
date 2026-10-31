@@ -3,8 +3,9 @@ import { deflateSync } from 'node:zlib';
 import { expect, test, type Page } from '@playwright/test';
 
 import {
-  DEMO_NOTES_KEY,
   camera,
+  closeOverlay,
+  DEMO_NOTES_KEY,
   diagram,
   download,
   expectNoAxeViolations,
@@ -12,10 +13,12 @@ import {
   heading,
   open,
   openFocused,
+  openPanel,
   recordClipboard,
   seed,
   stepInput,
   svg,
+  themeSelect,
   toastBox,
 } from './helpers.ts';
 
@@ -170,8 +173,7 @@ test.describe('old notes and bookmarks', () => {
     await expect(pop).toContainText('saved answer');
     await expect(pop.getByRole('button', { name: 'Delete' })).toBeVisible();
     await page.keyboard.press('Escape');
-    await page.keyboard.press('i');
-    await page.getByRole('tab', { name: /Glossary/ }).click();
+    await openPanel(page, 'Learn', 'Glossary');
     await expect(page.getByTestId('insight').locator('[data-term="shopper"]')).toContainText(
       'saved answer',
     );
@@ -194,7 +196,9 @@ test.describe('old settings', () => {
         }),
       },
     });
-    await expect(page.locator('#themeSel')).toHaveValue('forest');
+    await openPanel(page, 'Settings', 'Theme and display');
+    await expect(themeSelect(page)).toHaveValue('forest');
+    await closeOverlay(page);
     await expect(page.getByRole('button', { name: 'Wheel: Zoom' })).toHaveAttribute(
       'aria-pressed',
       'true',
@@ -225,7 +229,9 @@ test.describe('old settings', () => {
     await expect(page.locator('#topbar')).toBeHidden();
     await expect(page.locator('#wbar')).toBeVisible();
     await page.getByRole('button', { name: 'Show the header' }).click();
-    await expect(page.locator('#themeSel')).toHaveValue('redux-color');
+    await openPanel(page, 'Settings', 'Theme and display');
+    await expect(themeSelect(page)).toHaveValue('redux-color');
+    await closeOverlay(page);
     await expect(page.getByLabel('Seconds per step')).toHaveValue('3000');
   });
 

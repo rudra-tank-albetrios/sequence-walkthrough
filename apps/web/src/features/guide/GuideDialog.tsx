@@ -67,8 +67,8 @@ export function GuideDialog() {
           <Mono>@effect</Mono>) that take part without being a layer.
         </li>
         <li>
-          <Kbd>I</Kbd> opens the Insight panel: layers, every endpoint with its replies, the error catalog, side
-          parts, the glossary (<Mono>@term</Mono>) and the tables touched.
+          <Kbd>I</Kbd> opens the Analyze tools: layers, every endpoint with its replies, the error catalog, the
+          tables touched and the side parts. The glossary (<Mono>@term</Mono>) sits under Learn.
         </li>
         <li>
           <Kbd>A</Kbd> asks an AI about the current step or any word, in under 60 words. You choose a free provider

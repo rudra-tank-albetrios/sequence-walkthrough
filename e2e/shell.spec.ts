@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import {
   camera,
+  closeOverlay,
   copied,
   DEMO_TITLE,
   demoFlow,
@@ -9,7 +10,10 @@ import {
   heading,
   open,
   openFocused,
+  openTool,
+  overlay,
   stepInput,
+  themeSelect,
 } from './helpers.ts';
 
 // Parity rows O3 to O7 and O9 to O11: the header, the two help dialogs, the narrow top bar, the
@@ -48,11 +52,11 @@ test.describe('header', () => {
     await page.keyboard.press('ArrowRight');
     await expect(page.getByTestId('card-cur').getByText('proposed', { exact: true })).toBeVisible();
     await page.keyboard.press('i');
-    const insight = page.getByTestId('insight');
-    await insight.getByRole('tab', { name: /^Errors/ }).click();
-    await expect(insight).toContainText(
+    await overlay(page).getByRole('tab', { name: /^Errors/ }).click();
+    await expect(page.getByTestId('insight')).toContainText(
       'Proposed design: none of these steps exist in the code yet.',
     );
+    await closeOverlay(page);
     await page.getByRole('button', { name: /^Export/ }).click();
     await page.getByRole('menuitem', { name: 'Copy table as Markdown' }).click();
     expect(await copied(page)).toContain(
@@ -66,7 +70,7 @@ test.describe('help dialogs', () => {
     page,
   }) => {
     await open(page);
-    await page.getByRole('button', { name: 'How it works' }).click();
+    await openTool(page, 'Learn', 'How it works');
     const dialog = page.getByRole('dialog', { name: 'How it works' });
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole('heading', { level: 3 })).toHaveText([
@@ -81,8 +85,8 @@ test.describe('help dialogs', () => {
     await expect(shortcuts).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(shortcuts).toBeHidden();
-    // The ⋯ menu reaches it too.
-    await page.setViewportSize({ width: 1000, height: 800 });
+    // On a phone the ⋯ menu reaches it too.
+    await page.setViewportSize({ width: 640, height: 800 });
     await page.getByRole('button', { name: 'More' }).click();
     await page.getByRole('menuitem', { name: 'How it works' }).click();
     await expect(dialog).toBeVisible();
@@ -111,36 +115,53 @@ test.describe('help dialogs', () => {
 });
 
 test.describe('layout, theme and motion', () => {
-  test('O7 below 1100 px the wheel and theme controls move into the ⋯ menu', async ({ page }) => {
+  test('O7 below 1100 px the tool groups shrink to icons; on a phone one ⋯ menu holds everything', async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1000, height: 800 });
     await open(page);
+    const topbar = page.locator('#topbar');
+    // Find and the four groups stay, as icons named by their labels.
+    for (const name of ['Find', 'Learn', 'Analyze', 'Export', 'Settings']) {
+      const button = topbar.getByRole('button', { name, exact: true });
+      await expect(button).toBeVisible();
+      await expect(button.locator('span', { hasText: name })).toBeHidden();
+    }
+    await expect(page.getByRole('button', { name: 'More' })).toBeHidden();
+    // The wheel switch sits with the canvas tools and the theme in Settings, not in the header.
+    await expect(page.getByRole('button', { name: /^Wheel:/ })).toBeVisible();
+    await expect(page.locator('#themeSel')).toBeHidden();
+    await page.setViewportSize({ width: 640, height: 800 });
     const more = page.getByRole('button', { name: 'More' });
     await expect(more).toBeVisible();
-    await expect(page.getByRole('button', { name: /^Wheel:/ })).toBeHidden();
-    await expect(page.locator('#themeSel')).toBeHidden();
-    await expect(page.getByRole('button', { name: /^Export/ })).toBeVisible();
+    await expect(topbar.getByRole('button', { name: 'Learn', exact: true })).toBeHidden();
     await more.click();
     const menu = page.getByRole('menu', { name: 'More' });
-    await expect(menu.getByRole('menuitem')).toHaveText([
-      'How it works',
+    for (const name of [
       'Switch to table view',
-      'Insight panel',
-      'Ask AI settings',
       'Find',
       'Fit width',
       'Fit all',
-      'Wheel: Scroll',
-      'Shortcuts and help',
-    ]);
-    await expect(menu.locator('#themeSel2')).toBeVisible();
-    await menu.getByRole('menuitem', { name: 'Wheel: Scroll' }).click();
+      'Dim others',
+      'Hide controls',
+      'How it works',
+      'Layers',
+      /^PDF/,
+      'Theme and display',
+      'Stored data',
+    ]) {
+      await expect(menu.getByRole('menuitem', { name })).toBeVisible();
+    }
+    await menu.getByRole('menuitem', { name: 'Theme and display' }).click();
     await expect(menu).toBeHidden();
-    await more.click();
-    await expect(menu.getByRole('menuitem', { name: 'Wheel: Zoom' })).toBeVisible();
-    await page.keyboard.press('Escape');
+    await expect(themeSelect(page)).toBeVisible();
+    await closeOverlay(page);
     await page.setViewportSize({ width: 1280, height: 800 });
     await expect(more).toBeHidden();
-    await expect(page.getByRole('button', { name: 'Wheel: Zoom' })).toBeVisible();
+    await expect(
+      topbar.getByRole('button', { name: 'Learn', exact: true }).locator('span', { hasText: 'Learn' }),
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Wheel: Scroll' })).toBeVisible();
   });
 
   test('O9 the page follows the system colour scheme', async ({ page }) => {

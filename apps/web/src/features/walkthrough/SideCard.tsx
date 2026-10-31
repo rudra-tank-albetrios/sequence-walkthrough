@@ -18,7 +18,6 @@ export function SideCard({ flow, step, testId }: { flow: Flow; step: Step | unde
       type="button"
       className={cx(styles.card, styles.side, !pathVisible(step, path) && styles.off)}
       style={hue === undefined ? undefined : ({ '--ch': hue } as CSSProperties)}
-      aria-label={`Go to step ${String(step.n)}`}
       data-testid={testId}
       onClick={() => {
         go(step.idx);

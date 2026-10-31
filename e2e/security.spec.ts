@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { openPanel } from './helpers.ts';
 import {
   arm,
   deliveries,
@@ -392,11 +393,7 @@ test.describe('malicious values left in browser storage', () => {
       await page.getByTestId('bm-btn').click();
       await expect(page.getByRole('heading', { name: 'Bookmarks and notes' })).toBeVisible();
       await page.keyboard.press('Escape');
-      await page.keyboard.press('i');
-      await page
-        .getByTestId('insight')
-        .getByRole('tab', { name: /Glossary/ })
-        .click();
+      await openPanel(page, 'Learn', 'Glossary');
       await expectNothingRan(armed, name);
     });
   }
@@ -433,7 +430,7 @@ test.describe('a malicious notes file', () => {
   const FLOW = 'sequenceDiagram\n  %% @title Noted\n  A->>B: hello\n  B-->>A: 200 ok';
   const html = `<img src=x onerror="__pwned('notes-file')" data-pwn>`;
 
-  async function importNotes(page: import('@playwright/test').Page, content: string) {
+  async function importNotes(page: Page, content: string) {
     await page.getByTestId('bm-btn').click();
     await page.getByRole('heading', { name: 'Bookmarks and notes' }).waitFor();
     await page.getByLabel('Notes file').setInputFiles({
