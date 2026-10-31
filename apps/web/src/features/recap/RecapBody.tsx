@@ -11,7 +11,7 @@ import {
 } from '../../shared/storage/weakPoints.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { AnalysisPanel, SampleAnalysis } from './AnalysisPanel.tsx';
-import { selectMistakes, type RecapSelection } from './mistakes.ts';
+import { selectMistakes } from './mistakes.ts';
 import { MistakeList } from './MistakeList.tsx';
 import { PERIODS, type RecapPeriod } from './period.ts';
 import styles from './recap.module.css';
@@ -35,24 +35,19 @@ function useWeakPoints(): readonly WeakPoint[] | null {
   return points;
 }
 
-function Controls({
-  points,
-  period,
-  setPeriod,
-  currentFlow,
-  allFlows,
-  setAllFlows,
-  now,
-}: {
+interface ControlsProps {
   points: readonly WeakPoint[];
   period: RecapPeriod;
   setPeriod: (period: RecapPeriod) => void;
+  /** The flow on screen, or null when there is none to choose. */
   currentFlow: string | null;
-  allFlows: boolean;
+  scope: string | null;
   setAllFlows: (allFlows: boolean) => void;
   now: Date;
-}) {
-  const scope = allFlows ? null : currentFlow;
+}
+
+function Controls(props: ControlsProps) {
+  const { points, period, setPeriod, currentFlow, scope, setAllFlows, now } = props;
   return (
     <div className={styles.controls}>
       <div className={styles.seg} role="group" aria-label="Period">
@@ -65,13 +60,13 @@ function Controls({
       <div className={styles.seg} role="group" aria-label="Flows">
         <button
           type="button"
-          aria-pressed={!allFlows}
+          aria-pressed={scope !== null}
           disabled={currentFlow === null}
           onClick={() => setAllFlows(false)}
         >
           This flow
         </button>
-        <button type="button" aria-pressed={allFlows} onClick={() => setAllFlows(true)}>
+        <button type="button" aria-pressed={scope === null} onClick={() => setAllFlows(true)}>
           All flows
         </button>
       </div>
@@ -87,9 +82,9 @@ export function RecapBody() {
   const own = useWeakPoints();
   const [now] = useState(() => new Date());
   const [period, setPeriod] = useState<RecapPeriod>('today');
+  const [allFlows, setAllFlows] = useState(false);
   const currentFlow = flow?.isSequence ? flowId(flow) : null;
-  const [allFlowsChosen, setAllFlows] = useState(false);
-  const allFlows = allFlowsChosen || currentFlow === null;
+  const scope = allFlows ? null : currentFlow;
 
   // The sample stands in only while the person has no mistakes of their own, on the demo flow.
   const sample = useMemo(
@@ -98,18 +93,16 @@ export function RecapBody() {
     [own, flow, code, now],
   );
   const points = sample?.mistakes ?? own;
-  const selection: RecapSelection = { period, flowId: allFlows ? null : currentFlow };
   const mistakes = useMemo(
-    () => selectMistakes(points ?? [], { period, flowId: selection.flowId }, now),
-    [points, period, selection.flowId, now],
+    () => selectMistakes(points ?? [], { period, flowId: scope }, now),
+    [points, period, scope, now],
   );
 
   if (!points) return <p className={styles.muted}>Loading your mistakes…</p>;
 
   const openQuiz = () => setUi({ recapOpen: false, quizOpen: true });
   const retry = () => {
-    const topics = weakTopics(mistakes, null, MAX_RETRY_TOPICS);
-    requestQuizRetry({ topics, flowId: selection.flowId });
+    requestQuizRetry({ topics: weakTopics(mistakes, null, MAX_RETRY_TOPICS), flowId: scope });
     openQuiz();
   };
 
@@ -120,7 +113,7 @@ export function RecapBody() {
         period={period}
         setPeriod={setPeriod}
         currentFlow={currentFlow}
-        allFlows={allFlows}
+        scope={scope}
         setAllFlows={setAllFlows}
         now={now}
       />
@@ -141,10 +134,13 @@ export function RecapBody() {
           {sample ? (
             <SampleAnalysis groups={sample.groups} mistakes={mistakes} />
           ) : (
-            <AnalysisPanel selection={selectionKey(selection)} mistakes={mistakes} />
+            <AnalysisPanel
+              selection={selectionKey({ period, flowId: scope })}
+              mistakes={mistakes}
+            />
           )}
           <h3 className={styles.h3}>Your mistakes</h3>
-          <MistakeList mistakes={mistakes} now={now} showFlow={allFlows} />
+          <MistakeList mistakes={mistakes} now={now} showFlow={scope === null} />
           <p className={styles.muted}>
             Your mistakes and their analysis stay in this browser. Clearing browser data removes
             them.

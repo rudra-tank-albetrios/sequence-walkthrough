@@ -1,3 +1,5 @@
+import { useId, type ReactNode } from 'react';
+
 import type { WeakPoint } from '../../shared/storage/weakPoints.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Button } from '../../shared/ui/Button.tsx';
@@ -6,11 +8,27 @@ import type { AnalysisGroup } from './analysis.ts';
 import { recapModel } from './recapModel.ts';
 import { liveGroups, type SavedAnalysis } from './savedAnalysis.ts';
 import styles from './recap.module.css';
-import { useAnalysis } from './useAnalysis.ts';
+import { useAnalysis, type AnalysisView } from './useAnalysis.ts';
 
 const DAY = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
-/** The model's themes. Everything here is plain text, whatever the reply held. */
+function Panel({ live = false, children }: { live?: boolean; children: ReactNode }) {
+  const headingId = useId();
+  return (
+    <section
+      className={styles.panel}
+      aria-labelledby={headingId}
+      {...(live ? { 'aria-live': 'polite' as const } : {})}
+    >
+      <h3 id={headingId} className={styles.h3}>
+        Key points
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+/** The themes. Everything here is shown as plain text, whatever a model's reply held. */
 function Groups({
   groups,
   mistakes,
@@ -21,14 +39,14 @@ function Groups({
   const numberOf = (id: string) => mistakes.findIndex((mistake) => mistake.id === id) + 1;
   return (
     <div className={styles.groups}>
-      {liveGroups(groups, mistakes).map((group) => {
+      {liveGroups(groups, mistakes).map((group, index) => {
         const numbers = group.mistakeIds.map(numberOf).filter((number) => number > 0);
         return (
-          <section key={group.title} data-testid="recap-group">
+          <section key={index} data-testid="recap-group">
             <h4 className={styles.groupTitle}>{group.title}</h4>
             <ul className={styles.points}>
-              {group.points.map((point) => (
-                <li key={point}>{point}</li>
+              {group.points.map((point, pointIndex) => (
+                <li key={pointIndex}>{point}</li>
               ))}
             </ul>
             {numbers.length > 0 ? (
@@ -56,22 +74,23 @@ function SavedLine({ saved }: { saved: SavedAnalysis }) {
   );
 }
 
-/** The part of the panel that needs a model: an invitation, the request, or its error. */
+/** The part of the panel that needs a model: the invitation, or an error and a second try. */
 function AskForAnalysis({
   view,
   analyse,
 }: {
-  view: { status: 'none'; stale: boolean } | { status: 'error'; message: string };
+  view: Extract<AnalysisView, { status: 'none' | 'error' }>;
   analyse: () => void;
 }) {
-  // Re-read after the settings dialog closes, so a new key takes effect at once.
   const setUi = useFlowStore((s) => s.setUi);
+  // Rendering again when the settings dialog closes picks up a key added there.
   useFlowStore((s) => s.ui.aiSettingsOpen);
   const model = recapModel();
   if (!model) {
     return (
       <p className={styles.muted}>
-        No model is set up, so there is no analysis. The mistakes and correct answers are all here.{' '}
+        No model is set up, so there is no analysis. Your mistakes and the correct answers are all
+        below.{' '}
         <button
           type="button"
           className={styles.link}
@@ -87,13 +106,11 @@ function AskForAnalysis({
     <>
       {view.status === 'error' ? <p className={styles.error}>{view.message}</p> : null}
       {view.status === 'none' && view.stale ? (
-        <p className={styles.muted}>You have new mistakes since the last analysis.</p>
+        <p className={styles.notice}>You have new mistakes since the last analysis.</p>
       ) : null}
-      <div className={styles.panelActions}>
-        <Button variant="primary" onClick={analyse}>
-          {view.status === 'error' ? 'Try again' : 'Analyse my mistakes'}
-        </Button>
-      </div>
+      <Button variant="primary" onClick={analyse}>
+        {view.status === 'error' ? 'Try again' : 'Analyse my mistakes'}
+      </Button>
       <p className={styles.savedLine}>
         Sends these questions, your answers and the correct answers to {model.name}. The reply is at
         most about 500 tokens and stays in this browser until new mistakes appear.
@@ -111,8 +128,7 @@ export interface AnalysisPanelProps {
 export function AnalysisPanel({ selection, mistakes }: AnalysisPanelProps) {
   const { view, analyse } = useAnalysis(selection, mistakes);
   return (
-    <section className={styles.panel} aria-label="Key points" aria-live="polite">
-      <h3 className={styles.h3}>Key points</h3>
+    <Panel live>
       {view.status === 'loading' ? <p className={styles.muted}>Loading…</p> : null}
       {view.status === 'busy' ? <p className={styles.muted}>Analysing your mistakes…</p> : null}
       {view.status === 'none' || view.status === 'error' ? (
@@ -124,7 +140,7 @@ export function AnalysisPanel({ selection, mistakes }: AnalysisPanelProps) {
           <SavedLine saved={view.saved} />
         </>
       ) : null}
-    </section>
+    </Panel>
   );
 }
 
@@ -136,13 +152,12 @@ export interface SampleAnalysisProps {
 /** The built-in key points of the sample recap. No model wrote them and nothing is sent. */
 export function SampleAnalysis({ groups, mistakes }: SampleAnalysisProps) {
   return (
-    <section className={styles.panel} aria-label="Key points">
-      <h3 className={styles.h3}>Key points</h3>
+    <Panel>
       <Groups groups={groups} mistakes={mistakes} />
       <p className={styles.savedLine}>
         <Chip>Sample</Chip>
         <span>Built in. Your own model writes these for your own mistakes.</span>
       </p>
-    </section>
+    </Panel>
   );
 }

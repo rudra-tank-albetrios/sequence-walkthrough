@@ -22,10 +22,7 @@ export type AnalysisView =
 
 const BAD_REPLY = 'The model replied in a form this page cannot read, so nothing was saved.';
 
-function viewOfSaved(
-  saved: SavedAnalysis | null,
-  mistakes: readonly WeakPoint[],
-): AnalysisView {
+function viewOfSaved(saved: SavedAnalysis | null, mistakes: readonly WeakPoint[]): AnalysisView {
   if (!saved) return { status: 'none', stale: false };
   if (!isCurrent(saved, mistakes)) return { status: 'none', stale: true };
   if (liveGroups(saved.groups, mistakes).length === 0) return { status: 'none', stale: false };

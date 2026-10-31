@@ -46,6 +46,7 @@ export interface FlowState {
     importOpen: boolean;
     quizOpen: boolean;
     weakPointsOpen: boolean;
+    recapOpen: boolean;
   };
 
   setCode: (code: string) => void;
@@ -109,6 +110,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     importOpen: false,
     quizOpen: false,
     weakPointsOpen: false,
+    recapOpen: false,
   },
   lastGo: { index: -1, camera: true, seq: 0 },
 
