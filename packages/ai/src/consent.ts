@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { endpointUrl, type ModelEntry } from './models.ts';
 import { presetFor } from './presets.ts';
-import { readJson, writeJson } from './storage.ts';
+import { notifyAiChange, readJson, writeJson } from './storage.ts';
 
 /**
  * Plan section 4: before the first AI feature, say what text goes to which provider. Saved per
@@ -34,4 +34,5 @@ export function consentMissing(models: readonly ModelEntry[]): ModelEntry[] {
 /** Records that the person has read the notice for these models. */
 export function grantConsent(models: readonly ModelEntry[]): void {
   writeJson(CONSENT_KEY, [...new Set([...toldHosts(), ...models.map(modelHost)])]);
+  notifyAiChange();
 }

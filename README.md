@@ -140,7 +140,7 @@ Press **A** on any step, or select a word and right-click it, to ask a short que
 
 Answers are under 60 words, written for a developer new to the codebase, in plain words with technical terms glossed. Every answer is saved into the step's note (press **N** to edit it later), and a "What is …?" answer can be added to the glossary with one click.
 
-The viewer is a static page, so it cannot hide an API key. You pick the provider under **Export → Ask AI → Provider and key…** and the key stays in this browser's storage; it is sent only to that provider.
+The viewer is a static page, so it cannot hide an API key. You add models under **Export → Ask AI → Provider and key…**, as an ordered list. Each key is stored in this browser, not encrypted, and is sent only to its own model's address. "Forget key when this tab closes" keeps it out of permanent storage. Before the first question, the viewer says what text goes to which provider.
 
 | Provider | Needs | Notes |
 |---|---|---|
@@ -149,7 +149,13 @@ The viewer is a static page, so it cannot hide an API key. You pick the provider
 | Custom OpenAI-compatible endpoint | a URL, optionally a key | For your own proxy: a small Netlify Function or Cloudflare Worker that holds one key for a group of friends. |
 | Claude | nothing, but only when the page is opened as a Claude artifact | Uses the artifact's `sample` capability; the viewer asks for consent on the first question. |
 
-If a provider refuses browser requests, the panel says so; pick another provider or put a proxy in front of it.
+If a browser call is blocked, the **Test** button on that model says so; pick another provider or put a proxy in front of it. On 2026-10-31 all five free-tier providers allowed browser calls (`docs/decisions.md`).
+
+**Usage bars.** Each model has a bar beside the question and in AI settings, green under 60% used, amber to 85%, red above. The percentage and what is left are always written out, and hover shows the limit and reset time. It says where the number comes from: **Exact** from the provider, **Estimated, this browser only** from limits you typed in, or **Count only**.
+
+**Auto-switch.** Mark a model as a fallback and it may take over: when the one before it has 5% or less left (you can change the level), hits a limit, or cannot be reached. A short notice says what happened. A bad key never switches. Each request tries each model at most once, and models not marked as fallbacks are never used.
+
+**Saved answers.** A repeated question about an unchanged step costs no tokens: the answer is labelled "Saved answer", says which model wrote it, and has an **Ask again** button. The newest 500 are kept in this browser, and AI settings shows their size with a clear button.
 
 ---
 

@@ -33,7 +33,7 @@ These rules come from `docs/IMPLEMENTATION-PLAN.md`, section 4. Each becomes tru
 | API keys | A key is stored in this browser only and is sent only to the model URL it was saved for. It never appears in logs, URLs, exports, the answer cache or bug reports. Settings offer "Forget key when this tab closes". Keys are not encrypted with a key stored beside them, because that adds no safety; the settings screen says plainly that the key is stored in this browser. |
 | Pasted diagrams and code shared in a URL | Treated as untrusted. Mermaid runs at `securityLevel: 'strict'` and every SVG it produces goes through DOMPurify before it reaches the page. |
 | Model replies | Treated as untrusted data. They are shown as plain text, validated with Zod schemas, and can never run an action. Flow text is clearly marked as data inside prompts. |
-| Custom model URLs | `https` only, except `localhost`. |
+| Custom model URLs | `https` only, except `localhost` and `127.0.0.1`. A link cannot hold credentials or a query parameter named like a key, a key is removed when its address changes, and redirects are refused. |
 
 ## Scope
 

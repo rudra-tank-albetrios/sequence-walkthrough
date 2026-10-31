@@ -17,6 +17,8 @@
  *     The `flowVersion` of an answer-cache key.
  *   hasUsableModel(): boolean
  *     Whether a saved model can be asked now, for a feature with a no-model mode.
+ *   receivingModels(state: ModelState): ModelEntry[]
+ *     The models that could receive text now, which the privacy notice names.
  *   REPLY_TOKENS, FLOW_SUMMARY_TOKENS, MAX_PROMPT_TOKENS, estimateTokens
  *     The budgets of plan section 5.
  *   z
@@ -49,6 +51,7 @@ export {
   type ModelRequest,
   type ModelResult,
 } from './call.ts';
+export { askRequest } from './ask.ts';
 export { testModel, type ModelCheck } from './check.ts';
 export { consentMissing, grantConsent, modelHost } from './consent.ts';
 export {
@@ -78,6 +81,7 @@ export {
   type PromptTerm,
   type StepContext,
 } from './prompts.ts';
+export { receivingModels } from './route.ts';
 export { onAiChange } from './storage.ts';
 export {
   formatReset,
