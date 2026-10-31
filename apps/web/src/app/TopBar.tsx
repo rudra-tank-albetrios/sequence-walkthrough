@@ -148,6 +148,7 @@ export function TopBar() {
               {view === 'diagram' ? 'Switch to table view' : 'Switch to diagram view'}
             </MenuItem>
             <MenuItem onSelect={() => setUi({ insightOpen: !insightOpen })}>Insight panel</MenuItem>
+            <MenuItem onSelect={() => setUi({ recapOpen: true })}>Day recap</MenuItem>
             <MenuItem onSelect={() => setUi({ aiSettingsOpen: true })}>Ask AI settings</MenuItem>
             <MenuItem onSelect={() => setUi({ findOpen: true })}>Find</MenuItem>
             <MenuItem onSelect={commands.fitWidth}>Fit width</MenuItem>

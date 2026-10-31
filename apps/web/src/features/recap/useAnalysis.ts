@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useFlowStore } from '../../shared/state/flowStore.ts';
 import type { WeakPoint } from '../../shared/storage/weakPoints.ts';
-import { buildRecapPrompt, parseRecapReply, RECAP_REPLY_TOKENS, RECAP_SYSTEM } from './analysis.ts';
-import { recapModel } from './recapModel.ts';
+import { toast } from '../../shared/ui/toast.ts';
+import { buildRecapPrompt, groupsFromReply, RECAP_SYSTEM, RecapReplySchema } from './analysis.ts';
+import { callModel, REPLY_TOKENS } from './recapModel.ts';
 import {
   isCurrent,
   liveGroups,
@@ -19,8 +21,6 @@ export type AnalysisView =
   | { status: 'busy' }
   | { status: 'saved'; saved: SavedAnalysis }
   | { status: 'error'; message: string };
-
-const BAD_REPLY = 'The model replied in a form this page cannot read, so nothing was saved.';
 
 function viewOfSaved(saved: SavedAnalysis | null, mistakes: readonly WeakPoint[]): AnalysisView {
   if (!saved) return { status: 'none', stale: false };
@@ -52,34 +52,38 @@ export function useAnalysis(
   }, [key, mistakes]);
 
   const analyse = useCallback(() => {
-    const model = recapModel();
-    if (!model) return;
     const controller = new AbortController();
     running.current = controller;
     const show = (view: AnalysisView) => {
       if (!controller.signal.aborted) setState({ key, view });
     };
     show({ status: 'busy' });
-    const { user, sentIds } = buildRecapPrompt(mistakes);
+    const { prompt, sentIds } = buildRecapPrompt(mistakes);
     const run = async () => {
-      const reply = await model.send({
+      const result = await callModel({
         system: RECAP_SYSTEM,
-        user,
-        maxTokens: RECAP_REPLY_TOKENS,
+        prompt,
+        maxTokens: REPLY_TOKENS.recap,
+        schema: RecapReplySchema,
         signal: controller.signal,
       });
-      const groups = parseRecapReply(reply, sentIds);
-      if (!groups) {
-        show({ status: 'error', message: BAD_REPLY });
-        return;
+      if (controller.signal.aborted) return;
+      for (const notice of result.notices) toast(notice);
+      if (result.ok) {
+        const groups = groupsFromReply(result.data, sentIds);
+        const model = `${result.model.name} · ${result.model.model}`;
+        const saved = newSavedAnalysis(groups, mistakes, sentIds.length, model, new Date());
+        await saveAnalysis(key, saved);
+        show({ status: 'saved', saved });
+      } else if (result.error.kind === 'no-model' || result.error.kind === 'consent-needed') {
+        // The settings dialog sets up a model and says what goes where. The person then asks again.
+        useFlowStore.getState().setUi({ aiSettingsOpen: true });
+        show({ status: 'none', stale: false });
+      } else {
+        show({ status: 'error', message: result.error.message });
       }
-      const saved = newSavedAnalysis(groups, mistakes, sentIds.length, model.name, new Date());
-      await saveAnalysis(key, saved);
-      show({ status: 'saved', saved });
     };
-    run().catch((error: unknown) => {
-      show({ status: 'error', message: error instanceof Error ? error.message : String(error) });
-    });
+    void run();
   }, [key, mistakes]);
 
   const view: AnalysisView = state?.key === key ? state.view : { status: 'loading' };

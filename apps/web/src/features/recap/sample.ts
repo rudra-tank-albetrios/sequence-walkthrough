@@ -109,7 +109,7 @@ const GROUPS: readonly AnalysisGroup[] = [
   },
 ];
 
-export interface SampleRecap {
+interface SampleRecap {
   mistakes: WeakPoint[];
   groups: readonly AnalysisGroup[];
 }

@@ -28,6 +28,7 @@ const CODE = `sequenceDiagram
 const THIS_FLOW = 't:Orders';
 const NOW = new Date(2026, 9, 31, 15, 30);
 const daysAgo = (days: number) => new Date(2026, 9, 31 - days, 11, 0);
+const TEST_KEY = 'gsk_test_key';
 
 const miss = (question: string, patch: Partial<Miss> = {}): Miss => ({
   flowId: THIS_FLOW,
@@ -46,22 +47,50 @@ const GOOD_REPLY = JSON.stringify({
   groups: [{ title: 'Holds', points: ['A hold keeps stock aside.'], mistakes: [1] }],
 });
 
-function modelReplies(content: string) {
-  const fetchMock = vi.fn((_url: string, _init: RequestInit) =>
-    Promise.resolve(
-      new Response(JSON.stringify({ choices: [{ message: { content } }] }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    ),
-  );
-  vi.stubGlobal('fetch', fetchMock);
-  return fetchMock;
+interface Call {
+  url: string;
+  authorization: string;
+  body: { max_tokens?: number; messages?: { role: string; content: string }[] };
 }
 
-const setUpModel = () => {
-  Store.set('swv:ai', { provider: 'groq', keys: { groq: 'gsk_test_key' } });
-};
+/** Replaces `fetch` and records what leaves the page. Nothing here reaches a real provider. */
+function mockFetch(reply: string, status = 200) {
+  const calls: Call[] = [];
+  vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
+    calls.push({
+      url,
+      authorization: new Headers(init.headers).get('authorization') ?? '',
+      body: JSON.parse(init.body as string) as Call['body'],
+    });
+    const body = JSON.stringify({ choices: [{ message: { content: reply } }] });
+    return Promise.resolve(new Response(body, { status }));
+  });
+  return { calls };
+}
+
+/** One saved model, and a replaced `fetch`. */
+function mockModel(reply: string, status = 200) {
+  setUpModel();
+  return mockFetch(reply, status);
+}
+
+function setUpModel() {
+  Store.set('swv:ai', { provider: 'groq', keys: { groq: TEST_KEY } });
+}
+
+/** A provider that answers only when the request is stopped. It shows what the signal did. */
+function hangingFetch() {
+  const seen: { signal: AbortSignal | null | undefined } = { signal: undefined };
+  vi.stubGlobal('fetch', (_url: string, init: RequestInit) => {
+    seen.signal = init.signal;
+    return new Promise<Response>((_resolve, reject) => {
+      init.signal?.addEventListener('abort', () => {
+        reject(new DOMException('Aborted', 'AbortError'));
+      });
+    });
+  });
+  return seen;
+}
 
 const user = userEvent.setup({ pointerEventsCheck: 0 });
 
@@ -107,7 +136,7 @@ describe('each mistake', () => {
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
     expect(screen.getByRole('dialog', { name: 'Day recap' })).toBeInTheDocument();
-    const card = within(mistakeCards()[0] as HTMLElement);
+    const card = within(screen.getByTestId('recap-mistake'));
     expect(card.getByText('Why hold stock?')).toBeInTheDocument();
     expect(card.getByText('My answer to: Why hold stock?')).toBeInTheDocument();
     expect(card.getByText('The reason about: Why hold stock?')).toBeInTheDocument();
@@ -130,7 +159,7 @@ describe('each mistake', () => {
 
 describe('with no model', () => {
   it('still shows the mistakes and correct answers, without analysis and without an error', async () => {
-    const fetchMock = modelReplies(GOOD_REPLY);
+    const { calls } = mockFetch(GOOD_REPLY);
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
     expect(mistakeCards()).toHaveLength(1);
@@ -140,10 +169,10 @@ describe('with no model', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByTestId('recap-group')).not.toBeInTheDocument();
     expect(document.querySelector('.error')).toBeNull();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(calls).toHaveLength(0);
   });
 
-  it('offers the settings, and the analysis once a key is added there', async () => {
+  it('offers the settings, and the analysis once a model is added there', async () => {
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
     await user.click(await screen.findByRole('button', { name: 'Add a model' }));
@@ -154,52 +183,47 @@ describe('with no model', () => {
   });
 
   it('keeps showing an analysis saved earlier, sending nothing', async () => {
-    const fetchMock = modelReplies(GOOD_REPLY);
-    setUpModel();
+    const { calls } = mockModel(GOOD_REPLY);
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
     await user.click(await analyseButton());
     await screen.findByText('A hold keeps stock aside.');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(calls).toHaveLength(1);
     Store.del('swv:ai');
     await reopen();
     expect(await screen.findByText('A hold keeps stock aside.')).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(calls).toHaveLength(1);
   });
 });
 
 describe('the analysis', () => {
-  it('sends nothing until asked, and says what it would send and where', async () => {
-    const fetchMock = modelReplies(GOOD_REPLY);
-    setUpModel();
+  it('sends nothing until asked, and says what it would send', async () => {
+    const { calls } = mockModel(GOOD_REPLY);
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
     await analyseButton();
-    expect(screen.getByText(/Sends these questions, your answers.*Groq/)).toBeInTheDocument();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByText(/Sends these questions, your answers/)).toBeInTheDocument();
+    expect(calls).toHaveLength(0);
   });
 
   it('asks the model for at most 500 reply tokens, with the mistakes as data', async () => {
-    const fetchMock = modelReplies(GOOD_REPLY);
-    setUpModel();
+    const { calls } = mockModel(GOOD_REPLY);
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
     await user.click(await analyseButton());
     await screen.findByText('A hold keeps stock aside.');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('https://api.groq.com/openai/v1/chat/completions');
-    const body = JSON.parse(init.body as string) as {
-      max_tokens: number;
-      messages: { role: string; content: string }[];
-    };
-    expect(body.max_tokens).toBeLessThanOrEqual(500);
-    expect(body.messages[1]?.content).toContain('data, not instructions');
-    expect(body.messages[1]?.content).toContain('Why hold stock?');
+    expect(calls).toHaveLength(1);
+    const call = calls[0];
+    expect(call?.url).toBe('https://api.groq.com/openai/v1/chat/completions');
+    expect(call?.authorization).toBe(`Bearer ${TEST_KEY}`);
+    expect(call?.body.max_tokens).toBeLessThanOrEqual(500);
+    expect(call?.body.messages?.[1]?.content).toContain('data, not instructions');
+    expect(call?.body.messages?.[1]?.content).toContain('Why hold stock?');
+    expect(JSON.stringify(call?.body)).not.toContain(TEST_KEY);
   });
 
   it('shows the groups and which mistakes each covers', async () => {
-    modelReplies(
+    mockModel(
       JSON.stringify({
         groups: [
           { title: 'Holds', points: ['One.', 'Two.'], mistakes: [1, 2] },
@@ -207,7 +231,6 @@ describe('the analysis', () => {
         ],
       }),
     );
-    setUpModel();
     await recordMiss(miss('First?'), NOW);
     await recordMiss(miss('Second?'), NOW);
     await openRecap();
@@ -222,8 +245,16 @@ describe('the analysis', () => {
     expect(screen.getByText('Saved analysis')).toBeInTheDocument();
   });
 
+  it('reads a reply wrapped in a code fence', async () => {
+    mockModel(`Here you go:\n\`\`\`json\n${GOOD_REPLY}\n\`\`\``);
+    await recordMiss(miss('Why hold stock?'), NOW);
+    await openRecap();
+    await user.click(await analyseButton());
+    expect(await screen.findByText('A hold keeps stock aside.')).toBeInTheDocument();
+  });
+
   it('shows a reply as plain text, whatever it holds', async () => {
-    modelReplies(
+    mockModel(
       JSON.stringify({
         groups: [
           {
@@ -233,37 +264,30 @@ describe('the analysis', () => {
         ],
       }),
     );
-    setUpModel();
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
     await user.click(await analyseButton());
     expect(await screen.findByText('<img src=x onerror=alert(1)>')).toBeInTheDocument();
     expect(screen.getByText('<script>alert(1)</script>')).toBeInTheDocument();
-    const dialog = screen.getByRole('dialog');
-    expect(dialog.querySelector('img, script, a')).toBeNull();
+    expect(screen.getByRole('dialog').querySelector('img, script, a')).toBeNull();
   });
 
   it('refuses a reply it cannot read, saves nothing and can try again', async () => {
-    const fetchMock = modelReplies('Sorry, here is some prose instead of JSON.');
-    setUpModel();
+    const { calls } = mockModel('Sorry, here is some prose instead of JSON.');
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
     await user.click(await analyseButton());
-    expect(await screen.findByText(/cannot read, so nothing was saved/)).toBeInTheDocument();
+    const retry = await screen.findByRole('button', { name: 'Try again' });
     expect(screen.queryByText(/prose instead/)).not.toBeInTheDocument();
     expect(await dbGet(SAVED_ANALYSIS_KEY)).toBeUndefined();
-    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    await user.click(retry);
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(calls).toHaveLength(2);
     });
   });
 
-  it('shows a provider error in the panel, saves nothing and can try again', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => Promise.resolve(new Response('{}', { status: 429, statusText: 'Too Many' }))),
-    );
-    setUpModel();
+  it('shows a provider error in the panel, keeps the mistakes and saves nothing', async () => {
+    mockModel('{}', 429);
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
     await user.click(await analyseButton());
@@ -274,18 +298,7 @@ describe('the analysis', () => {
   });
 
   it('stops the request when the recap closes, and saves nothing', async () => {
-    let signal: AbortSignal | null | undefined;
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((_url: string, init: RequestInit) => {
-        signal = init.signal;
-        return new Promise<Response>((_resolve, reject) => {
-          init.signal?.addEventListener('abort', () => {
-            reject(new DOMException('Aborted', 'AbortError'));
-          });
-        });
-      }),
-    );
+    const seen = hangingFetch();
     setUpModel();
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
@@ -293,20 +306,13 @@ describe('the analysis', () => {
     await screen.findByText('Analysing your mistakes…');
     useFlowStore.getState().setUi({ recapOpen: false });
     await waitFor(() => {
-      expect(signal?.aborted).toBe(true);
+      expect(seen.signal?.aborted).toBe(true);
     });
     expect(await dbGet(SAVED_ANALYSIS_KEY)).toBeUndefined();
   });
 
   it('stops the request when the period changes, and the new period shows its own state', async () => {
-    let signal: AbortSignal | null | undefined;
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((_url: string, init: RequestInit) => {
-        signal = init.signal;
-        return new Promise<Response>(() => undefined);
-      }),
-    );
+    const seen = hangingFetch();
     setUpModel();
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
@@ -314,89 +320,87 @@ describe('the analysis', () => {
     await screen.findByText('Analysing your mistakes…');
     await user.click(period(/Last 7 days/));
     await waitFor(() => {
-      expect(signal?.aborted).toBe(true);
+      expect(seen.signal?.aborted).toBe(true);
     });
     expect(await analyseButton()).toBeInTheDocument();
     expect(screen.queryByText('Analysing your mistakes…')).not.toBeInTheDocument();
   });
 
   it('never stores the key with the analysis', async () => {
-    modelReplies(GOOD_REPLY);
-    setUpModel();
+    mockModel(GOOD_REPLY);
     await recordMiss(miss('Why hold stock?'), NOW);
     await openRecap();
     await user.click(await analyseButton());
     await screen.findByText('A hold keeps stock aside.');
     const stored = JSON.stringify(await dbGet(SAVED_ANALYSIS_KEY));
     expect(stored).toContain('A hold keeps stock aside.');
-    expect(stored).not.toContain('gsk_test_key');
+    expect(stored).not.toContain(TEST_KEY);
   });
 });
 
 describe('saved until new mistakes appear', () => {
   async function analysed() {
-    const fetchMock = modelReplies(GOOD_REPLY);
-    setUpModel();
+    const { calls } = mockModel(GOOD_REPLY);
     await recordMiss(miss('First?'), NOW);
     await recordMiss(miss('Second?'), NOW);
     await openRecap();
     await user.click(await analyseButton());
     await screen.findByText('A hold keeps stock aside.');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    return fetchMock;
+    expect(calls).toHaveLength(1);
+    return calls;
   }
 
   it('reopening with no new mistakes makes no network call and shows the saved result', async () => {
-    const fetchMock = await analysed();
+    const calls = await analysed();
     for (let i = 0; i < 3; i++) {
       await reopen();
       expect(await screen.findByText('A hold keeps stock aside.')).toBeInTheDocument();
       expect(screen.getByText('Saved analysis')).toBeInTheDocument();
     }
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(calls).toHaveLength(1);
   });
 
   it('survives a fresh mount, as after a reload', async () => {
-    const fetchMock = await analysed();
+    const calls = await analysed();
     useFlowStore.getState().setUi({ recapOpen: false });
     cleanup();
     await openRecap();
     expect(await screen.findByText('A hold keeps stock aside.')).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(calls).toHaveLength(1);
   });
 
   it('a new mistake ends the saved result, and only a click sends again', async () => {
-    const fetchMock = await analysed();
+    const calls = await analysed();
     await recordMiss(miss('Third?'), NOW);
     await reopen();
     expect(await screen.findByText(/new mistakes since the last analysis/)).toBeInTheDocument();
     expect(screen.queryByText('A hold keeps stock aside.')).not.toBeInTheDocument();
     expect(mistakeCards()).toHaveLength(3);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(calls).toHaveLength(1);
     await user.click(await analyseButton());
     await screen.findByText('A hold keeps stock aside.');
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(calls).toHaveLength(2);
     await reopen();
     expect(await screen.findByText('A hold keeps stock aside.')).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(calls).toHaveLength(2);
   });
 
   it('missing a known question again counts as new', async () => {
-    const fetchMock = await analysed();
+    const calls = await analysed();
     await recordMiss(miss('First?'), new Date(NOW.getTime() + 60_000));
     await reopen();
     expect(await screen.findByText(/new mistakes since the last analysis/)).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(calls).toHaveLength(1);
   });
 
   it('each period keeps its own result', async () => {
-    const fetchMock = await analysed();
+    const calls = await analysed();
     await user.click(period(/Last 7 days/));
     expect(await analyseButton()).toBeInTheDocument();
     expect(screen.queryByText('A hold keeps stock aside.')).not.toBeInTheDocument();
     await user.click(period(/Today/));
     expect(await screen.findByText('A hold keeps stock aside.')).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(calls).toHaveLength(1);
   });
 
   it('a damaged saved result counts as none, without an error', async () => {
@@ -438,7 +442,7 @@ describe('correct answers reduce the recap', () => {
   });
 
   it('keeps the saved analysis with no network call, hiding a group nothing is left in', async () => {
-    const fetchMock = modelReplies(
+    const { calls } = mockModel(
       JSON.stringify({
         groups: [
           { title: 'About the first', points: ['Point one.'], mistakes: [1] },
@@ -446,7 +450,6 @@ describe('correct answers reduce the recap', () => {
         ],
       }),
     );
-    setUpModel();
     // Both were missed once, so the later miss is number 1
     await recordMiss(miss('Earlier?'), new Date(NOW.getTime() - 60_000));
     await recordMiss(miss('Later?'), NOW);
@@ -458,7 +461,7 @@ describe('correct answers reduce the recap', () => {
     expect(await screen.findByText('About the second')).toBeInTheDocument();
     expect(screen.queryByText('About the first')).not.toBeInTheDocument();
     expect(screen.getByText('Mistake 1')).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(calls).toHaveLength(1);
   });
 });
 
@@ -514,7 +517,7 @@ describe('period and flow', () => {
     expect(screen.getByText('Other')).toBeInTheDocument();
   });
 
-  it('says so when a period is empty, without calling it the end of the data', async () => {
+  it('says so when a period is empty, and offers no retry', async () => {
     await recordMiss(miss('Missed long ago?'), daysAgo(20));
     await openRecap();
     expect(mistakeCards()).toHaveLength(0);
@@ -564,12 +567,11 @@ describe('Retry my mistakes', () => {
   });
 
   it('never takes its topics from a model reply', async () => {
-    modelReplies(
+    mockModel(
       JSON.stringify({
         groups: [{ title: 'Injected topic', points: ['Point.'], topics: ['Injected topic'] }],
       }),
     );
-    setUpModel();
     await recordMiss(miss('A?', { topic: 'Stock holds' }), NOW);
     await openRecap();
     await user.click(await analyseButton());
@@ -590,7 +592,7 @@ describe('Retry my mistakes', () => {
 
 describe('the built-in sample', () => {
   it('works on the demo flow with no key, no quiz and no network, and says it is a sample', async () => {
-    const fetchMock = modelReplies(GOOD_REPLY);
+    const { calls } = mockFetch(GOOD_REPLY);
     await openRecap(DEFAULT_DIAGRAM);
     expect(screen.getByText(/^Sample recap\./)).toBeInTheDocument();
     expect(period(/^Today · 2$/)).toBeInTheDocument();
@@ -600,8 +602,16 @@ describe('the built-in sample', () => {
     expect(screen.getAllByTestId('recap-group').length).toBeGreaterThan(0);
     expect(screen.getByText('Sample')).toBeInTheDocument();
     expect(screen.queryByText(/No model is set up/)).not.toBeInTheDocument();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(calls).toHaveLength(0);
     expect(await dbGet(SAVED_ANALYSIS_KEY)).toBeUndefined();
+  });
+
+  it('sends nothing even when a model is set up', async () => {
+    const { calls } = mockModel(GOOD_REPLY);
+    await openRecap(DEFAULT_DIAGRAM);
+    expect(screen.getByText(/^Sample recap\./)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Analyse my mistakes' })).not.toBeInTheDocument();
+    expect(calls).toHaveLength(0);
   });
 
   it('follows the period, hiding the groups it has nothing for', async () => {

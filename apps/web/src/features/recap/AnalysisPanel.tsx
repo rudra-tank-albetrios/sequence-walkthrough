@@ -5,7 +5,7 @@ import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Chip } from '../../shared/ui/Chip.tsx';
 import type { AnalysisGroup } from './analysis.ts';
-import { recapModel } from './recapModel.ts';
+import { hasUsableModel } from './recapModel.ts';
 import { liveGroups, type SavedAnalysis } from './savedAnalysis.ts';
 import styles from './recap.module.css';
 import { useAnalysis, type AnalysisView } from './useAnalysis.ts';
@@ -83,10 +83,9 @@ function AskForAnalysis({
   analyse: () => void;
 }) {
   const setUi = useFlowStore((s) => s.setUi);
-  // Rendering again when the settings dialog closes picks up a key added there.
+  // Rendering again when the settings dialog closes picks up a model added there.
   useFlowStore((s) => s.ui.aiSettingsOpen);
-  const model = recapModel();
-  if (!model) {
+  if (!hasUsableModel()) {
     return (
       <p className={styles.muted}>
         No model is set up, so there is no analysis. Your mistakes and the correct answers are all
@@ -112,20 +111,21 @@ function AskForAnalysis({
         {view.status === 'error' ? 'Try again' : 'Analyse my mistakes'}
       </Button>
       <p className={styles.savedLine}>
-        Sends these questions, your answers and the correct answers to {model.name}. The reply is at
+        Sends these questions, your answers and the correct answers to your model. The reply is at
         most about 500 tokens and stays in this browser until new mistakes appear.
       </p>
     </>
   );
 }
 
-export interface AnalysisPanelProps {
+/** Key points for the person's own mistakes, from their own model. */
+export function AnalysisPanel({
+  selection,
+  mistakes,
+}: {
   selection: string;
   mistakes: readonly WeakPoint[];
-}
-
-/** Key points for the person's own mistakes, from their own model. */
-export function AnalysisPanel({ selection, mistakes }: AnalysisPanelProps) {
+}) {
   const { view, analyse } = useAnalysis(selection, mistakes);
   return (
     <Panel live>
@@ -144,13 +144,14 @@ export function AnalysisPanel({ selection, mistakes }: AnalysisPanelProps) {
   );
 }
 
-export interface SampleAnalysisProps {
+/** The built-in key points of the sample recap. No model wrote them and nothing is sent. */
+export function SampleAnalysis({
+  groups,
+  mistakes,
+}: {
   groups: readonly AnalysisGroup[];
   mistakes: readonly WeakPoint[];
-}
-
-/** The built-in key points of the sample recap. No model wrote them and nothing is sent. */
-export function SampleAnalysis({ groups, mistakes }: SampleAnalysisProps) {
+}) {
   return (
     <Panel>
       <Groups groups={groups} mistakes={mistakes} />

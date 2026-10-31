@@ -43,7 +43,7 @@ function Mistake({ point, now, showFlow }: { point: WeakPoint; now: Date; showFl
   );
 }
 
-export interface MistakeListProps {
+interface MistakeListProps {
   mistakes: readonly WeakPoint[];
   now: Date;
   /** Names each mistake's flow, when the list covers all flows. */
