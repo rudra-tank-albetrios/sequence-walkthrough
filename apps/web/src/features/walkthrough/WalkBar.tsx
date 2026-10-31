@@ -1,17 +1,15 @@
 import { useRef, type CSSProperties } from 'react';
 
+import { cx } from '../../shared/lib/util.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { BehindPopover } from './BehindPopover.tsx';
 import { BookmarksPopover } from './BookmarksPopover.tsx';
 import { Cards } from './Cards.tsx';
 import { ChaptersNav } from './ChaptersNav.tsx';
-import { cx } from './cx.ts';
 import { FollowStrip } from './FollowStrip.tsx';
-import { LiveRegion } from './LiveRegion.tsx';
 import { PathSelect } from './PathSelect.tsx';
 import { ProgressBar } from './ProgressBar.tsx';
 import { ResizeHandle } from './ResizeHandle.tsx';
-import { usePlay } from './usePlay.ts';
 import { useWheelStep } from './useWheelStep.ts';
 import styles from './walkbar.module.css';
 
@@ -22,7 +20,6 @@ export function WalkBar() {
   const barRef = useRef<HTMLElement | null>(null);
   const centreRef = useRef<HTMLDivElement | null>(null);
   const onWheel = useWheelStep(centreRef);
-  usePlay();
 
   if (!flow) return <footer id="wbar" className={styles.bar} aria-label="Walkthrough" />;
 
@@ -50,7 +47,6 @@ export function WalkBar() {
           </div>
           <ProgressBar flow={flow} />
           <Cards flow={flow} centreRef={centreRef} />
-          <LiveRegion flow={flow} />
         </>
       ) : (
         <div className={styles.offline} role="status">

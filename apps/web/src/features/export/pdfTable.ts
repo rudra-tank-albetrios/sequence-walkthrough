@@ -3,7 +3,7 @@ import type { Flow, Step } from '@swv/core';
 import { route } from '../../shared/storage/notes.ts';
 import type { PdfPlan } from './pdf.ts';
 import { context2d, makeCanvas } from './raster.ts';
-import type { NoteLookup } from './table.ts';
+import type { NoteLookup } from '../../shared/lib/stepTable.ts';
 
 /** The step table drawn on canvas pages for the PDF, so any character prints correctly. */
 

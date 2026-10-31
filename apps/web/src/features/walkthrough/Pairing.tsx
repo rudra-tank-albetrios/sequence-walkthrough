@@ -1,9 +1,9 @@
 import { bodyText, payloadDiff, type Flow, type Step } from '@swv/core';
 
+import { cx } from '../../shared/lib/util.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Chip } from '../../shared/ui/Chip.tsx';
 import styles from './card.module.css';
-import { cx } from './cx.ts';
 import { statusFamily } from './steps.ts';
 
 /** On a request: every reply as a status chip that jumps to it; an HTTP request with none says so. */

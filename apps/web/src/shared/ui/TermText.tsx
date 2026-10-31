@@ -1,12 +1,13 @@
 import * as Popover from '@radix-ui/react-popover';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
-import { useGlossaryStore, type GlossaryEntry } from '../../shared/state/glossaryStore.ts';
-import { Button } from '../../shared/ui/Button.tsx';
-import { Chip } from '../../shared/ui/Chip.tsx';
-import styles from './card.module.css';
-import { cx } from './cx.ts';
-import { askAbout, startFollow } from './follow.ts';
+import { cx } from '../lib/util.ts';
+import { askAboutWord, startFollow } from '../state/follow.ts';
+import { useGlossaryStore, type GlossaryEntry } from '../state/glossaryStore.ts';
+import { useGlossary } from '../state/useGlossary.ts';
+import { Button } from './Button.tsx';
+import { Chip } from './Chip.tsx';
+import styles from './TermText.module.css';
 
 /** An underlined glossary word; clicking it shows the definition with Ask, Follow and Delete. */
 export function TermPopover({
@@ -29,7 +30,13 @@ export function TermPopover({
         </button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content className={styles.termPop} sideOffset={6} collisionPadding={8} aria-label={`Term: ${entry.term}`}>
+        <Popover.Content
+          className={styles.termPop}
+          sideOffset={6}
+          collisionPadding={8}
+          aria-label={`Term: ${entry.term}`}
+          data-testid="term-pop"
+        >
           <h4>
             {entry.term}
             {entry.source === 'saved' ? <Chip tone="marker">saved answer</Chip> : null}
@@ -37,16 +44,14 @@ export function TermPopover({
           <p>{entry.def}</p>
           <div className={styles.termActs}>
             <Button
-              className={styles.ibtn}
               onClick={() => {
                 setOpen(false);
-                askAbout(`Tell me more about "${entry.term}"`);
+                askAboutWord(entry.term);
               }}
             >
               Ask AI more
             </Button>
             <Button
-              className={styles.ibtn}
               onClick={() => {
                 setOpen(false);
                 startFollow(entry.term);
@@ -56,7 +61,6 @@ export function TermPopover({
             </Button>
             {entry.source === 'saved' ? (
               <Button
-                className={styles.ibtn}
                 onClick={() => {
                   setOpen(false);
                   remove(entry.term);
@@ -70,4 +74,22 @@ export function TermPopover({
       </Popover.Portal>
     </Popover.Root>
   );
+}
+
+/** Prose with the glossary terms underlined; a click on one opens its definition. */
+export function TermText({ text }: { text: string }) {
+  const glossary = useGlossary();
+  if (!glossary.regex) return <>{text}</>;
+  const out: ReactNode[] = [];
+  let last = 0;
+  for (const m of text.matchAll(glossary.regex)) {
+    const word = m[0];
+    const entry = glossary.lookup(word);
+    if (!entry) continue;
+    out.push(text.slice(last, m.index));
+    out.push(<TermPopover key={m.index} entry={entry} text={word} />);
+    last = m.index + word.length;
+  }
+  out.push(text.slice(last));
+  return <>{out}</>;
 }

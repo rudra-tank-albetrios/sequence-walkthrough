@@ -1,6 +1,7 @@
 import type { Flow, Step } from '@swv/core';
 
-import { cx, endpointList } from './derive.ts';
+import { cx } from '../../shared/lib/util.ts';
+import { endpointList } from './derive.ts';
 import styles from './insight.module.css';
 import { StatusChip, StepLink } from './StepLink.tsx';
 

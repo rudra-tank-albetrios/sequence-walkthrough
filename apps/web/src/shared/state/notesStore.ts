@@ -10,6 +10,7 @@ import {
   type NoteEntry,
   type NotesData,
 } from '../storage/notes.ts';
+import { announce } from '../ui/announce.ts';
 import { toast } from '../ui/toast.ts';
 import { plural } from '../lib/util.ts';
 
@@ -58,6 +59,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     entry.star = !entry.star;
     saveNotes(get().id, data);
     set({ data });
+    announce(entry.star ? `Step ${step.n} bookmarked` : `Bookmark removed from step ${step.n}`);
     return entry.star;
   },
 

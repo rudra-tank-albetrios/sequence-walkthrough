@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 
+import { fileName } from '../../shared/lib/util.ts';
 import { useDiagramStore } from '../../shared/state/diagramStore.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Dialog } from '../../shared/ui/Dialog.tsx';
 import styles from './export.module.css';
-import { exportName } from './files.ts';
 import { exportPdf, run } from './exportActions.ts';
 import { useExportUi } from './exportUi.ts';
 import { liveGeometry, pdfPlan, type PaperSize } from './pdf.ts';
@@ -45,7 +45,7 @@ export function PdfDialog() {
         <>
           <Button onClick={() => setOpen(false)}>Cancel</Button>
           <Button variant="primary" onClick={download} disabled={width === 0}>
-            Download {exportName(title, 'pdf')}
+            Download {fileName(title, 'pdf')}
           </Button>
         </>
       }

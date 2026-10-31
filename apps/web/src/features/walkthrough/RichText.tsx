@@ -1,34 +1,16 @@
 import { isFollowable, tokens } from '@swv/core';
 import { Fragment, type ReactNode } from 'react';
 
+import { cx } from '../../shared/lib/util.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
+import { startFollow } from '../../shared/state/follow.ts';
+import { useGlossary } from '../../shared/state/useGlossary.ts';
+import { TermPopover } from '../../shared/ui/TermText.tsx';
 import styles from './card.module.css';
-import { cx } from './cx.ts';
-import { startFollow } from './follow.ts';
-import { TermPopover } from './TermPopover.tsx';
-import { useGlossary } from './useGlossary.ts';
-
-/** Prose with the glossary terms underlined; a click on one opens its definition. */
-export function TermText({ text }: { text: string }) {
-  const glossary = useGlossary();
-  if (!glossary.regex) return <>{text}</>;
-  const out: ReactNode[] = [];
-  let last = 0;
-  for (const m of text.matchAll(glossary.regex)) {
-    const word = m[0];
-    const entry = glossary.lookup(word);
-    if (!entry) continue;
-    out.push(text.slice(last, m.index));
-    out.push(<TermPopover key={m.index} entry={entry} text={word} />);
-    last = m.index + word.length;
-  }
-  out.push(text.slice(last));
-  return <>{out}</>;
-}
 
 /**
- * A label or payload line: every followable word is a span that follows the value on double-click
- * (title "Follow this value"), glossary words open their definition.
+ * A label or payload line: a click on a followable word follows the value through the flow (title
+ * "Follow this value"), a click on a glossary word opens its definition.
  */
 export function TokenText({ text }: { text: string }) {
   const glossary = useGlossary();
@@ -52,8 +34,7 @@ export function TokenText({ text }: { text: string }) {
           className={cx(styles.tok, on && styles.on)}
           title="Follow this value"
           data-tok={word}
-          onDoubleClick={() => {
-            window.getSelection()?.removeAllRanges();
+          onClick={() => {
             startFollow(word);
           }}
         >
