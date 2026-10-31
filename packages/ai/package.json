@@ -8,9 +8,18 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./testing": {
+      "types": "./src/testing.ts",
+      "default": "./src/testing.ts"
     }
   },
   "scripts": {
     "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@swv/core": "*",
+    "idb-keyval": "^6.3.0",
+    "zod": "^4.6.7"
   }
 }
