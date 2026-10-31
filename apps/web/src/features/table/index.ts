@@ -1,4 +1,1 @@
-// Placeholder until the table feature lands.
-export function TableView() {
-  return null;
-}
+export { TableView } from './TableView.tsx';

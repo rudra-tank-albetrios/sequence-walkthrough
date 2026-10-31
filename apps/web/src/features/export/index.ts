@@ -1,10 +1,6 @@
-// Placeholder until the export feature lands: menu items, the import dialog and drop handling.
-export function ExportMenuItems() {
-  return null;
-}
-export function ImportDialog() {
-  return null;
-}
-export function useDropImport(): void {
-  /* nothing yet */
-}
+// The Export menu (files, images, PDF, share links, the skill kit) and importing (paste dialog,
+// file open, drag-and-drop, document paste). `ImportDialog` also carries the PDF dialog, the
+// clipboard fallback, the hidden file input and the drop scrim, so the app mounts it once.
+export { ExportMenuItems } from './ExportMenuItems.tsx';
+export { ImportDialog } from './ImportDialog.tsx';
+export { useDropImport } from './useDropImport.ts';

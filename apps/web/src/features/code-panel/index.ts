@@ -1,4 +1,1 @@
-// Placeholder until the code panel feature lands.
-export function CodePanel() {
-  return null;
-}
+export { CodePanel } from './CodePanel.tsx';

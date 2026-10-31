@@ -1,7 +1,2 @@
-// Placeholder until the Ask AI feature lands.
-export function AskDialog() {
-  return null;
-}
-export function AiSettingsDialog() {
-  return null;
-}
+export { AiSettingsDialog } from './AiSettingsDialog.tsx';
+export { AskDialog } from './AskDialog.tsx';
