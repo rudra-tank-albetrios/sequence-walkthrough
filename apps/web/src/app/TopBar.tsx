@@ -144,6 +144,7 @@ export function TopBar() {
         <span className={styles.more}>
           <Menu label="More" trigger={<Button icon aria-label="More">⋯</Button>}>
             <MenuItem onSelect={() => setUi({ guideOpen: true })}>How it works</MenuItem>
+            <MenuItem onSelect={() => setUi({ quizOpen: true })}>Quiz</MenuItem>
             <MenuItem onSelect={() => setView(view === 'diagram' ? 'table' : 'diagram')}>
               {view === 'diagram' ? 'Switch to table view' : 'Switch to diagram view'}
             </MenuItem>

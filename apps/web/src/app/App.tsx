@@ -6,6 +6,7 @@ import { ImportDialog, useDropImport } from '../features/export/index.ts';
 import { FindPopover } from '../features/find/index.ts';
 import { GuideDialog, ShortcutsDialog } from '../features/guide/index.ts';
 import { InsightPanel } from '../features/insight/index.ts';
+import { QuizMount } from '../features/quiz/index.ts';
 import { TableView } from '../features/table/index.ts';
 import { Viewer } from '../features/viewer/index.ts';
 import { PresenterCard, SelectionMenu, WalkBar, WalkthroughRuntime } from '../features/walkthrough/index.ts';
@@ -165,6 +166,7 @@ export function App() {
         <SelectionMenu />
         <AskDialog />
         <AiSettingsDialog />
+        <QuizMount />
         <GuideDialog />
         <ShortcutsDialog />
         <ImportDialog />

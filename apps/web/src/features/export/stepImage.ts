@@ -1,5 +1,5 @@
 import { clamp } from '../../shared/lib/util.ts';
-import { context2d, makeCanvas, type Raster } from './raster.ts';
+import { context2d, makeCanvas, type Raster } from '../../shared/lib/raster.ts';
 
 /**
  * The step image is what the canvas shows right now: the live diagram with the current step's
