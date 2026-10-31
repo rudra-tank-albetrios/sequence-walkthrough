@@ -10,7 +10,8 @@ import { readJsonList, repoRoot } from '@swv/tool-kit';
 type Budget =
   | { name: string; kind: 'first-load-js'; html: string; maxBytesGzip: number }
   | { name: string; kind: 'file'; path: string; maxBytes: number }
-  | { name: string; kind: 'text'; path: string; maxChars: number };
+  | { name: string; kind: 'text'; path: string; maxChars: number }
+  | { name: string; kind: 'skill-description'; path: string; maxChars: number };
 
 interface Result {
   name: string;
@@ -72,6 +73,18 @@ function measure(budget: Budget): Result {
         return { ...fail(budget.name, budget.maxChars, 'chars'), detail: `${budget.path} is missing` };
       }
       const chars = readFileSync(file, 'utf8').length;
+      return { name: budget.name, measured: chars, limit: budget.maxChars, unit: 'chars', ok: chars <= budget.maxChars };
+    }
+    case 'skill-description': {
+      const file = resolve(root, budget.path);
+      if (!existsSync(file)) {
+        return { ...fail(budget.name, budget.maxChars, 'chars'), detail: `${budget.path} is missing` };
+      }
+      const description = /^description:\s*(.*)$/m.exec(readFileSync(file, 'utf8'))?.[1];
+      if (description === undefined) {
+        return { ...fail(budget.name, budget.maxChars, 'chars'), detail: 'no description line' };
+      }
+      const chars = description.length;
       return { name: budget.name, measured: chars, limit: budget.maxChars, unit: 'chars', ok: chars <= budget.maxChars };
     }
   }

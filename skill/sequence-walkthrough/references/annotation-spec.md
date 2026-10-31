@@ -1,6 +1,6 @@
 # Annotation spec `walkthrough/2`
 
-Version 2 · 2026-10-30 · read by the Sequence Walkthrough Viewer v2 and `validate.py`. Version 1 files still work unchanged: every v1 tag keeps its meaning, v2 only adds tags.
+Version 2 · 2026-10-30 · read by the Sequence Walkthrough Viewer v2. Version 1 files still work unchanged: every v1 tag keeps its meaning, v2 only adds tags.
 
 Walkthrough annotations turn a Mermaid sequence diagram into a guided, step-by-step explanation. Every annotation is a Mermaid comment (`%% …`), so annotated code still renders unchanged on mermaid.live, GitHub, GitLab, Notion and any other Mermaid renderer. Only the viewer gives the comments meaning.
 
@@ -136,7 +136,7 @@ These need no tags, but they work best when the code follows the writing guide.
 
 ## 6. Lint
 
-The viewer lists these in the code panel, and `validate.py` reports them as **warnings** with the same codes, messages and line numbers:
+The viewer lists these in the code panel:
 
 | Code | When | Message |
 |---|---|---|
@@ -157,7 +157,7 @@ The viewer lists these in the code panel, and `validate.py` reports them as **wa
 
 The viewer adds `mismatch` when Mermaid draws a different number of arrows than the code lines it found (for example, an arrow hidden inside an unsupported construct).
 
-`validate.py` adds:
+The validator of the newer skills (`scripts/validate.mjs`) adds:
 
 | Severity | Code | When |
 |---|---|---|
@@ -183,7 +183,6 @@ The viewer adds `mismatch` when Mermaid draws a different number of arrows than 
 | hint | `mode-value` | `@mode` with a value other than `proposed` |
 | hint | `no-trigger` | no `@trigger` in a flow with more than 8 steps |
 
-`validate.py -` reads the code from stdin, so a diagram can be checked without saving it to a file.
 
 ## 7. Mermaid syntax traps
 

@@ -24,10 +24,9 @@ sequence-walkthrough/
 │   ├── annotation-spec.md         the full walkthrough/2 format
 │   ├── writing-guide.md           how to write each tag; Explain vs Easy, Proposed and Scoped flows
 │   └── layer-naming.md            aliases, kinds and zones; layers vs side parts
-├── examples/
-│   ├── oauth-login.mmd
-│   └── payment-idempotency.mmd
-└── scripts/validate.py            checks a diagram (Python 3.8+, no packages needed)
+└── examples/
+    ├── oauth-login.mmd
+    └── payment-idempotency.mmd
 ```
 
 ## 1. Claude Code (terminal, desktop app, IDE)
@@ -73,7 +72,7 @@ Make a walkthrough diagram of how login works in this repo, with code links.
 Check this diagram and fix any missing @step lines: <paste the Mermaid code>
 ```
 
-Claude replies with the code in a fenced `mermaid` block. It checks the code first by piping it into `scripts/validate.py -`, so no file is created. Paste the code into the viewer to step through it.
+Claude replies with the code in a fenced `mermaid` block. Paste the code into the viewer to step through it.
 
 What the diagram contains:
 - Every request arrow shows the method and full path (`POST /api/v1/orders`).
@@ -141,7 +140,6 @@ Notes:
 
 - If you set `settingSources` / `setting_sources` yourself and leave out `"project"` and `"user"`, no skills load.
 - Check the `skills` list in the `init` system message to confirm `sequence-walkthrough` loaded.
-- `Bash` lets the agent run `scripts/validate.py`. Leave it out if you don't want the agent running commands; the skill still works, it just skips the check.
 - The skill returns the diagram in its reply and writes no files, so `Write` isn't needed. Add it only if your prompt asks the agent to save the diagram somewhere, for example "…and save it as docs/payment.mmd".
 
 ## 4. Claude API (Messages API with code execution)
@@ -213,5 +211,4 @@ You can also skip the upload: commit the folder to `.claude/skills/sequence-walk
 
 - **The skill doesn't trigger.** Name it: "use the sequence-walkthrough skill to ...", or in Claude Code type `/sequence-walkthrough`.
 - **"SKILL.md not found" on upload.** Upload `sequence-walkthrough.zip`, not the kit zip. Its top folder is `sequence-walkthrough/` with `SKILL.md` directly inside.
-- **validate.py fails to run.** It needs Python 3.8 or later and nothing else. Run it yourself with `python sequence-walkthrough/scripts/validate.py my-flow.mmd`, or pipe the code in with `-` in place of the file name.
-- **The viewer shows "no steps".** Every arrow needs a `%% @step` line directly above it. Ask Claude to "check this diagram with the sequence-walkthrough validator", or paste the viewer's fix-prompt into the chat.
+- **The viewer shows "no steps".** Every arrow needs a `%% @step` line directly above it. Ask Claude to "check this diagram with the sequence-walkthrough skill", or paste the viewer's fix-prompt into the chat.

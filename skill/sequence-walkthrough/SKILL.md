@@ -82,7 +82,7 @@ The full grammar and lint codes are in `references/annotation-spec.md`.
 | `@async`, `@retry`, `@timeout`, `@idempotent` | short text | when the code sets them |
 | `@unconfirmed <text>` | | anything on this step you could not confirm |
 
-Mermaid traps (`validate.py` catches them): `;` ends a statement, `#` cuts a label, keywords (`end`, `alt`, `loop`) cannot be aliases, every block needs `end`. Write `#59;` and `#35;`, or reword. Never write `%%{ … }%%`.
+Mermaid traps: `;` ends a statement, `#` cuts a label, keywords (`end`, `alt`, `loop`) cannot be aliases, every block needs `end`. Write `#59;` and `#35;`, or reword. Never write `%%{ … }%%`.
 
 ## Workflow
 
@@ -93,27 +93,9 @@ Mermaid traps (`validate.py` catches them): `;` ends a statement, `#` cuts a lab
 5. **Chapters.** Boundaries where the reader's question changes. Steps before the first `@section` become "Start".
 6. **Annotate** with the tag table above.
 7. **Verify** as in *Accuracy*.
-8. **Check** on stdin, never through a file. `scripts/` is next to this file.
+8. **Output** as below.
 
-   ```bash
-   python scripts/validate.py - <<'MERMAID'
-   <the full code>
-   MERMAID
-   ```
-
-   Windows PowerShell:
-
-   ```powershell
-   $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
-   @'
-   <the full code>
-   '@ | python scripts/validate.py -
-   ```
-
-   Fix every error and warning. Fix every hint unless the code shows it does not apply (a call that truly gets no reply). Run it again until it prints `clean`.
-9. **Output** as below.
-
-If Python cannot run, check by hand: every arrow has a `@step`; there is a `@title` and a `@trigger`; every alias has a `@layer`; no `@step` over 240 characters; no `;` or `#` in a label; every block has an `end`; every request has a reply with a status code; every `@uses` has a kind, a name and a ref.
+Before replying, check by hand: every arrow has a `@step`; there is a `@title` and a `@trigger`; every alias has a `@layer`; no `@step` over 240 characters; no `;` or `#` in a label; every block has an `end`; every request has a reply with a status code; every `@uses` has a kind, a name and a ref.
 
 ## Output
 
@@ -126,7 +108,7 @@ Reply with this and nothing else:
 <the full code>
 ```
 
-Checked: validate.py clean
+Checked: by hand
 Verified: <N> of <N> refs re-opened, <M> unconfirmed
 Not confirmed: <only what concerns the whole flow; leave the line out when empty>
 ````
@@ -162,4 +144,3 @@ Given existing walkthrough code or the viewer's fix-prompt, change only what was
 - `references/layer-naming.md`: aliases, kinds and zones, layers vs side parts.
 - `examples/payment-idempotency.mmd`: Explain mode from code. 18 steps, 5 chapters, nested `alt`, every tag in use.
 - `examples/oauth-login.mmd`: 23 steps, 3 chapters, nested `alt`, `loop` with `opt`. Built from a description, so no refs.
-- `scripts/validate.py`: the viewer's lint, Mermaid syntax traps and the API checks. Python 3 standard library only. Reads stdin with `-`; `--json` for a machine-readable result.

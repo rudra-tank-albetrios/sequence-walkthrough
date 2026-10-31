@@ -116,7 +116,7 @@ This is the heart of the walkthrough. In 1–2 sentences under 240 characters, s
 | `Set-Cookie: sid (HttpOnly)` | Sets a cookie. | The session id goes into a cookie page scripts cannot read, so a cross-site-scripting bug cannot steal the session. |
 | `200 user profile` | Returns the profile. | The request succeeds as the signed-in user, who gets their profile back. |
 
-**A reply's `@step` names the outcome**: the status, its reason, or what the caller gets back. "The browser gets the result of the one and only charge." passes; "The middleware finishes." does not (`validate.py` hints `step-outcome`).
+**A reply's `@step` names the outcome**: the status, its reason, or what the caller gets back. "The browser gets the result of the one and only charge." passes; "The middleware finishes." does not.
 
 Tips:
 - Start with the actor or the effect: "The database decides…", "The user is now signed in."

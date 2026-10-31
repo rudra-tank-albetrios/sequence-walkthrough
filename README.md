@@ -300,7 +300,7 @@ Check this diagram and add the missing @step lines: <paste the Mermaid code>
 ```
 
 What you get back:
-- **The code only, in the reply.** Claude checks it with `scripts/validate.py` through stdin and doesn't create any file, unless you ask for one and say where.
+- **The code only, in the reply.** Claude doesn't create any file, unless you ask for one and say where.
 - **The real API detail.** Each request shows the method and full path, each reply the status code and message, with payload parts for what is sent and returned, every error branch, the hooks and crons behind each step, a glossary, chapter summaries and code links.
 - **Taken from your project, then verified.** Every endpoint, field, status code and message comes from the code. Before replying Claude re-opens every referenced line and confirms it; anything it could not confirm is marked `@unconfirmed` on the step or listed under *Not confirmed*. The reply ends with `Verified: N of N refs re-opened, M unconfirmed`.
 - **Middleware as a main layer**, always, in every mode.
@@ -315,7 +315,8 @@ Notes you took in the viewer stay attached to steps whose arrows didn't change.
 The validator also runs on its own, on a file or on stdin:
 
 ```bash
-python skill/sequence-walkthrough/scripts/validate.py my-flow.mmd
+npm run build:skills
+node tools/build-skills/dist/seq-diagram/scripts/validate.mjs my-flow.mmd
 ```
 
 Use `-` instead of a file name to read the code from stdin. Add `--json` for machine-readable output or `--strict` to fail on style hints. It exits with 0 when clean, 1 on errors or warnings, and 2 when a file can't be read.
@@ -392,8 +393,7 @@ Connect the repository and use these settings. Netlify reads them from [netlify.
 │   └── sequence-walkthrough/   the Claude skill
 │       ├── SKILL.md            modes, accuracy rules, token budget, workflow, output shape
 │       ├── references/         annotation spec (walkthrough/2), writing guide, layer naming
-│       ├── examples/           payment-idempotency.mmd (the viewer's default diagram), oauth-login.mmd
-│       └── scripts/validate.py
+│       └── examples/           payment-idempotency.mmd (the viewer's default diagram), oauth-login.mmd
 ├── skill-kit/                  setup guide and install scripts packed into the skill download
 ├── FEATURE-IDEAS.md            the feature list this version was built from, with what is still open
 ├── .github/workflows/          GitHub Pages deployment
@@ -412,7 +412,8 @@ Connect the repository and use these settings. Netlify reads them from [netlify.
 - The build is reproducible: the same sources always give the same bytes, including the zips.
 - **To change the default diagram,** edit `skill/sequence-walkthrough/examples/payment-idempotency.mmd`. Keep its arrow lines unchanged if you want existing notes to stay attached.
 - **To change the skill,** edit `skill/sequence-walkthrough/`, run the validator on both examples, rebuild so the download in the viewer picks it up, then reinstall it wherever you use it. For the Claude app and the API, upload the new `sequence-walkthrough.zip`.
-- **To add a tag,** update `references/annotation-spec.md` first, then `Annotations.parse` and `buildFlow` in `src/js/core.js`, the card in `src/js/walk.js`, and `scripts/validate.py` so the viewer and the validator agree on codes and messages.
+- **To add a tag,** update `references/annotation-spec.md` first, then `Annotations.parse` and `buildFlow` in `src/js/core.js`, the card in `src/js/walk.js`, and `packages/core` so the viewer and the validator agree on codes and messages.
+- **The version 3 skills** live in `skills/`: rules both share in `skills/shared`, each skill's own text in `skills/<name>/SKILL.src.md`. `npm run build:skills` writes both folders, their zips and the kit to `tools/build-skills/dist/`, and stops if a skill breaks a rule. `npm run install:skills` installs them for Claude Code and backs up what it replaces. The old `skill/` stays until the cutover, because `build.py` packs it.
 - Mermaid is pinned to **12.2.0** and jsPDF to **4.2.1** in `src/js/core.js` (`VERSION` and the CDN URL list). The viewer's line numbers, highlighting and chapter bands depend on Mermaid's SVG structure, so test a diagram with steps, chapters, notes and exports before you change the version.
 - `window.SWV` exposes the modules in the browser console for debugging (`SWV.S.flow`, `SWV.Path.set('happy')`, `SWV.Insight.show('errors')`).
 

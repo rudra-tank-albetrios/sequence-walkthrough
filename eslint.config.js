@@ -57,6 +57,8 @@ export default defineConfig(
     'skill/**',
     'skill-kit/**',
     'build.py',
+    // Sample projects the skills are tested against, written like the frameworks they imitate
+    'skills/fixtures/**',
     '**/*.d.ts',
   ]),
   js.configs.recommended,

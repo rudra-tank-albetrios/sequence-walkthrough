@@ -1,0 +1,29 @@
+{
+  "framework": "Next.js",
+  "prompt": "Walk me through placing an order, from the checkout page down.",
+  "request": {
+    "method": "POST",
+    "path": "/api/orders",
+    "evidence": [
+      ["lib/api-client.ts", "fetch('/api/orders'"],
+      ["app/api/orders/route.ts", "export async function POST(request: Request)"]
+    ]
+  },
+  "frontend": ["page", "component", "api"],
+  "layers": ["middleware", "controller", "service", "db"],
+  "statuses": {
+    "201": ["app/api/orders/route.ts", "{ status: 201 }"],
+    "400": ["app/api/orders/route.ts", "{ status: 400 }"],
+    "401": ["middleware.ts", "{ status: 401 }"],
+    "409": ["app/api/orders/route.ts", "{ status: 409 }"]
+  },
+  "messages": {
+    "400": ["app/api/orders/route.ts", "Check the order form"],
+    "401": ["middleware.ts", "Sign in first"],
+    "409": ["app/api/orders/route.ts", "That item just sold out"]
+  },
+  "requestFields": { "file": "lib/api-client.ts", "fields": ["code", "units"] },
+  "replyFields": { "file": "app/api/orders/route.ts", "fields": ["number", "phase"] },
+  "names": ["placeOrder", "createOrder"],
+  "offPath": ["app/about/page.tsx", "tests/orders.test.ts"]
+}
