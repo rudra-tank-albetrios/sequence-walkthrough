@@ -1,10 +1,6 @@
 import { useFlowStore } from '../../shared/state/flowStore.ts';
-import { DIAGRAM_THEMES, type DiagramTheme } from '../../shared/storage/settings.ts';
 import { toast } from '../../shared/ui/toast.ts';
 import { importFile, importText, type ImportResult } from './importer.ts';
-
-const isTheme = (value: string): value is DiagramTheme =>
-  (DIAGRAM_THEMES as readonly string[]).includes(value);
 
 /** Loads an import result into the viewer and tells the user; false when nothing was loaded. */
 export function applyImport(result: ImportResult): boolean {
@@ -12,11 +8,7 @@ export function applyImport(result: ImportResult): boolean {
     toast(result.message);
     return false;
   }
-  const store = useFlowStore.getState();
-  if (result.theme !== null && isTheme(result.theme) && result.theme !== store.settings.theme) {
-    store.updateSettings({ theme: result.theme, themeAuto: false });
-  }
-  store.setCode(result.code);
+  useFlowStore.getState().loadCode(result.code, result.theme);
   if (result.message) toast(result.message);
   return true;
 }

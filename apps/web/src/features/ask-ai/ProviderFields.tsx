@@ -25,6 +25,11 @@ export function ProviderFields({ draft, onChange }: ProviderFieldsProps) {
     const { [p.id]: _previous, ...others } = draft.keys;
     onChange({ keys: value ? { ...others, [p.id]: value } : others });
   };
+  // A key belongs to the address it was saved for, so a new address starts with no key.
+  const setCustomUrl = (value: string) => {
+    const { custom: _dropped, ...others } = draft.keys;
+    onChange({ customUrl: value, keys: others });
+  };
   const setModel = (value: string) => {
     onChange({ models: { ...draft.models, [p.id]: value } });
   };
@@ -47,8 +52,9 @@ export function ProviderFields({ draft, onChange }: ProviderFieldsProps) {
             spellCheck={false}
             placeholder="https://your-proxy.example/v1/chat/completions"
             value={draft.customUrl}
-            onChange={(e) => onChange({ customUrl: e.target.value })}
+            onChange={(e) => setCustomUrl(e.target.value)}
           />
+          <p className={styles.muted}>Changing this address clears the key below.</p>
         </div>
       ) : null}
       {p.key === 'none' ? null : (

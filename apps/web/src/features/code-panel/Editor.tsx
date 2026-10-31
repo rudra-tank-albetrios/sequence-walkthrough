@@ -14,7 +14,7 @@ import {
 } from 'react';
 
 import { useIsNarrow } from '../../shared/hooks/useMediaQuery.ts';
-import { LIVE_LINK_RE, readLiveState } from '../../shared/lib/codec.ts';
+import { isLiveLink, LIVE_LINK_RE, readLiveState } from '../../shared/lib/codec.ts';
 import { errorLine } from '../../shared/lib/mermaidLines.ts';
 import { cx, debounce } from '../../shared/lib/util.ts';
 import { useDiagramStore } from '../../shared/state/diagramStore.ts';
@@ -85,6 +85,7 @@ export const Editor = forwardRef<EditorHandle>(function Editor(_props, ref) {
   const cur = useFlowStore((s) => s.cur);
   const lastGo = useFlowStore((s) => s.lastGo);
   const setCode = useFlowStore((s) => s.setCode);
+  const loadCode = useFlowStore((s) => s.loadCode);
   const go = useFlowStore((s) => s.go);
   const error = useDiagramStore((s) => s.error);
   const narrow = useIsNarrow();
@@ -204,7 +205,8 @@ export const Editor = forwardRef<EditorHandle>(function Editor(_props, ref) {
   };
 
   const onPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
-    const match = LIVE_LINK_RE.exec(event.clipboardData.getData('text'));
+    const pastedText = event.clipboardData.getData('text');
+    const match = isLiveLink(pastedText) ? LIVE_LINK_RE.exec(pastedText) : null;
     if (!match) {
       pasted.current = true;
       return;
@@ -216,7 +218,7 @@ export const Editor = forwardRef<EditorHandle>(function Editor(_props, ref) {
         if (!state.code) throw new Error('The link holds no code');
         flush.cancel();
         setText(state.code);
-        setCode(state.code);
+        loadCode(state.code, state.theme);
         toast('Loaded the diagram from the mermaid.live link');
       })
       .catch(() => {

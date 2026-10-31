@@ -4,7 +4,14 @@ import { useNotesStore } from '../../shared/state/notesStore.ts';
 import { isReady, type AiSettings } from './aiSettings.ts';
 import { readCached, writeCached } from './cache.ts';
 import { providerFor, type Provider } from './providers.ts';
-import { buildUserMessage, complete, endpointFor, type AskContext, type CompleteOptions } from './request.ts';
+import {
+  buildUserMessage,
+  complete,
+  endpointFor,
+  legacyUserMessage,
+  type AskContext,
+  type CompleteOptions,
+} from './request.ts';
 
 export interface AskResult {
   answer: string;
@@ -39,7 +46,7 @@ export async function askQuestion({ settings, question, context, bypassCache = f
   const user = buildUserMessage(question, settings, context);
   const model = provider.artifact ? 'quick' : endpointFor(settings).model;
   if (!bypassCache) {
-    const hit = readCached(provider.id, user);
+    const hit = readCached(provider.id, user) ?? readCached(provider.id, legacyUserMessage(question, settings, context));
     if (hit) return { answer: hit, cached: true, provider, model };
   }
   const options: CompleteOptions = signal ? { signal } : {};

@@ -14,7 +14,14 @@ import type {
   StepUses,
   Uses,
 } from './types.ts';
-import { FLAG_TAGS, KNOWN_TAGS, PAYLOAD_PARTS, SEQ_KEYWORD, STEP_TAGS } from './vocabulary.ts';
+import {
+  FLAG_TAGS,
+  KNOWN_TAGS,
+  PAYLOAD_PARTS,
+  SEQ_KEYWORD,
+  STEP_TAGS,
+  wordTable,
+} from './vocabulary.ts';
 
 /** Step-level tags collected while waiting for the next arrow. */
 interface Pending {
@@ -105,7 +112,7 @@ export function parseAnnotations(code: string): Annotations {
     trigger: '',
     summary: [],
     terms: [],
-    layers: {},
+    layers: wordTable({}),
     sectionSummaries: {},
     arrows: [],
     lint: [],
@@ -115,6 +122,8 @@ export function parseAnnotations(code: string): Annotations {
     frontMatterEnd: -1,
   };
   const warn = (line: number, msg: string, code: string) => res.lint.push({ line, msg, code });
+  // Where each lower-cased term sits in res.terms, so a repeated @term replaces the earlier one.
+  const termAt = new Map<string, number>();
 
   let i = 0;
   // Front matter (--- ... ---) at the very top.
@@ -167,9 +176,12 @@ export function parseAnnotations(code: string): Annotations {
         if (m?.[1] && m[2]) {
           const term = m[1].trim();
           const entry = { term, def: m[2].trim(), line };
-          const prev = res.terms.findIndex((x) => x.term.toLowerCase() === term.toLowerCase());
-          if (prev >= 0) res.terms[prev] = entry;
-          else res.terms.push(entry);
+          const prev = termAt.get(term.toLowerCase());
+          if (prev !== undefined) res.terms[prev] = entry;
+          else {
+            termAt.set(term.toLowerCase(), res.terms.length);
+            res.terms.push(entry);
+          }
         } else warn(line, '@term needs a word and a definition: @term tombstone: …', 'term-empty');
         break;
       }

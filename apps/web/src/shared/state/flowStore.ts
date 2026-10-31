@@ -2,7 +2,7 @@ import { parseFlow, type Flow, type ParsedFlow } from '@swv/core';
 import { create } from 'zustand';
 
 import { clamp } from '../lib/util.ts';
-import { loadSettings, saveSettings, type Settings } from '../storage/settings.ts';
+import { isDiagramTheme, loadSettings, saveSettings, type Settings } from '../storage/settings.ts';
 import { announce } from '../ui/announce.ts';
 import { toast } from '../ui/toast.ts';
 import { pathVisible, type PathMode } from './path.ts';
@@ -33,6 +33,8 @@ export interface FlowState {
   /** The text in the Find box; the table underlines the steps it matches. */
   findQuery: string;
   settings: Settings;
+  /** Goes up when the camera should start over at the next drawing. */
+  fitRequest: number;
   ui: {
     codeOpen: boolean;
     /** The tool shown in the big overlay, by its id in the tool registry; null when closed. */
@@ -57,6 +59,8 @@ export interface FlowState {
   };
 
   setCode: (code: string) => void;
+  /** Code from outside the editor (the example, an import, a link): the camera starts over. */
+  loadCode: (code: string, theme?: string | null) => void;
   /** Mermaid refused the code: the walkthrough goes back to the flow of the last good drawing. */
   restoreFlow: (flow: Flow | null) => void;
   /** Moves to a step. `camera: false` leaves the diagram where it is. */
@@ -128,6 +132,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     askQuestion: null,
   },
   lastGo: { index: -1, camera: true, seq: 0 },
+  fitRequest: 0,
 
   setCode(code) {
     const parsed = parseFlow(code);
@@ -142,6 +147,15 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       spot: s.spot && flow.participants.some((p) => p.alias === s.spot) ? s.spot : null,
       follow: refollow(flow, s.follow),
     }));
+  },
+
+  loadCode(code, theme) {
+    const { settings, updateSettings, setCode } = get();
+    if (isDiagramTheme(theme) && (theme !== settings.theme || settings.themeAuto)) {
+      updateSettings({ theme, themeAuto: false });
+    }
+    setCode(code);
+    set((s) => ({ fitRequest: s.fitRequest + 1 }));
   },
 
   restoreFlow(flow) {

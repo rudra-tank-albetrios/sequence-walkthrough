@@ -143,7 +143,7 @@ export function BookmarksPopover({ flow }: { flow: Flow }) {
             </div>
           )}
           <div className={styles.popRow}>
-            <Button className={styles.small} onClick={() => exportNotes(flow, id, data)}>
+            <Button className={styles.small} onClick={() => void exportNotes(flow, id, data)}>
               Export notes
             </Button>
             <Button className={styles.small} onClick={() => fileRef.current?.click()}>

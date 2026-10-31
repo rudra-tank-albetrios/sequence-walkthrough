@@ -67,6 +67,8 @@ export async function renderDiagram(code: string, theme: string, id: string): Pr
     startOnLoad: false,
     theme: theme as NonNullable<MermaidConfig['theme']>,
     securityLevel: 'strict',
+    // Mermaid's own default, stated so the limit on pasted and dropped code is visible here.
+    maxTextSize: 50000,
   });
   let themeBg = theme.includes('dark') ? '#1e1e1e' : '#ffffff';
   try {

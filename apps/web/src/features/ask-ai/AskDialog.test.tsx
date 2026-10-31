@@ -138,13 +138,13 @@ describe('AskDialog', () => {
     expect(useFlowStore.getState().ui.aiSettingsOpen).toBe(true);
   });
 
-  it('sends a prefilled question from sessionStorage and clears it', async () => {
+  it('sends a question another feature prepared and clears it', async () => {
     vi.stubGlobal('fetch', answerWith('A hold keeps stock aside.'));
-    sessionStorage.setItem('swv:ask:prefill', 'What is "hold" here?');
     openOnStep1();
+    useFlowStore.getState().setUi({ askQuestion: 'What is "hold" here?' });
     render(<AskDialog />);
     await screen.findByText('A hold keeps stock aside.');
-    expect(sessionStorage.getItem('swv:ask:prefill')).toBeNull();
+    expect(useFlowStore.getState().ui.askQuestion).toBeNull();
     expect(screen.getByRole('button', { name: 'Add to glossary' })).toBeInTheDocument();
   });
 });

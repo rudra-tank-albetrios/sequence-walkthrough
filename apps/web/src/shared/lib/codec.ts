@@ -80,6 +80,11 @@ export async function liveLink(code: string, theme: string, grid: boolean): Prom
 
 export const LIVE_LINK_RE = /#(pako|base64):([A-Za-z0-9\-_+/=]+)/;
 
+const LIVE_LINK_START_RE = /^\s*https?:\/\/(www\.)?mermaid\.(live|ink)\/[^\s]*#(pako|base64):/;
+
+/** A whole mermaid.live or mermaid.ink link, not text that happens to hold `#pako:`. */
+export const isLiveLink = (text: string): boolean => LIVE_LINK_START_RE.test(text);
+
 export interface ParsedHash {
   code: string | null;
   /** 0-based step index from `step=N` or `step-N`, or null. */

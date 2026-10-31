@@ -47,7 +47,10 @@ export function Dialog({
               {description}
             </RadixDialog.Description>
           ) : null}
-          <div className={styles.body}>{children}</div>
+          {/* The body scrolls when a dialog is taller than the screen, so the keyboard can reach it. */}
+          <div className={styles.body} tabIndex={0}>
+            {children}
+          </div>
           {actions ? <div className={styles.actions}>{actions}</div> : null}
         </RadixDialog.Content>
       </RadixDialog.Portal>

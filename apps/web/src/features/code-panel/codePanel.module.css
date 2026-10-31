@@ -172,31 +172,31 @@
   background: var(--danger-soft);
 }
 
-/* Token colours, the names version 2 used */
-.t-kw {
+/* Token colours, with the global class names version 2 used (the browser tests read them). */
+.hl :global(.t-kw) {
   color: light-dark(#7c3aed, #c4a5ff);
   font-weight: 600;
 }
 
-.t-ar {
+.hl :global(.t-ar) {
   color: light-dark(#c2410c, #ffa36b);
   font-weight: 700;
 }
 
-.t-cm {
+.hl :global(.t-cm) {
   color: var(--faint);
 }
 
-.t-tag {
+.hl :global(.t-tag) {
   color: light-dark(#0f766e, #5eead4);
   font-weight: 700;
 }
 
-.t-tagtx {
+.hl :global(.t-tagtx) {
   color: light-dark(#0f5e57, #99f0e0);
 }
 
-.t-al {
+.hl :global(.t-al) {
   color: light-dark(#1d4ed8, #93b4ff);
 }
 

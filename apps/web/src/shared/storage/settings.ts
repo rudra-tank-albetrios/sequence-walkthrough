@@ -50,13 +50,13 @@ export const DEFAULT_SETTINGS: Settings = {
   bands: true,
 };
 
-const isTheme = (value: unknown): value is DiagramTheme =>
+export const isDiagramTheme = (value: unknown): value is DiagramTheme =>
   typeof value === 'string' && (DIAGRAM_THEMES as readonly string[]).includes(value);
 
 export function loadSettings(): Settings {
   const stored = Store.get<Partial<Settings>>(SETTINGS_KEY, {});
   const merged: Settings = { ...DEFAULT_SETTINGS, ...stored };
-  if (!isTheme(merged.theme)) merged.theme = DEFAULT_SETTINGS.theme;
+  if (!isDiagramTheme(merged.theme)) merged.theme = DEFAULT_SETTINGS.theme;
   // A theme saved by version 2 was the user's choice; only a missing one follows the page.
   merged.themeAuto = stored.themeAuto ?? stored.theme === undefined;
   if (!PAGE_THEMES.includes(merged.pageTheme)) merged.pageTheme = 'system';
@@ -94,7 +94,10 @@ export function applyPageTheme(pageTheme: PageTheme): void {
 /** `swv:code`: the last code the user had in the panel, written a moment after each edit. */
 export const CODE_KEY = 'swv:code';
 
-export const loadSavedCode = (): string | null => Store.get<string | null>(CODE_KEY, null);
+export function loadSavedCode(): string | null {
+  const saved = Store.get<unknown>(CODE_KEY, null);
+  return typeof saved === 'string' ? saved : null;
+}
 export const saveCode = (code: string): void => {
   Store.set(CODE_KEY, code);
 };
