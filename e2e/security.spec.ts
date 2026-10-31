@@ -169,11 +169,13 @@ test.describe('hostile diagram text, sanitiser alone', () => {
     await openSafeFlow(page);
     const address = page.url();
     const drawn: string[] = [];
+    const refused: string[] = [];
     for (const [name, code] of Object.entries(OTHER_DIAGRAMS)) {
       const before = await drawingId(page);
       await dispatchDrop(page, `${name}.mmd`, code);
       await expect.poll(() => drawingEnded(page, before)).not.toBe('');
       if ((await drawingEnded(page, before)) === 'drawn') drawn.push(name);
+      else refused.push(`${name}: ${await page.getByTestId('err-badge').innerText()}`);
       // Mermaid's own handlers would answer these clicks. The page never binds them.
       await page.evaluate(
         `document.querySelectorAll('[data-testid="diagram"] svg :is(.node, .clickable, .actor, .task, a, [class*="click"])')
@@ -183,7 +185,7 @@ test.describe('hostile diagram text, sanitiser alone', () => {
       expect(page.url()).toBe(address);
     }
     // The attacks only mean something for the kinds Mermaid really drew.
-    expect(drawn).toEqual(
+    expect(drawn, refused.join('\n')).toEqual(
       expect.arrayContaining(['flowchart', 'classDiagram', 'stateDiagram', 'erDiagram', 'gantt']),
     );
   });
@@ -290,8 +292,15 @@ test.describe('large input', () => {
       const armed = await arm(page, baseURL);
       await openSafeFlow(page);
       await dispatchDrop(page, 'huge.mmd', code);
-      await expect(flowTitle(page)).not.toHaveText('Safe');
-      // The page still answers.
+      // Over Mermaid's size limit the code is refused with that message and the last good flow
+      // stays; under it the new flow takes over. Either way the page still answers.
+      await expect
+        .poll(async () =>
+          (await flowTitle(page).innerText()) !== 'Safe'
+            ? 'drawn'
+            : ((await page.getByTestId('err-badge').textContent()) ?? ''),
+        )
+        .toMatch(/drawn|Maximum text size/);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expectNothingRan(armed, name);
     });

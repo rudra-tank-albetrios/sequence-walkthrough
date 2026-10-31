@@ -261,10 +261,23 @@ async function pointAt(page: Page, targets: Locator): Promise<void> {
     const x = box.x + box.width / 2;
     const y = box.y + box.height / 2;
     if (x < 0 || y < 0 || x > viewport.width || y > viewport.height) continue;
+    const reachable = await target.evaluate(
+      (el, point) => {
+        const scope = globalThis as unknown as {
+          document: {
+            elementFromPoint: (x: number, y: number) => { closest: (s: string) => unknown } | null;
+          };
+        };
+        const under = scope.document.elementFromPoint(point.x, point.y);
+        return under !== null && (under === el || under.closest('.swv-actor, .swv-hit') === el);
+      },
+      { x, y },
+    );
+    if (!reachable) continue;
     await page.mouse.move(x, y);
     return;
   }
-  throw new Error('No target is inside the viewport');
+  throw new Error('No target is inside the viewport and uncovered');
 }
 
 /**
