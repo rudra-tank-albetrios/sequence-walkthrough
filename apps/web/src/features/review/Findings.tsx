@@ -33,7 +33,7 @@ export function Findings({ findings }: { findings: readonly ReviewFinding[] }) {
             <h4 className={styles.h4}>{REVIEW_AREA_LABEL[area]}</h4>
             <ul className={styles.list}>
               {inArea.map((finding, i) => (
-                <li key={i} className={styles.finding}>
+                <li key={i} className={styles.finding} data-rule={finding.rule}>
                   <Chip tone={SEVERITY_TONE[finding.severity]}>{finding.severity}</Chip>
                   <span className={styles.message}>{finding.message}</span>
                   <span className={styles.steps}>
@@ -63,7 +63,7 @@ export function RulesList({ rules }: { rules: readonly ReviewRuleResult[] }) {
       </h3>
       <ul className={styles.rules}>
         {rules.map((rule) => (
-          <li key={rule.id} data-status={rule.status}>
+          <li key={rule.id} data-rule={rule.id} data-status={rule.status}>
             <span className={styles.mark} aria-hidden="true">
               {STATUS_MARK[rule.status]}
             </span>

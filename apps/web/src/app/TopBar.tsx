@@ -149,6 +149,7 @@ export function TopBar() {
             </MenuItem>
             <MenuItem onSelect={() => setUi({ insightOpen: !insightOpen })}>Insight panel</MenuItem>
             <MenuItem onSelect={() => setUi({ aiSettingsOpen: true })}>Ask AI settings</MenuItem>
+            <MenuItem onSelect={() => setUi({ reviewOpen: true })}>Review this flow</MenuItem>
             <MenuItem onSelect={() => setUi({ findOpen: true })}>Find</MenuItem>
             <MenuItem onSelect={commands.fitWidth}>Fit width</MenuItem>
             <MenuItem onSelect={commands.fitAll}>Fit all</MenuItem>

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { Store } from '../../shared/storage/store.ts';
+import { Store } from '../storage/store.ts';
 import {
   AI_SETTINGS_KEY,
   DEFAULT_AI_SETTINGS,

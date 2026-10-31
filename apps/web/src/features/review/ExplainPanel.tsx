@@ -6,9 +6,6 @@ import { Button } from '../../shared/ui/Button.tsx';
 import { EXPLAIN_MAX, explainFindings, type Explanation } from './explain.ts';
 import styles from './review.module.css';
 
-/** These need the settings dialog before anything can be asked. */
-const NEEDS_SETTINGS = new Set(['no-model', 'consent-needed']);
-
 /**
  * The user's model puts the findings in plain words. Its reply is shown as plain text in its own
  * block, and nothing it says can reach the rating, the findings or an action.
@@ -31,7 +28,7 @@ export function ExplainPanel({ findings }: { findings: readonly ReviewFinding[] 
     setAsking(false);
     if (!result.ok && result.kind === 'aborted') return;
     setAnswer(result);
-    if (!result.ok && NEEDS_SETTINGS.has(result.kind)) setUi({ aiSettingsOpen: true });
+    if (!result.ok && result.kind === 'no-model') setUi({ aiSettingsOpen: true });
   };
 
   return (
@@ -40,7 +37,8 @@ export function ExplainPanel({ findings }: { findings: readonly ReviewFinding[] 
         In plain words
       </h3>
       <p className={styles.note}>
-        Your own model can explain these findings. It cannot change the rating or the findings.
+        The model you set up in Ask AI can explain these findings. It cannot change the rating or
+        the findings. Only the text of the findings is sent to it, never the diagram or your key.
         {findings.length > EXPLAIN_MAX
           ? ` It explains the ${EXPLAIN_MAX} most serious of ${findings.length}.`
           : ''}
@@ -62,11 +60,6 @@ export function ExplainPanel({ findings }: { findings: readonly ReviewFinding[] 
           </p>
         </>
       ) : null}
-      {answer?.notices.map((notice) => (
-        <p key={notice} className={styles.note}>
-          {notice}
-        </p>
-      ))}
       <p role="status" className={styles.note} data-testid="review-explain-status">
         {asking ? 'Asking your model…' : answer && !answer.ok ? answer.message : ''}
       </p>

@@ -1,13 +1,13 @@
 import { useState } from 'react';
 
+import { normalizeSettings, useAiSettingsStore, type AiSettings } from '../../shared/ai/aiSettings.ts';
+import { complete, TEST_QUESTION } from '../../shared/ai/complete.ts';
+import { PROVIDERS } from '../../shared/ai/providers.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Dialog } from '../../shared/ui/Dialog.tsx';
 import { toast } from '../../shared/ui/toast.ts';
-import { normalizeSettings, useAiSettingsStore, type AiSettings } from './aiSettings.ts';
 import { ProviderFields } from './ProviderFields.tsx';
-import { PROVIDERS } from './providers.ts';
-import { complete, TEST_QUESTION } from './request.ts';
 import styles from './settings.module.css';
 
 const INTRO =

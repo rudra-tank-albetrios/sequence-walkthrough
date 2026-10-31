@@ -70,7 +70,36 @@ describe('ReviewDialog', () => {
 
     const rules = within(screen.getByTestId('review-rules')).getAllByRole('listitem');
     expect(rules.length).toBeGreaterThan(5);
-    expect(rules.some((rule) => rule.dataset.status === 'found')).toBe(true);
+    const byRule = (id: string) => rules.find((rule) => rule.dataset.rule === id);
+    expect(byRule('layers-direct-database')).toHaveAttribute('data-status', 'found');
+    expect(byRule('layers-direct-database')).toHaveTextContent('Found:');
+    expect(byRule('secret-exposed')).toHaveAttribute('data-status', 'passed');
+    expect(byRule('secret-exposed')).toHaveTextContent('Passed:');
+    const skipped = byRule('half-saved');
+    expect(skipped).toHaveAttribute('data-status', 'skipped');
+    expect(skipped).toHaveTextContent(
+      'Not checked: Reliability: Data can be left half saved This flow has no chapter with two separate writes.',
+    );
+  });
+
+  it('keeps the two results apart: the rating is a number and the confidence a level with reasons', () => {
+    load(PROBLEM, { reviewOpen: true });
+    render(<ReviewDialog />);
+
+    // One high finding (the controller writes to the database) takes 20 off.
+    expect(screen.getByTestId('review-score')).toHaveTextContent('80 / 100');
+    expect(screen.getByRole('meter', { name: 'Structure rating' })).toHaveAttribute(
+      'aria-valuenow',
+      '80',
+    );
+    // No step links to code, so the confidence stays low whatever the rating says.
+    expect(screen.getByTestId('review-confidence')).toHaveTextContent('Low');
+    const confidence = screen.getByRole('region', { name: 'Confidence' });
+    expect(confidence).toHaveTextContent('No step links to code');
+    expect(confidence).toHaveTextContent('Only one flow reviewed so far');
+    expect(screen.getByRole('region', { name: 'Structure rating' })).toHaveTextContent(
+      'using no tokens',
+    );
   });
 
   it('a step link closes the review and shows that step', () => {

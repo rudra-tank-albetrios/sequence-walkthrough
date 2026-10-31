@@ -1,12 +1,13 @@
 import { parseFlow } from '@swv/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { DEFAULT_AI_SETTINGS, type AiSettings } from '../../shared/ai/aiSettings.ts';
+import { complete, customUrlProblem } from '../../shared/ai/complete.ts';
+import { AI_SYSTEM } from '../../shared/ai/providers.ts';
 import { allTerms } from '../../shared/state/glossaryStore.ts';
 import { Store } from '../../shared/storage/store.ts';
-import { DEFAULT_AI_SETTINGS, type AiSettings } from './aiSettings.ts';
 import { askQuestion } from './ask.ts';
-import { AI_SYSTEM } from './providers.ts';
-import { buildUserMessage, complete, customUrlProblem, type AskContext } from './request.ts';
+import { buildUserMessage, type AskContext } from './request.ts';
 
 const settingsWith = (patch: Partial<AiSettings>): AiSettings => ({
   ...DEFAULT_AI_SETTINGS,

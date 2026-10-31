@@ -1,6 +1,5 @@
 import { REVIEW_AREA_LABEL, type ReviewFinding, type ThreatLevel } from '@swv/core';
 
-import { hashStr } from '../../shared/lib/util.ts';
 import { asData, callModel, z, type ModelResult } from './modelCall.ts';
 
 /** The most findings one request explains: the rest wait, and the page says so. */
@@ -54,8 +53,8 @@ export interface ExplainedFinding {
 }
 
 export type Explanation =
-  | { ok: true; points: ExplainedFinding[]; by: string; cached: boolean; notices: string[] }
-  | { ok: false; kind: string; message: string; notices: string[] };
+  | { ok: true; points: ExplainedFinding[]; by: string; cached: boolean }
+  | { ok: false; kind: string; message: string };
 
 const NO_MATCH = 'The reply did not explain these findings. You can ask again.';
 
@@ -71,31 +70,17 @@ export async function explainFindings(
     prompt: asData('The findings', lines),
     maxTokens: TOKENS_PER_FINDING * chosen.length + REPLY_FRAME_TOKENS,
     schema: ExplainReply,
-    cache: {
-      flowVersion: hashStr(lines),
-      step: 'review',
-      question: 'explain the findings',
-      mode: 'review',
-    },
     fresh,
     signal,
   });
   if (!result.ok) {
     const { kind, message } = result.error;
-    return { ok: false, kind, message, notices: result.notices };
+    return { ok: false, kind, message };
   }
   const points = result.data.points.flatMap(({ finding, plain }) => {
     const matched = chosen[finding - 1];
     return matched ? [{ finding: matched, plain }] : [];
   });
-  if (points.length === 0) {
-    return { ok: false, kind: 'bad-reply', message: NO_MATCH, notices: result.notices };
-  }
-  return {
-    ok: true,
-    points,
-    by: result.model.name,
-    cached: result.cached,
-    notices: result.notices,
-  };
+  if (points.length === 0) return { ok: false, kind: 'bad-reply', message: NO_MATCH };
+  return { ok: true, points, by: result.model.name, cached: result.cached };
 }

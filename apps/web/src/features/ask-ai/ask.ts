@@ -1,17 +1,11 @@
 import type { Step } from '@swv/core';
 
+import { isReady, type AiSettings } from '../../shared/ai/aiSettings.ts';
+import { readCached, writeCached } from '../../shared/ai/cache.ts';
+import { complete, endpointFor, type CompleteOptions } from '../../shared/ai/complete.ts';
+import { providerFor, type Provider } from '../../shared/ai/providers.ts';
 import { useNotesStore } from '../../shared/state/notesStore.ts';
-import { isReady, type AiSettings } from './aiSettings.ts';
-import { readCached, writeCached } from './cache.ts';
-import { providerFor, type Provider } from './providers.ts';
-import {
-  buildUserMessage,
-  complete,
-  endpointFor,
-  legacyUserMessage,
-  type AskContext,
-  type CompleteOptions,
-} from './request.ts';
+import { buildUserMessage, legacyUserMessage, type AskContext } from './request.ts';
 
 export interface AskResult {
   answer: string;
