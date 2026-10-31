@@ -41,6 +41,7 @@ export function ProgressBar({ flow }: { flow: Flow }) {
                 <span
                   key={step.idx}
                   className={cx(styles.cell, step.idx <= cur && styles.done, hidden && styles.off)}
+                  {...(step.idx <= cur ? { 'data-done': '' } : {})}
                   {...(hidden ? { 'data-hidden': '' } : {})}
                 />
               );

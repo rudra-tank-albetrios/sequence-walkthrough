@@ -41,13 +41,13 @@ export const DEFAULT_SETTINGS: Settings = {
   bands: true,
 };
 
-const isTheme = (value: unknown): value is DiagramTheme =>
+export const isDiagramTheme = (value: unknown): value is DiagramTheme =>
   typeof value === 'string' && (DIAGRAM_THEMES as readonly string[]).includes(value);
 
 export function loadSettings(): Settings {
   const stored = Store.get<Partial<Settings>>(SETTINGS_KEY, {});
   const merged: Settings = { ...DEFAULT_SETTINGS, ...stored };
-  if (!isTheme(merged.theme)) merged.theme = DEFAULT_SETTINGS.theme;
+  if (!isDiagramTheme(merged.theme)) merged.theme = DEFAULT_SETTINGS.theme;
   if (merged.wheel !== 'zoom') merged.wheel = 'scroll';
   if (typeof merged.speed !== 'number' || !Number.isFinite(merged.speed)) {
     merged.speed = DEFAULT_SETTINGS.speed;

@@ -1,8 +1,7 @@
 import type { Step } from '@swv/core';
 
-import { copyText, cx, isUrl } from '../../shared/lib/util.ts';
+import { cx, isUrl } from '../../shared/lib/util.ts';
 import { Chip } from '../../shared/ui/Chip.tsx';
-import { toast } from '../../shared/ui/toast.ts';
 import { TermText } from '../../shared/ui/TermText.tsx';
 import styles from './card.module.css';
 import { StepLinks } from './RichText.tsx';
@@ -46,18 +45,9 @@ export function RefChip({ value }: { value: string }) {
     );
   }
   return (
-    <button
-      type="button"
-      className={cx(styles.ref, 'mono')}
-      title="Source. Click to copy."
-      onClick={() => {
-        void copyText(value).then((ok) => {
-          toast(ok ? `Copied ${value}` : 'Could not copy to the clipboard');
-        });
-      }}
-    >
+    <span className={cx(styles.ref, 'mono')} title="Source">
       {value}
-    </button>
+    </span>
   );
 }
 

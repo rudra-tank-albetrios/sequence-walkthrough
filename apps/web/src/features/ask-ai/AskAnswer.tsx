@@ -1,8 +1,7 @@
-import { copyText } from '../../shared/lib/util.ts';
+import { copyWithFallback } from '../../shared/lib/files.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Chip } from '../../shared/ui/Chip.tsx';
 import { Kbd } from '../../shared/ui/Kbd.tsx';
-import { toast } from '../../shared/ui/toast.ts';
 import styles from './ask.module.css';
 
 /** One question and what came back. The text is always rendered as plain text, never as markup. */
@@ -64,9 +63,7 @@ export function AskAnswer({ answer, onSaveNote, onAddTerm, onAskAgain }: AskAnsw
           )}
           <Button
             onClick={() => {
-              void copyText(answer.text).then((ok) => {
-                toast(ok ? 'Copied the answer' : 'Could not copy; select the text instead');
-              });
+              void copyWithFallback(answer.text, 'Copied the answer');
             }}
           >
             Copy

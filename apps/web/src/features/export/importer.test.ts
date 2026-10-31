@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
-import { liveLink } from '../../shared/lib/codec.ts';
-import { extractMarkdown, importFile, importText, isLiveLink, looksLikeMermaid } from './importer.ts';
+import { isLiveLink, liveLink } from '../../shared/lib/codec.ts';
+import { extractMarkdown, importFile, importText, looksLikeMermaid } from './importer.ts';
 
 const CODE = 'sequenceDiagram\n  %% @title Imported\n  A->>B: hi';
 const MARKDOWN = `# Notes\n\nSome text.\n\n\`\`\`mermaid\n${CODE}\n\`\`\`\n\nMore text.\n`;

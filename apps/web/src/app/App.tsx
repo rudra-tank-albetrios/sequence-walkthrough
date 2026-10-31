@@ -16,6 +16,7 @@ import { useGlossaryStore } from '../shared/state/glossaryStore.ts';
 import { useNotesStore } from '../shared/state/notesStore.ts';
 import { flowId } from '../shared/storage/notes.ts';
 import { saveCode } from '../shared/storage/settings.ts';
+import { Store } from '../shared/storage/store.ts';
 import { Button } from '../shared/ui/Button.tsx';
 import { Kbd } from '../shared/ui/Kbd.tsx';
 import { ToastHost } from '../shared/ui/Toast.tsx';
@@ -75,6 +76,7 @@ export function App() {
   // First load: the link, then the autosaved code, then the demo flow.
   useEffect(() => {
     let cancelled = false;
+    if (!Store.ok) toast('Storage is blocked here, so code, notes and bookmarks last only for this session.');
     void loadInitialCode(window.location.hash).then(({ code, step, message }) => {
       if (cancelled) return;
       setCode(code);

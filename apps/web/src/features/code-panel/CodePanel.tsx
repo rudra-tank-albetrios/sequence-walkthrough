@@ -3,7 +3,8 @@ import { useMemo, useRef } from 'react';
 
 import { DEFAULT_DIAGRAM } from '../../shared/lib/defaultDiagram.ts';
 import { errorLine } from '../../shared/lib/mermaidLines.ts';
-import { copyText, cx, MERMAID_VERSION, plural } from '../../shared/lib/util.ts';
+import { copyWithFallback } from '../../shared/lib/files.ts';
+import { cx, MERMAID_VERSION, plural } from '../../shared/lib/util.ts';
 import { useDiagramStore } from '../../shared/state/diagramStore.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Button } from '../../shared/ui/Button.tsx';
@@ -70,7 +71,7 @@ export function CodePanel() {
   const setUi = useFlowStore((s) => s.setUi);
   const code = useFlowStore((s) => s.code);
   const flow = useFlowStore((s) => s.flow);
-  const setCode = useFlowStore((s) => s.setCode);
+  const loadCode = useFlowStore((s) => s.loadCode);
   const go = useFlowStore((s) => s.go);
   const grid = useFlowStore((s) => s.settings.grid);
   const updateSettings = useFlowStore((s) => s.updateSettings);
@@ -79,12 +80,12 @@ export function CodePanel() {
   const editorRef = useRef<EditorHandle | null>(null);
 
   const loadExample = () => {
-    setCode(DEFAULT_DIAGRAM);
+    loadCode(DEFAULT_DIAGRAM);
     toast('Loaded the example flow');
   };
 
   const copyCode = () => {
-    void copyText(code).then((ok) => toast(ok ? 'Copied the code' : 'Could not copy the code'));
+    void copyWithFallback(code, 'Copied the code');
   };
 
   const copyFixPrompt = () => {
@@ -93,13 +94,7 @@ export function CodePanel() {
       return;
     }
     const prompt = fixPrompt(flow, code);
-    void copyText(prompt.text).then((ok) =>
-      toast(
-        ok
-          ? `Copied a fix-prompt for ${plural(prompt.missing, 'unexplained step')}`
-          : 'Could not copy the fix-prompt',
-      ),
-    );
+    void copyWithFallback(prompt.text, `Copied a fix-prompt for ${plural(prompt.missing, 'unexplained step')}`);
   };
 
   const pickLint = (entry: LintEntry) => {
