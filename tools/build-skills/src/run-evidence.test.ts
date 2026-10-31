@@ -1,4 +1,5 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 import { afterAll, describe, expect, it } from 'vitest';
@@ -54,9 +55,8 @@ describe('filesRead', () => {
       resolve('/p/demo store/src/a.ts'),
       resolve('/p/demo store/src/b.py'),
     ]);
-    expect(filesRead(bash('sed -n \'1,20p\' "D:\\demo store\\src\\a.ts"'))).toEqual([
-      'D:\\demo store\\src\\a.ts',
-    ]);
+    const spaced = resolve(tmpdir(), 'demo store', 'src', 'a.ts');
+    expect(filesRead(bash(`sed -n '1,20p' "${spaced}"`))).toEqual([spaced]);
   });
 
   it('reads relative paths from the run root when the command has no cd', () => {
