@@ -66,10 +66,19 @@ export function stepText(step: Step): string {
 /** The payload lines of a step, as one text to search. */
 export const payloadText = (step: Step): string => step.payloads.map((p) => p.text).join(' ');
 
-/** A step as a finding names it: the method and path, or its label on one line. */
+/** Shapes of real credentials from well-known services, and private key blocks. */
+export const REAL_SECRET =
+  /\b(?:[sr]k_live_[0-9a-z]{8,}|AKIA[0-9A-Z]{16}|gh[pousr]_[0-9A-Za-z]{20,}|xox[abprs]-[0-9A-Za-z-]{10,}|eyJ[\w-]{10,}\.[\w-]{10,}\.[\w-]{5,})\b|-----BEGIN [A-Z ]*PRIVATE KEY-----/i;
+
+const ANY_REAL_SECRET = new RegExp(REAL_SECRET.source, 'gi');
+
+/**
+ * A step as a finding names it: the method and path, or its label on one line. Findings go on
+ * screen and to the user's model, so query values and credential-like text stay out of them.
+ */
 export function labelOf(step: Step): string {
-  if (step.http) return `${step.http.method} ${step.http.path}`;
-  return step.label.join(' ').trim() || 'This call';
+  const label = step.http ? `${step.http.method} ${step.http.path}` : step.label.join(' ').trim();
+  return label.replace(/\?[^\s=]+=\S*/g, '').replace(ANY_REAL_SECRET, '[hidden]') || 'This call';
 }
 
 /** Whether a reply leaves the backend: it goes to the client, or it answers an HTTP call. */

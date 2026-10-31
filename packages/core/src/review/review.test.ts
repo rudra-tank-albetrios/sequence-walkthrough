@@ -300,6 +300,26 @@ describe('known problems are found', () => {
   });
 });
 
+describe('what a finding says', () => {
+  it('leaves out query values and real-looking credentials, on screen and in a prompt', () => {
+    // Built at run time, so the secret scanner has nothing to find in this file.
+    const fake = ['sk', 'live', 'x'.repeat(24)].join('_');
+    const { findings } = review(
+      small(
+        'participant B as Browser',
+        'participant D as Database',
+        'B->>D: GET /admin?password=hunter2',
+        `D-->>B: ${fake} failed with an error`,
+      ),
+    );
+    const said = findings.map((finding) => finding.message).join(' ');
+    expect(said).toContain('GET /admin');
+    expect(said).toContain('[hidden]');
+    expect(said).not.toContain('hunter2');
+    expect(said).not.toContain(fake);
+  });
+});
+
 describe('the rating', () => {
   it('takes off 20 for a high finding, 10 for a medium and 5 for a low', () => {
     expect(

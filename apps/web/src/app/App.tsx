@@ -6,6 +6,7 @@ import { ImportDialog, useDropImport } from '../features/export/index.ts';
 import { FindPopover } from '../features/find/index.ts';
 import { GuideDialog, ShortcutsDialog } from '../features/guide/index.ts';
 import { InsightPanel } from '../features/insight/index.ts';
+import { ReviewHost } from '../features/review/index.ts';
 import { TableView } from '../features/table/index.ts';
 import { Viewer } from '../features/viewer/index.ts';
 import { PresenterCard, SelectionMenu, WalkBar, WalkthroughRuntime } from '../features/walkthrough/index.ts';
@@ -168,6 +169,7 @@ export function App() {
         <GuideDialog />
         <ShortcutsDialog />
         <ImportDialog />
+        <ReviewHost />
         <ToastHost />
       </div>
     </TooltipProvider>

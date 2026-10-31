@@ -1,5 +1,5 @@
 import type { Step } from '../types.ts';
-import { kindOf, labelOf, payloadText, repliesToCaller, type Facts } from './facts.ts';
+import { kindOf, labelOf, payloadText, REAL_SECRET, repliesToCaller, type Facts } from './facts.ts';
 import type { Rule, RuleFinding } from './rule.ts';
 
 /** Names of values that must never travel in the open. `\w*` also catches `client_secret`, `passwordHash`. */
@@ -15,10 +15,6 @@ const SECRET_FIELD = new RegExp(String.raw`["']?\b${SECRET}\b["']?\s*[:=]`, 'i')
 /** "Logs the password" is a log. "Logs the user in" is not. */
 const LOG_WORD = /\b(logger|logging|logs?|logged)\b(?!\s+(?:\w+\s+){0,2}(?:in|out)\b)/i;
 const LOGGER_NAME = /\b(logger|logs?|logging|audit)\b/i;
-
-/** Shapes of real credentials from well-known services, and private key blocks. */
-const REAL_SECRET =
-  /\b(?:[sr]k_live_[0-9a-z]{8,}|AKIA[0-9A-Z]{16}|gh[pousr]_[0-9A-Za-z]{20,}|xox[abprs]-[0-9A-Za-z-]{10,}|eyJ[\w-]{10,}\.[\w-]{10,}\.[\w-]{5,})\b|-----BEGIN [A-Z ]*PRIVATE KEY-----/i;
 
 /** Everything a step writes in a URL: the path in its label and its query payload. */
 function urlProblem(step: Step): boolean {
