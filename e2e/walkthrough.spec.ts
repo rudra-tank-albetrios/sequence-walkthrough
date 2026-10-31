@@ -156,10 +156,16 @@ test.describe('walkthrough', () => {
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowRight');
     await expect(progress).toHaveAttribute('aria-valuenow', '2');
-    await expect(progress).toHaveAttribute('aria-valuetext', new RegExp(`^Step 2 of ${DEMO_STEPS}, `));
+    await expect(progress).toHaveAttribute(
+      'aria-valuetext',
+      new RegExp(`^Step 2 of ${DEMO_STEPS}, `),
+    );
     await expect(page.getByTestId('progress-seg')).toHaveCount(5);
     // The start of the last chapter: a click lands on the step under the pointer.
-    await page.getByTestId('progress-seg').last().click({ position: { x: 1, y: 4 } });
+    await page
+      .getByTestId('progress-seg')
+      .last()
+      .click({ position: { x: 1, y: 4 } });
     await expect(page.getByTestId('step-card')).toContainText('Send the email');
   });
 
@@ -545,7 +551,14 @@ test.describe('walkthrough', () => {
     page,
   }) => {
     await openFocused(page);
-    for (const name of [/Code/, /^Play/, 'Dim others', 'Chapter band', 'Analyze', 'Hide controls']) {
+    for (const name of [
+      /Code/,
+      /^Play/,
+      'Dim others',
+      'Chapter band',
+      'Analyze',
+      'Hide controls',
+    ]) {
       await expect(
         page.getByRole('button', { name, exact: typeof name === 'string' }).first(),
       ).toBeVisible();

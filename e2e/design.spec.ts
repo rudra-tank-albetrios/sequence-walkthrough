@@ -19,7 +19,6 @@ import {
 
 const rail = (page: Page) => page.getByTestId('progress');
 
-
 test.describe('header, Flow Rail and dock', () => {
   test('the header, the dock, the Flow Rail and each tool group carry their tour names', async ({
     page,
@@ -64,7 +63,9 @@ test.describe('header, Flow Rail and dock', () => {
     const preview = page.getByTestId('rail-preview');
     await expect(preview).toBeVisible();
     await expect(preview).toContainText(/^Step \d+/);
-    await expect(preview).toContainText(/Check the request|Reserve stock|Save the order|Reply|Send the email/);
+    await expect(preview).toContainText(
+      /Check the request|Reserve stock|Save the order|Reply|Send the email/,
+    );
     await page.mouse.click(line.x + line.width * 0.9, line.y + line.height / 2);
     await expect(rail(page)).toHaveAttribute('aria-valuenow', /^(3\d|4\d)$/);
     await expect(stepInput(page)).toHaveValue(/^(3\d|4\d)$/);
@@ -101,7 +102,9 @@ test.describe('header, Flow Rail and dock', () => {
     expect(size.height).toBeGreaterThanOrEqual(44);
     await expect(dock.getByLabel('Seconds per step')).toBeVisible();
     await expect(page.getByTestId('chapters').getByRole('button')).toHaveCount(5);
-    await expect(page.getByTestId('chapters').getByRole('button', { name: 'Reserve stock' })).toBeVisible();
+    await expect(
+      page.getByTestId('chapters').getByRole('button', { name: 'Reserve stock' }),
+    ).toBeVisible();
     await page.getByTestId('chapters').getByRole('button', { name: 'Reserve stock' }).click();
     await expect(rail(page)).toHaveAttribute('aria-valuetext', /Reserve stock/);
     await page.keyboard.press('Home');
@@ -129,7 +132,9 @@ test.describe('header, Flow Rail and dock', () => {
     await expect(tip).toContainText(/Used on steps? \d/);
   });
 
-  test('a dark diagram gets the dark chapter band, and the dot grid stays open when zoomed out', async ({ page }) => {
+  test('a dark diagram gets the dark chapter band, and the dot grid stays open when zoomed out', async ({
+    page,
+  }) => {
     await page.emulateMedia({ colorScheme: 'dark' });
     await openFocused(page);
     await page.keyboard.press('ArrowRight');
@@ -137,7 +142,9 @@ test.describe('header, Flow Rail and dock', () => {
     await expect(diagram(page)).toHaveCSS('background-size', /^(1[4-9]|2[0-7])(\.\d+)?px/);
   });
 
-  test('fit leaves the first row and the last layer clear of the canvas tools', async ({ page }) => {
+  test('fit leaves the first row and the last layer clear of the canvas tools', async ({
+    page,
+  }) => {
     await openFocused(page);
     const code = await boxOf(page.getByRole('button', { name: 'Code', exact: true }));
     const first = await boxOf(await topActor(page, 'U'));
@@ -186,8 +193,14 @@ test.describe('header, Flow Rail and dock', () => {
   test('reduced motion stops the rail and the dock from animating', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openFocused(page);
-    await expect(page.getByTestId('rail-cap')).toHaveCSS('transition-duration', /^(0\.01ms|1e-05s)$/);
-    await expect(page.getByRole('button', { name: 'Play' })).toHaveCSS('transition-duration', /^(0\.01ms|1e-05s)/);
+    await expect(page.getByTestId('rail-cap')).toHaveCSS(
+      'transition-duration',
+      /^(0\.01ms|1e-05s)$/,
+    );
+    await expect(page.getByRole('button', { name: 'Play' })).toHaveCSS(
+      'transition-duration',
+      /^(0\.01ms|1e-05s)/,
+    );
   });
 
   test('at phone width the header keeps the title and ⋯, the dock keeps Play, and nothing overflows', async ({

@@ -183,7 +183,9 @@ export function viewportOf(page: Page): { width: number; height: number } {
 }
 
 /** The element's box, which Playwright reports as null for one that is not drawn. */
-export async function boxOf(locator: Locator): Promise<{ x: number; y: number; width: number; height: number }> {
+export async function boxOf(
+  locator: Locator,
+): Promise<{ x: number; y: number; width: number; height: number }> {
   const rect = await locator.boundingBox();
   if (!rect) throw new Error('Not on the page');
   return rect;

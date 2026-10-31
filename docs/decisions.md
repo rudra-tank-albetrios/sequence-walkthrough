@@ -66,3 +66,8 @@ Decisions the plan (`docs/IMPLEMENTATION-PLAN.md`) does not already make, one or
 - **Side cards are named by their text.** The `aria-label="Go to step N"` the design branch added failed axe's label-content-name-mismatch; the sr-only "Go to" prefix already names them.
 - **Four lint errors in the merged Phase 3 specs were fixed here** (an `import()` type, a literal BOM in a regex, an `any` from `Object.fromEntries`, an `as` on an array element) because the gate runs `npm run lint` over `e2e/`.
 
+
+- **Dark diagrams are read as dark.** Mermaid's dark themes give `background: "#333"`, and the check only read six-digit colours, so every dark theme counted as light: a pale chapter band over the arrows and dark dots on a dark canvas. The check now reads both forms, at the source rather than per theme.
+- **The dot grid keeps its spacing.** Dots double their spacing when zoomed out, so a large flow at fit does not turn the canvas into grey fog.
+- **Fit stays clear of the floating tools.** The first view and Fit keep 64 px at each side (24 px on a phone) and start below the Code button, so no layer sits under a tool. The diagram is slightly smaller at fit as a result.
+- **A step link closes the overlay.** The jump is there to show the diagram. Opened again, the overlay marks the current step.

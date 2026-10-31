@@ -14,7 +14,6 @@ import {
 // Parity rows O7 and O8 on the phone project (Pixel 7): the top bar keeps the title and the ⋯ menu,
 // the step bar drops its side cards, and the table, the code panel and Insight fill the screen.
 
-
 test.describe('phone layout', () => {
   test('O8 the top bar keeps the title and the ⋯ menu, which holds the export items', async ({
     page,

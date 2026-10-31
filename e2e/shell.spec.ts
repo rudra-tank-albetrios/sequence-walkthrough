@@ -52,7 +52,9 @@ test.describe('header', () => {
     await page.keyboard.press('ArrowRight');
     await expect(page.getByTestId('card-cur').getByText('proposed', { exact: true })).toBeVisible();
     await page.keyboard.press('i');
-    await overlay(page).getByRole('tab', { name: /^Errors/ }).click();
+    await overlay(page)
+      .getByRole('tab', { name: /^Errors/ })
+      .click();
     await expect(page.getByTestId('insight')).toContainText(
       'Proposed design: none of these steps exist in the code yet.',
     );
@@ -159,7 +161,9 @@ test.describe('layout, theme and motion', () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await expect(more).toBeHidden();
     await expect(
-      topbar.getByRole('button', { name: 'Learn', exact: true }).locator('span', { hasText: 'Learn' }),
+      topbar
+        .getByRole('button', { name: 'Learn', exact: true })
+        .locator('span', { hasText: 'Learn' }),
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Wheel: Scroll' })).toBeVisible();
   });

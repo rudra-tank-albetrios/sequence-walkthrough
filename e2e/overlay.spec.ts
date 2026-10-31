@@ -22,13 +22,13 @@ import {
 
 const scrim = (page: Page) => page.getByTestId('overlay-scrim');
 
-
-
 /** Whether the focused element is inside the locator's element. */
 const holdsFocus = (locator: Locator): Promise<boolean> =>
   locator.evaluate((el) => {
     const scope = globalThis as unknown as { document: { activeElement: unknown } };
-    return (el as unknown as { contains: (node: unknown) => boolean }).contains(scope.document.activeElement);
+    return (el as unknown as { contains: (node: unknown) => boolean }).contains(
+      scope.document.activeElement,
+    );
   });
 
 test.describe('tool overlay', () => {
@@ -85,7 +85,9 @@ test.describe('tool overlay', () => {
     expect(await camera(page)).toEqual(before);
   });
 
-  test('keeps the focus inside and gives it back to the button that opened it', async ({ page }) => {
+  test('keeps the focus inside and gives it back to the button that opened it', async ({
+    page,
+  }) => {
     await open(page);
     const opener = page.getByRole('button', { name: 'Analyze', exact: true });
     await opener.click();
@@ -104,13 +106,20 @@ test.describe('tool overlay', () => {
     await expect(opener).toBeFocused();
   });
 
-  test('I opens and closes it, and the panes of a group switch without leaving it', async ({ page }) => {
+  test('I opens and closes it, and the panes of a group switch without leaving it', async ({
+    page,
+  }) => {
     await openFocused(page);
     await page.keyboard.press('i');
     await expect(overlay(page)).toBeVisible();
-    await overlay(page).getByRole('tab', { name: /^Errors/ }).click();
+    await overlay(page)
+      .getByRole('tab', { name: /^Errors/ })
+      .click();
     await expect(overlay(page).getByRole('heading', { name: 'Errors' })).toBeVisible();
-    await expect(overlay(page).getByRole('tab', { name: /^Errors/ })).toHaveAttribute('aria-selected', 'true');
+    await expect(overlay(page).getByRole('tab', { name: /^Errors/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
     await page.keyboard.press('i');
     await expect(overlay(page)).toBeHidden();
   });
