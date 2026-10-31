@@ -1,11 +1,14 @@
 import react from '@vitejs/plugin-react';
-import { defineConfig, type Plugin } from 'vitest/config';
+import { viteSingleFile } from 'vite-plugin-singlefile';
+import { defineConfig, type Plugin, type ViteUserConfigFnPromise } from 'vitest/config';
 
-import { skillKit } from './vite-plugins/skillKit.ts';
+import { oneFilePage } from './vite-plugins/oneFilePage.ts';
+import { readSkillKit, skillKit } from './vite-plugins/skillKit.ts';
 
 // Plan section 4: no external scripts, everything bundled. GitHub Pages cannot send headers, so the
 // policy is a <meta> tag. It is added to production builds only: the dev server and React refresh
-// need an inline script, which the policy forbids.
+// need an inline script, which the policy forbids. The one-file build has its own policy, in
+// vite-plugins/oneFilePage.ts, because this one would block its inlined script.
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self'",
@@ -33,17 +36,33 @@ function contentSecurityPolicy(): Plugin {
   };
 }
 
-export default defineConfig({
-  base: './',
-  plugins: [react(), contentSecurityPolicy(), skillKit()],
-  build: {
-    target: 'es2022',
-    sourcemap: false,
-  },
-  test: {
-    environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}'],
-    css: { modules: { classNameStrategy: 'non-scoped' } },
-  },
-});
+const config: ViteUserConfigFnPromise = async ({ mode }) => {
+  // `vite build --mode single` is the one-file build, in its own output folder.
+  const oneFile = mode === 'single';
+  return {
+    base: './',
+    plugins: [
+      react(),
+      ...(oneFile ? [viteSingleFile(), oneFilePage()] : [contentSecurityPolicy(), skillKit()]),
+    ],
+    define: {
+      // A file next to the page on the website; inside the page in the one-file build.
+      __SKILL_KIT__: JSON.stringify(
+        oneFile ? Buffer.from(await readSkillKit()).toString('base64url') : '',
+      ),
+    },
+    build: {
+      target: 'es2022',
+      sourcemap: false,
+      outDir: oneFile ? 'dist-single' : 'dist',
+    },
+    test: {
+      environment: 'jsdom',
+      setupFiles: ['./src/test/setup.ts'],
+      include: ['src/**/*.test.{ts,tsx}'],
+      css: { modules: { classNameStrategy: 'non-scoped' } },
+    },
+  };
+};
+
+export default defineConfig(config);

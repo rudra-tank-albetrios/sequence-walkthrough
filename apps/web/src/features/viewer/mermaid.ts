@@ -91,6 +91,8 @@ export async function renderDiagram(code: string, theme: string, id: string): Pr
     startOnLoad: false,
     theme: theme as NonNullable<MermaidConfig['theme']>,
     securityLevel: 'strict',
+    // Labels as SVG text: HTML labels need <foreignObject>, which the sanitiser and exports refuse.
+    htmlLabels: false,
     maxTextSize: MAX_CODE_SIZE,
   });
   let themeBg = theme.includes('dark') ? '#1e1e1e' : '#ffffff';
