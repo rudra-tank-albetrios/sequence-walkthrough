@@ -5,6 +5,8 @@ export interface SkillConfig {
   triggers: readonly string[];
   /** Files from `skills/shared/references` this skill ships. */
   references: readonly string[];
+  /** Whether the skill ships worked examples. The fast skill reads nothing in its folders. */
+  examples: boolean;
   /** The bar its examples must pass: the detailed skill's own check is the strict one. */
   strictExamples: boolean;
 }
@@ -14,12 +16,14 @@ export const SKILLS: readonly SkillConfig[] = [
     name: 'seq-diagram',
     triggers: ['diagram this flow', 'how does X work', 'walk me through'],
     references: ['layer-naming.md'],
+    examples: false,
     strictExamples: false,
   },
   {
     name: 'detailed-seq-diagram',
     triggers: ['detailed seq diagram', 'detailed flow', 'full detail'],
     references: ['annotation-spec.md', 'layer-naming.md', 'writing-guide.md'],
+    examples: true,
     strictExamples: true,
   },
 ];

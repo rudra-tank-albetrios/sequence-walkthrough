@@ -13,9 +13,18 @@ import type {
   StateText,
   StepUses,
   Threat,
+  ThreatLevel,
   Uses,
 } from './types.ts';
-import { FLAG_TAGS, KNOWN_TAGS, PAYLOAD_PARTS, SEQ_KEYWORD, STEP_TAGS } from './vocabulary.ts';
+import {
+  FLAG_TAGS,
+  KNOWN_TAGS,
+  PAYLOAD_PARTS,
+  SEQ_KEYWORD,
+  STEP_TAGS,
+  THREAT_LEVELS,
+  THREAT_MAX_CHARS,
+} from './vocabulary.ts';
 
 /** Step-level tags collected while waiting for the next arrow. */
 interface Pending {
@@ -73,6 +82,17 @@ function hasStepContent(p: Pending): boolean {
     p.unconfirmed.length > 0 ||
     p.threats.length > 0
   );
+}
+
+const isThreatLevel = (word: string): word is ThreatLevel =>
+  (THREAT_LEVELS as readonly string[]).includes(word);
+
+/** `@threat <high|medium|low> <short text>`: null when the level or the text is missing. */
+export function parseThreat(value: string): Threat | null {
+  const match = /^(\S+)\s+(.+)$/.exec(value.trim());
+  const level = match?.[1]?.toLowerCase() ?? '';
+  const text = match?.[2]?.trim();
+  return text && isThreatLevel(level) ? { level, text } : null;
 }
 
 /** `@uses <kind> <name> [path:line] <text>` */
@@ -249,17 +269,23 @@ export function parseAnnotations(code: string): Annotations {
         pending.unconfirmed.push(val || 'Not confirmed from the code');
         break;
       case 'threat': {
-        const m = /^(high|medium|low)\s+(.+)$/i.exec(val);
-        const level = m?.[1]?.toLowerCase();
-        if ((level === 'high' || level === 'medium' || level === 'low') && m?.[2]) {
-          pending.threats.push({ level, text: m[2].trim() });
-        } else {
+        const threat = parseThreat(val);
+        if (!threat) {
           warn(
             line,
-            '@threat needs a level and a short text: @threat medium The token is logged',
+            '@threat needs a level (high, medium or low) and a short text: @threat high Token sent in the URL',
             'threat-format',
           );
+          break;
         }
+        if (threat.text.length > THREAT_MAX_CHARS) {
+          warn(
+            line,
+            `@threat is ${threat.text.length} characters (keep it under ${THREAT_MAX_CHARS})`,
+            'long-threat',
+          );
+        }
+        pending.threats.push(threat);
         break;
       }
       default:

@@ -67,24 +67,18 @@ function measure(budget: Budget): Result {
       const size = statSync(file).size;
       return { name: budget.name, measured: size, limit: budget.maxBytes, unit: 'B', ok: size <= budget.maxBytes };
     }
-    case 'text': {
-      const file = resolve(root, budget.path);
-      if (!existsSync(file)) {
-        return { ...fail(budget.name, budget.maxChars, 'chars'), detail: `${budget.path} is missing` };
-      }
-      const chars = readFileSync(file, 'utf8').length;
-      return { name: budget.name, measured: chars, limit: budget.maxChars, unit: 'chars', ok: chars <= budget.maxChars };
-    }
+    case 'text':
     case 'skill-description': {
       const file = resolve(root, budget.path);
       if (!existsSync(file)) {
         return { ...fail(budget.name, budget.maxChars, 'chars'), detail: `${budget.path} is missing` };
       }
-      const description = /^description:\s*(.*)$/m.exec(readFileSync(file, 'utf8'))?.[1];
-      if (description === undefined) {
+      const text = readFileSync(file, 'utf8');
+      const measured = budget.kind === 'text' ? text : /^description:\s*(.*)$/m.exec(text)?.[1];
+      if (measured === undefined) {
         return { ...fail(budget.name, budget.maxChars, 'chars'), detail: 'no description line' };
       }
-      const chars = description.length;
+      const chars = measured.length;
       return { name: budget.name, measured: chars, limit: budget.maxChars, unit: 'chars', ok: chars <= budget.maxChars };
     }
   }

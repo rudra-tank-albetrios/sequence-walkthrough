@@ -28,7 +28,7 @@ function filesUnder(dir: string): string[] {
 const entries = (zip: string) => Object.keys(unzipSync(readFileSync(join(out, zip)))).sort();
 
 describe('the built skills', () => {
-  for (const { name, references } of SKILLS) {
+  for (const { name, references, examples } of SKILLS) {
     describe(name, () => {
       it('has no include left and starts with its own front matter', () => {
         const text = readFileSync(join(out, name, 'SKILL.md'), 'utf8');
@@ -40,7 +40,7 @@ describe('the built skills', () => {
         expect(files).toContain('SKILL.md');
         expect(files).toContain('scripts/validate.mjs');
         for (const file of references) expect(files).toContain(`references/${file}`);
-        expect(files.some((file) => file.startsWith('examples/'))).toBe(true);
+        expect(files.some((file) => file.startsWith('examples/'))).toBe(examples);
       });
       it('zips with its own folder at the top, as the Claude app expects', () => {
         const inside = filesUnder(join(out, name)).map((file) => `${name}/${file}`);
@@ -60,7 +60,15 @@ describe('the built skills', () => {
         expect(text).toContain('Nothing outside it');
         expect(text).toMatch(/Read each file once/);
         expect(text).toMatch(/Never read tests/);
-        expect(text).toContain('@threat');
+        expect(text).toContain('in one ```mermaid block');
+        expect(text).toContain('over about 50 KB');
+        expect(text).toContain('Never an artifact, canvas, document or other file');
+        expect(text).toContain('Each layer once, same name and order');
+        expect(text).toContain('Crons, hooks, utils, helpers, config, env values, constants and libraries are side parts');
+        expect(text).toContain('Redis, Event Bus, queues and workers follow the main layers');
+        expect(text).toContain('may point only to code you really opened');
+        expect(text).toContain('@unconfirmed');
+        expect(text).toMatch(/@threat <high\\\|medium\\\|low> <short text>` \| [^\n]*only for something (you saw|seen) in the code/);
       });
     });
   }

@@ -41,6 +41,7 @@ export function buildFlow(ann: Annotations, info: SequenceInfo | null): Flow {
     data: [],
     endings: [],
     unconfirmed: 0,
+    threats: [],
     boundaries: [],
     main: -1,
     syntax: info?.syntax ?? [],
@@ -86,6 +87,7 @@ export function buildFlow(ann: Annotations, info: SequenceInfo | null): Flow {
     const step = makeStep(idx, m, a, flow, sectionIdx, keyCount);
     flow.steps.push(step);
     flow.unconfirmed += step.unconfirmed.length;
+    flow.threats.push(...step.threats.map((threat) => ({ ...threat, step: idx })));
     if (a && !a.step) {
       flow.lint.push({ line: a.line, msg: `Step ${step.n} (${step.fromName} → ${step.toName}) has no @step`, code: 'no-step', step: idx });
     }

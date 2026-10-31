@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { readdirSync, readFileSync } from 'node:fs';
+import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /** The repository root, found from this file's location. */
@@ -19,4 +19,12 @@ export function readJsonList<T>(file: string, key: string): T[] {
   const list: unknown = (parsed as Record<string, unknown>)[key];
   if (!isList<T>(list)) throw new Error(`${file}: "${key}" must be an array`);
   return list;
+}
+
+/** Files under `dir`, as sorted posix paths relative to it. */
+export function listFiles(dir: string): string[] {
+  return readdirSync(dir, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => relative(dir, resolve(entry.parentPath, entry.name)).replaceAll('\\', '/'))
+    .sort();
 }

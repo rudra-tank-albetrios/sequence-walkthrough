@@ -1,9 +1,9 @@
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, relative, resolve } from 'node:path';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { validateDiagram } from '@swv/core';
-import { repoRoot } from '@swv/tool-kit';
+import { listFiles, repoRoot } from '@swv/tool-kit';
 import { zipSync, type Zippable } from 'fflate';
 import { rolldown } from 'rolldown';
 
@@ -16,14 +16,6 @@ const SOURCES = resolve(repoRoot, 'skills');
 const ZIP_TIME = new Date(2026, 9, 31);
 
 export const DEFAULT_OUT = resolve(repoRoot, 'tools/build-skills/dist');
-
-/** Files under `dir` as sorted posix paths relative to it. */
-function listFiles(dir: string): string[] {
-  const files = readdirSync(dir, { recursive: true, withFileTypes: true })
-    .filter((entry) => entry.isFile())
-    .map((entry) => relative(dir, resolve(entry.parentPath, entry.name)).replaceAll('\\', '/'));
-  return files.sort();
-}
 
 function zipFiles(files: { name: string; path: string }[]): Uint8Array {
   const entries: Zippable = {};
