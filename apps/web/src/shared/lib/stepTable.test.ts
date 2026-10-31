@@ -32,7 +32,8 @@ describe('hostile text in the step table', () => {
     expect(words).not.toMatch(/<[a-z]/i);
     expect(words).not.toMatch(/(?<!\\)\[/);
     expect(words).toContain('&lt;img src=x');
-    expect(words).toContain('\\[a](javascript:alert(2))');
+    // Both brackets are escaped, so no reader can make a link of it.
+    expect(words).toContain('\\[a\\](javascript:alert(2))');
     expect(md).toContain("`x' <img src=x onerror=alert(6)>`");
   });
 });
