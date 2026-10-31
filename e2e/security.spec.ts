@@ -175,7 +175,13 @@ test.describe('hostile diagram text, sanitiser alone', () => {
       await dispatchDrop(page, `${name}.mmd`, code);
       await expect.poll(() => drawingEnded(page, before)).not.toBe('');
       if ((await drawingEnded(page, before)) === 'drawn') drawn.push(name);
-      else refused.push(`${name}: ${await page.getByTestId('err-badge').innerText()}`);
+      else {
+        refused.push(`${name}: ${await page.getByTestId('err-badge').innerText()}`);
+        // The badge stays until the next drawing; start the next kind from a clean page. The same
+        // link again would not reload, so leave it first.
+        await page.goto('about:blank');
+        await openSafeFlow(page);
+      }
       // Mermaid's own handlers would answer these clicks. The page never binds them.
       await page.evaluate(
         `document.querySelectorAll('[data-testid="diagram"] svg :is(.node, .clickable, .actor, .task, a, [class*="click"])')
