@@ -55,16 +55,22 @@ test.describe('one-file page, opened from disk', () => {
     expect(requestsBeyond(watch, PAGE_URL)).toEqual([]);
   });
 
-  test('draws other diagram types, whose Mermaid code is also inside the page', async ({
-    page,
-  }) => {
-    const watch = watchPage(page);
-    await page.goto(`${PAGE_URL}${linkTo('flowchart TD\n  A[Start] --> B[End]\n')}`);
-    await expect(svg(page)).toBeVisible({ timeout: 30_000 });
-    await expect(svg(page)).toContainText('Start');
-    expect(watch.errors).toEqual([]);
-    expect(requestsBeyond(watch, PAGE_URL)).toEqual([]);
-  });
+  for (const code of [
+    'flowchart TD\n  A[Start] --> B[End]\n',
+    'classDiagram\n  class Start\n',
+    'stateDiagram-v2\n  [*] --> Start\n',
+  ]) {
+    test(`draws ${code.split('\n')[0]} with its labels, from code inside the page`, async ({
+      page,
+    }) => {
+      const watch = watchPage(page);
+      await page.goto(`${PAGE_URL}${linkTo(code)}`);
+      await expect(svg(page)).toBeVisible({ timeout: 30_000 });
+      await expect(svg(page)).toContainText('Start');
+      expect(watch.errors).toEqual([]);
+      expect(requestsBeyond(watch, PAGE_URL)).toEqual([]);
+    });
+  }
 
   test('saves an SVG with its fonts, a PDF and the skill kit from inside the page', async ({
     page,

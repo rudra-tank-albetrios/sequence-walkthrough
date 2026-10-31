@@ -8,9 +8,11 @@ import type { Plugin } from 'vite';
 /**
  * Serves the kit that tools/build-skills makes next to the page: an emitted asset in the build, a
  * middleware in the dev server. `npm run build` makes the kit first; anywhere else, when the file
- * is missing, it is made on demand. The name stays version 2's, so links to it keep working.
+ * is missing, it is made on demand. The name stays version 2's, so links to it keep working, and
+ * version 2's other address for the skill download serves the same kit.
  */
 export const SKILL_KIT_FILE = `${KIT_NAME}.zip`;
+const OLD_SKILL_FILE = 'sequence-walkthrough.zip';
 
 export async function readSkillKit(): Promise<Uint8Array> {
   const { buildSkills, DEFAULT_OUT } = await import('@swv/build-skills/src/build.ts');
@@ -28,8 +30,10 @@ export function skillKit(): Plugin {
       building = config.command === 'build';
     },
     async buildStart() {
-      if (building)
-        this.emitFile({ type: 'asset', fileName: SKILL_KIT_FILE, source: await readSkillKit() });
+      if (!building) return;
+      const source = await readSkillKit();
+      for (const fileName of [SKILL_KIT_FILE, OLD_SKILL_FILE])
+        this.emitFile({ type: 'asset', fileName, source });
     },
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
