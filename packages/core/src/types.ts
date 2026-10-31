@@ -99,14 +99,8 @@ export interface LayerAnnotation {
   line: number;
 }
 
-/** One arrow line with the step-level annotations that were written above it. */
-export interface AnnotatedArrow {
-  line: number;
-  left: string;
-  text: string;
-  step: string;
-  stepLine: number;
-  payloads: AnnotatedPayload[];
+/** The step-level tags written above one arrow, as the annotations collect them and the step keeps them. */
+export interface StepTags {
   refs: string[];
   uses: StepUses[];
   effects: string[];
@@ -116,6 +110,16 @@ export interface AnnotatedArrow {
   flags: Flags;
   unconfirmed: string[];
   threats: Threat[];
+}
+
+/** One arrow line with the step-level annotations that were written above it. */
+export interface AnnotatedArrow extends StepTags {
+  line: number;
+  left: string;
+  text: string;
+  step: string;
+  stepLine: number;
+  payloads: AnnotatedPayload[];
   section: string | null;
   sectionLine: number;
   annLines: number[];
@@ -226,7 +230,7 @@ export interface Status {
 
 export type StepKind = 'request' | 'reply' | 'self';
 
-export interface Step {
+export interface Step extends StepTags {
   idx: number;
   n: number;
   line: number;
@@ -241,15 +245,6 @@ export interface Step {
   explain: string;
   payloads: Payload[];
   payload: string;
-  refs: string[];
-  uses: StepUses[];
-  effects: string[];
-  fields: FieldNote[];
-  schema: SchemaRule[];
-  state: StateText;
-  flags: Flags;
-  unconfirmed: string[];
-  threats: Threat[];
   http: HttpCall | null;
   status: Status | null;
   section: number;

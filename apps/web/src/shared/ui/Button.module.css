@@ -11,10 +11,17 @@
   font-size: var(--text-md);
   font-weight: 500;
   white-space: nowrap;
+  transition:
+    background-color var(--t-fast),
+    transform var(--t-fast) var(--ease-out);
 }
 
 .btn:hover {
   background: var(--surface-2);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .btn[aria-pressed='true'] {
@@ -50,5 +57,6 @@
 }
 
 .primary:hover {
+  background: var(--ink);
   opacity: 0.9;
 }

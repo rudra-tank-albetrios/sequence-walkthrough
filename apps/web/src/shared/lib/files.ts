@@ -1,5 +1,6 @@
 import { useFlowStore } from '../state/flowStore.ts';
 import { toast } from '../ui/toast.ts';
+import { fromBase64url } from './codec.ts';
 import { copyText, downloadBlob } from './util.ts';
 
 /** Saving files and copying text, with the Claude artifact host's capabilities when present. */
@@ -13,7 +14,7 @@ interface ClaudeHost {
 }
 
 /** The artifact host object, when this page runs inside a Claude artifact. */
-export function claudeHost(): ClaudeHost | null {
+function claudeHost(): ClaudeHost | null {
   const host: unknown = Reflect.get(window, 'claude');
   if (typeof host !== 'object' || host === null) return null;
   return typeof (host as { use?: unknown }).use === 'function' ? (host as ClaudeHost) : null;
@@ -100,17 +101,26 @@ export async function copyWithFallback(text: string, message: string): Promise<b
   return false;
 }
 
-export const SKILL_KIT_FILE = 'sequence-walkthrough-skill-kit.zip';
+const SKILL_KIT_FILE = 'sequence-walkthrough-skill-kit.zip';
 
-/** The skill, its setup guide and the install scripts: a zip built into the site next to the page. */
+/** Only the one-file build carries the kit inside the page, so it has nothing next to it to link to. */
+export const IS_ONE_FILE_BUILD = __SKILL_KIT__ !== '';
+
+/** The kit's bytes: inside the page in the one-file build, a file next to the page on the website. */
+async function skillKitBytes(): Promise<Uint8Array> {
+  if (IS_ONE_FILE_BUILD) return fromBase64url(__SKILL_KIT__);
+  const response = await fetch(`./${SKILL_KIT_FILE}`);
+  if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  // A zip starts with "PK"; a dev server without the file answers with the page instead.
+  if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) throw new Error('the skill kit is not part of this build');
+  return bytes;
+}
+
+/** The skill, its setup guide and the install scripts. */
 export async function downloadSkillKit(): Promise<void> {
   try {
-    const response = await fetch(`./${SKILL_KIT_FILE}`);
-    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    // A zip starts with "PK"; a dev server without the file answers with the page instead.
-    if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) throw new Error('the skill kit is not part of this build');
-    await saveFile(SKILL_KIT_FILE, bytes, 'application/zip');
+    await saveFile(SKILL_KIT_FILE, await skillKitBytes(), 'application/zip');
   } catch (error) {
     toast(`Download failed: ${error instanceof Error ? error.message : String(error)}`);
   }

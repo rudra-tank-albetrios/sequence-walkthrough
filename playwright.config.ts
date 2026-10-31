@@ -15,11 +15,14 @@ const baseURL = externalUrl ?? `http://127.0.0.1:${PORT}`;
 const projectFilter = CI
   ? null
   : process.env.SWV_E2E_PROJECTS?.split(',').map((name) => name.trim());
+// The desktop specs drive controls that a phone keeps in the ⋯ menu; phone.spec.ts covers the phone.
+const PHONE_SPECS = ['**/phone.spec.ts', '**/app.spec.ts'];
+const NOT_ON_DESKTOP = ['**/smoke/**', '**/phone.spec.ts'];
 const allProjects = [
-  { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-  { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-  { name: 'webkit', use: { ...devices['Desktop Safari'] } },
-  { name: 'phone', use: { ...devices['Pixel 7'] } },
+  { name: 'chromium', testIgnore: NOT_ON_DESKTOP, use: { ...devices['Desktop Chrome'] } },
+  { name: 'firefox', testIgnore: NOT_ON_DESKTOP, use: { ...devices['Desktop Firefox'] } },
+  { name: 'webkit', testIgnore: NOT_ON_DESKTOP, use: { ...devices['Desktop Safari'] } },
+  { name: 'phone', testMatch: PHONE_SPECS, use: { ...devices['Pixel 7'] } },
 ];
 
 // Browser tests for the web app. `npm run build` must have run first: the built site is served

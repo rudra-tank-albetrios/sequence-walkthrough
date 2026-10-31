@@ -1,8 +1,7 @@
-import { copyText } from '../../shared/lib/util.ts';
+import { copyWithFallback } from '../../shared/lib/files.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Chip } from '../../shared/ui/Chip.tsx';
 import { Kbd } from '../../shared/ui/Kbd.tsx';
-import { toast } from '../../shared/ui/toast.ts';
 import styles from './ask.module.css';
 
 /** One question and what came back. The text is always rendered as plain text, never as markup. */
@@ -13,10 +12,12 @@ export interface Answer {
   status: 'busy' | 'done' | 'error';
   text: string;
   cached: boolean;
-  providerName: string;
-  model: string;
+  /** Who wrote it: the saved entry's name, and its model when known. */
+  writer: string;
   /** The answer was appended to the step's note already. */
   noted: boolean;
+  /** What auto-switch did: "Groq limit reached, switched to Gemini". */
+  notices: readonly string[];
 }
 
 export interface AskAnswerProps {
@@ -35,12 +36,15 @@ export function AskAnswer({ answer, onSaveNote, onAddTerm, onAskAgain }: AskAnsw
       data-testid="ask-answer"
     >
       <div className={styles.q}>{answer.q}</div>
+      {answer.notices.map((notice) => (
+        <p key={notice} className={styles.notice} data-testid="ask-notice">
+          {notice}
+        </p>
+      ))}
       <div className={styles.a}>{answer.status === 'busy' ? 'Thinking…' : answer.text}</div>
       {done ? (
         <div className={styles.meta}>
-          <span>
-            {answer.providerName} · {answer.model}
-          </span>
+          <span>{answer.writer}</span>
           {answer.cached ? <Chip title="This answer was given before and kept in this browser">Saved answer</Chip> : null}
         </div>
       ) : null}
@@ -64,9 +68,7 @@ export function AskAnswer({ answer, onSaveNote, onAddTerm, onAskAgain }: AskAnsw
           )}
           <Button
             onClick={() => {
-              void copyText(answer.text).then((ok) => {
-                toast(ok ? 'Copied the answer' : 'Could not copy; select the text instead');
-              });
+              void copyWithFallback(answer.text, 'Copied the answer');
             }}
           >
             Copy

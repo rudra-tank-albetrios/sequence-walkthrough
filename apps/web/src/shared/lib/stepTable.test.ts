@@ -8,13 +8,43 @@ import { CSV_COLUMNS, csvText, markdownText, tableRows } from './stepTable.ts';
 const flow = parseFlow(DEFAULT_DIAGRAM).flow;
 const BOM = String.fromCharCode(0xfeff);
 
+const HOSTILE = parseFlow(`sequenceDiagram
+  %% @title =1+1 <img src=x onerror=alert(1)> [a](javascript:alert(2))
+  %% @trigger <script>alert(3)</script>
+  %% @term <b>t</b>: [d](javascript:alert(4))
+  %% @step @SUM(1+1) ![i](https://evil.example/i.png)
+  %% @uses hook name\`<i>x</i> [u](javascript:alert(5))
+  A->>B: x\` <img src=x onerror=alert(6)>
+`).flow;
+
+describe('hostile text in the step table', () => {
+  it('cannot start a formula in a CSV cell', () => {
+    const cells = tableRows(HOSTILE).rows.flat();
+    expect(cells).toContain('@SUM(1+1) ![i](https://evil.example/i.png)');
+    const csv = csvText(HOSTILE);
+    expect(csv).toContain("'@SUM(1+1) ![i](https://evil.example/i.png)");
+    expect(csv).not.toMatch(/(?:^|,|")[=+\-@]/m);
+  });
+
+  it('cannot open a tag, a link or an image in Markdown, outside a code span', () => {
+    const md = markdownText(HOSTILE);
+    const words = md.replace(/`[^`\n]*`/g, '');
+    expect(words).not.toMatch(/<[a-z]/i);
+    expect(words).not.toMatch(/(?<!\\)\[/);
+    expect(words).toContain('&lt;img src=x');
+    // Both brackets are escaped, so no reader can make a link of it.
+    expect(words).toContain('\\[a\\](javascript:alert(2))');
+    expect(md).toContain("`x' <img src=x onerror=alert(6)>`");
+  });
+});
+
 describe('step table exports', () => {
   it('writes the documented CSV columns with a BOM and CRLF line ends', () => {
     const csv = csvText(flow);
     const lines = csv.split('\r\n');
     expect(csv.startsWith(BOM)).toBe(true);
     expect(lines[0]).toBe(`${BOM}${CSV_COLUMNS.join(',')}`);
-    expect(lines[0]).toContain('Step,Chapter,From,To,Kind,Status,Sends,Does,Branch,Payload,Also involved,Effects,Unconfirmed,Ref');
+    expect(lines[0]).toContain('Step,Chapter,From,To,Kind,Status,Sends,Does,Branch,Payload,Also involved,Effects,Unconfirmed,Threats,Ref');
     // one row per step, then the trailing line end
     expect(lines.length).toBe(flow.steps.length + 2);
     expect(lines[lines.length - 1]).toBe('');
@@ -60,5 +90,46 @@ describe('step table exports', () => {
     for (const line of md.split('\n').filter((l) => l.startsWith('| '))) {
       expect(line.replace(/\\\|/g, '').split('|').length).toBeGreaterThanOrEqual(8);
     }
+  });
+  describe('escapes once', () => {
+    /** The cells of the only row, with the text in both a text cell and the code cell. */
+    const cells = (text: string): { does: string; sends: string } => {
+      const flow = parseFlow(
+        `sequenceDiagram\n  %% @step EXPLAIN\n  A->>B: one`,
+      ).flow;
+      const step = flow.steps[0];
+      if (!step) throw new Error('No step');
+      step.explain = text;
+      step.label = [text];
+      const line = markdownText(flow).split('\n').find((l) => l.startsWith('| 1 |'));
+      if (!line) throw new Error('No row');
+      // Split at the pipes between cells only: a pipe of the text has a backslash before it.
+      const parts = line.split(' | ');
+      return { sends: parts[2] ?? '', does: parts[3] ?? '' };
+    };
+
+    it.each([
+      ['[x](javascript:alert(1))', '\\[x\\](javascript:alert(1))', '`[x](javascript:alert(1))`'],
+      ['\\[x](y)', '\\\\\\[x\\](y)', '`\\[x](y)`'],
+      ['a\\', 'a\\\\', '`a\\`'],
+      ['a|b', 'a\\|b', '`a\\|b`'],
+      ['a\nb', 'a<br>b', '`a b`'],
+      ['a\r\nb', 'a<br>b', '`a b`'],
+      ['<b>', '&lt;b>', '`<b>`'],
+    ])('%j', (text, does, sends) => {
+      const got = cells(text);
+      expect(got.does).toBe(does);
+      expect(got.sends).toBe(sends);
+    });
+
+    it.each(['[x](javascript:alert(1))', '\\[x](y)', '\\\\[x](y)', '\\\\\\[x](y)'])(
+      'leaves no live bracket in %j',
+      (text) => {
+        // An odd number of backslashes before a bracket is what makes it plain text.
+        for (const run of cells(text).does.matchAll(/(\\*)[[\]]/g)) {
+          expect((run[1] ?? '').length % 2).toBe(1);
+        }
+      },
+    );
   });
 });

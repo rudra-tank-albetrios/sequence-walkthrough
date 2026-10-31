@@ -2,15 +2,15 @@
 .panel {
   position: absolute;
   left: 0;
-  top: 0;
+  top: var(--chrome-top, 0px);
   bottom: 0;
   width: min(480px, 92%);
-  z-index: 20;
+  z-index: var(--z-panel);
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto auto;
   background: var(--surface);
   border-right: 1px solid var(--line);
-  box-shadow: var(--shadow-1), var(--shadow-2);
+  box-shadow: var(--shadow-float);
 }
 
 .head {
@@ -172,31 +172,31 @@
   background: var(--danger-soft);
 }
 
-/* Token colours, the names version 2 used */
-.t-kw {
+/* Token colours, with the global class names version 2 used (the browser tests read them). */
+.hl :global(.t-kw) {
   color: light-dark(#7c3aed, #c4a5ff);
   font-weight: 600;
 }
 
-.t-ar {
+.hl :global(.t-ar) {
   color: light-dark(#c2410c, #ffa36b);
   font-weight: 700;
 }
 
-.t-cm {
+.hl :global(.t-cm) {
   color: var(--faint);
 }
 
-.t-tag {
+.hl :global(.t-tag) {
   color: light-dark(#0f766e, #5eead4);
   font-weight: 700;
 }
 
-.t-tagtx {
+.hl :global(.t-tagtx) {
   color: light-dark(#0f5e57, #99f0e0);
 }
 
-.t-al {
+.hl :global(.t-al) {
   color: light-dark(#1d4ed8, #93b4ff);
 }
 
@@ -264,7 +264,7 @@
     position: fixed;
     inset: 0;
     width: auto;
-    z-index: 80;
+    z-index: calc(var(--z-chrome) + 1);
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }

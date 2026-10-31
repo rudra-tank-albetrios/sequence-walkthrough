@@ -24,6 +24,7 @@ import {
   STEP_TAGS,
   THREAT_LEVELS,
   THREAT_MAX_CHARS,
+  wordTable,
 } from './vocabulary.ts';
 
 /** Step-level tags collected while waiting for the next arrow. */
@@ -89,9 +90,11 @@ const isThreatLevel = (word: string): word is ThreatLevel =>
 
 /** `@threat <high|medium|low> <short text>`: null when the level or the text is missing. */
 export function parseThreat(value: string): Threat | null {
-  const match = /^(\S+)\s+(.+)$/.exec(value.trim());
-  const level = match?.[1]?.toLowerCase() ?? '';
-  const text = match?.[2]?.trim();
+  const trimmed = value.trim();
+  const gap = trimmed.search(/\s/);
+  if (gap < 0) return null;
+  const level = trimmed.slice(0, gap).toLowerCase();
+  const text = trimmed.slice(gap).trim();
   return text && isThreatLevel(level) ? { level, text } : null;
 }
 
@@ -129,7 +132,7 @@ export function parseAnnotations(code: string): Annotations {
     trigger: '',
     summary: [],
     terms: [],
-    layers: {},
+    layers: wordTable({}),
     sectionSummaries: {},
     arrows: [],
     lint: [],
@@ -139,6 +142,8 @@ export function parseAnnotations(code: string): Annotations {
     frontMatterEnd: -1,
   };
   const warn = (line: number, msg: string, code: string) => res.lint.push({ line, msg, code });
+  // Where each lower-cased term sits in res.terms, so a repeated @term replaces the earlier one.
+  const termAt = new Map<string, number>();
 
   let i = 0;
   // Front matter (--- ... ---) at the very top.
@@ -191,9 +196,12 @@ export function parseAnnotations(code: string): Annotations {
         if (m?.[1] && m[2]) {
           const term = m[1].trim();
           const entry = { term, def: m[2].trim(), line };
-          const prev = res.terms.findIndex((x) => x.term.toLowerCase() === term.toLowerCase());
-          if (prev >= 0) res.terms[prev] = entry;
-          else res.terms.push(entry);
+          const prev = termAt.get(term.toLowerCase());
+          if (prev !== undefined) res.terms[prev] = entry;
+          else {
+            termAt.set(term.toLowerCase(), res.terms.length);
+            res.terms.push(entry);
+          }
         } else warn(line, '@term needs a word and a definition: @term tombstone: …', 'term-empty');
         break;
       }

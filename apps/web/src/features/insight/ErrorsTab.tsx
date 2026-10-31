@@ -2,6 +2,7 @@ import type { Flow, Step } from '@swv/core';
 import { Fragment } from 'react';
 
 import { Chip } from '../../shared/ui/Chip.tsx';
+import { TermText } from '../../shared/ui/TermText.tsx';
 import styles from './insight.module.css';
 import { StatusChip, StepLink } from './StepLink.tsx';
 
@@ -50,7 +51,9 @@ export function ErrorsTab({ flow, steps }: { flow: Flow; steps: Step[] }) {
                     <span className={styles.muted}>always</span>
                   )}
                 </td>
-                <td>{s.explain}</td>
+                <td>
+                  <TermText text={s.explain} />
+                </td>
               </tr>
             ))}
           </tbody>

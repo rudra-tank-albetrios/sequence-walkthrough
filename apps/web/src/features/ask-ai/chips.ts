@@ -2,7 +2,7 @@ import { isFollowable, tokens, type Step } from '@swv/core';
 
 import type { GlossaryEntry } from '../../shared/state/glossaryStore.ts';
 
-export const FIXED_CHIPS = ['Explain simpler', 'Why this step?', 'What if it fails?'] as const;
+const FIXED_CHIPS = ['Explain simpler', 'Why this step?', 'What if it fails?'] as const;
 
 /** Technical-looking tokens: paths, headers, snake_case, CamelCase, ALLCAPS; never everyday words. */
 const techy = (t: string): boolean =>
@@ -15,7 +15,7 @@ const techy = (t: string): boolean =>
  * Up to six words worth a `What is …?` chip: glossary terms present in the step, then names from
  * the label, then technical tokens from the explanation (version 2's `Ask.mount`).
  */
-export function suggestedWords(step: Step, terms: GlossaryEntry[]): string[] {
+function suggestedWords(step: Step, terms: GlossaryEntry[]): string[] {
   const label = step.label.join(' ');
   const text = `${label} ${step.explain}`.toLowerCase();
   const fromTerms = terms

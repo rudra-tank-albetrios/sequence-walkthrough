@@ -18,8 +18,16 @@ const STOPS = [
   'review',
   'exports',
 ];
-/** Stops whose element a later phase brings: until then the card is centred, with no spotlight. */
-const WAITING = ['voice', 'flow-rail', 'usage', 'quiz', 'recap', 'review'];
+/** The usage bars are simulated inside the card itself, so that stop is centred with no spotlight. */
+const CENTRED = ['usage'];
+/** What a stop points at, where that is not its own name: the menu its feature lives in. */
+const TARGETS: Record<string, string> = {
+  'ask-ai': 'ask-panel',
+  quiz: 'tools-learn',
+  recap: 'tools-learn',
+  review: 'tools-analyze',
+  exports: 'tools-export',
+};
 
 const card = (page: Page) => page.getByTestId('tour-card');
 
@@ -38,13 +46,8 @@ async function expectNoTour(page: Page) {
 }
 
 async function startTour(page: Page) {
-  const button = page.getByRole('button', { name: 'Take the tour' });
-  if (await button.isVisible()) {
-    await button.click();
-  } else {
-    await page.getByRole('button', { name: 'More' }).click();
-    await page.getByRole('menuitem', { name: 'Take the tour' }).click();
-  }
+  await page.getByRole('button', { name: 'Learn' }).click();
+  await page.getByRole('menuitem', { name: 'Take the tour' }).click();
   await expect(card(page)).toHaveAttribute('data-stop', 'layers');
 }
 
@@ -134,10 +137,10 @@ test.describe('a returning visitor', () => {
       expect(inView, `${id} card stays on screen`).toBe(true);
 
       const spot = page.getByTestId('tour-spotlight');
-      if (WAITING.includes(id)) {
+      if (CENTRED.includes(id)) {
         await expect(spot).toHaveCount(0);
       } else {
-        const target = page.locator(`[data-tour="${id}"]:visible`).first();
+        const target = page.locator(`[data-tour="${TARGETS[id] ?? id}"]:visible`).first();
         const [spotBox, targetBox] = await Promise.all([spot.boundingBox(), target.boundingBox()]);
         expect(spotBox, `${id} has a spotlight`).not.toBeNull();
         expect(targetBox, `${id} has a target`).not.toBeNull();
@@ -162,8 +165,10 @@ test.describe('a returning visitor', () => {
     test.skip(isMobile, 'A phone has no keyboard, and the button lives in the More menu');
     await page.goto('/');
     await diagramDrawn(page);
-    const button = page.getByRole('button', { name: 'Take the tour' });
+    const button = page.getByRole('button', { name: 'Learn' });
     await button.focus();
+    await page.keyboard.press('Enter');
+    await page.getByRole('menuitem', { name: 'Take the tour' }).focus();
     await page.keyboard.press('Enter');
     await expect(card(page)).toHaveAttribute('data-stop', 'layers');
     await expect(card(page).getByRole('button', { name: 'Next' })).toBeFocused();
@@ -226,6 +231,8 @@ test.describe('a returning visitor', () => {
 
     await page.goto('/');
     await diagramDrawn(page);
+    // Past the first autosave of the code, which is the page's own and not the tour's.
+    await page.waitForTimeout(700);
     const keysBefore = await page.evaluate(() => Object.keys(localStorage).sort());
     expect(keysBefore.join()).not.toContain('swv:ai');
     await expect(page.getByText('Simulated numbers')).toHaveCount(0);
@@ -315,9 +322,9 @@ test.describe('a returning visitor', () => {
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowRight');
     await expect(page.getByLabel('Step number, type to jump')).toHaveValue('2');
-    if (!isMobile) await page.keyboard.press('i');
-    const insight = page.getByRole('complementary', { name: /Insight/ });
-    if (!isMobile) await expect(insight).toBeVisible();
+    if (!isMobile) await page.keyboard.press('c');
+    const codePanel = page.locator('#codePanel');
+    if (!isMobile) await expect(codePanel).toBeVisible();
 
     await startTour(page);
     // The page behind the card is hidden from the accessibility tree, so this looks for the tag.
@@ -331,7 +338,7 @@ test.describe('a returning visitor', () => {
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('My own flow');
     await expect(page.getByLabel('Step number, type to jump')).toHaveValue('2');
-    if (!isMobile) await expect(insight).toBeVisible();
+    if (!isMobile) await expect(codePanel).toBeVisible();
     await page.waitForTimeout(700);
     expect(await saved()).toBe(code);
   });

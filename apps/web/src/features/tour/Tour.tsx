@@ -106,7 +106,10 @@ export function Tour() {
   // Focus goes back to the button that opened the tour.
   useEffect(() => {
     if (open) {
-      opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const active = document.activeElement;
+      // A menu item is gone once its menu closes, so the focus goes back to the menu's button.
+      const from = active?.closest('[role="menu"]') ? document.querySelector('[data-tour="tools-learn"]') : active;
+      opener.current = from instanceof HTMLElement ? from : null;
     } else if (opener.current?.isConnected) {
       opener.current.focus();
       opener.current = null;

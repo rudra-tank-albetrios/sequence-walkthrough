@@ -25,16 +25,20 @@ export class Camera {
   private size: () => { w: number; h: number } = () => ({ w: 0, h: 0 });
   private onChange: (state: CameraState) => void = () => undefined;
   private reducedMotion: () => boolean = () => false;
+  /** Pixels the floating header and dock cover; the diagram frames itself in the space between. */
+  private chrome: () => { top: number; bottom: number } = () => ({ top: 0, bottom: 0 });
 
   /** Connects the camera to its canvas; called from an effect, once the elements exist. */
   bind(
     size: () => { w: number; h: number },
     onChange: (state: CameraState) => void,
     reducedMotion: () => boolean,
+    chrome?: () => { top: number; bottom: number },
   ): void {
     this.size = size;
     this.onChange = onChange;
     this.reducedMotion = reducedMotion;
+    if (chrome) this.chrome = chrome;
   }
 
   setContent(w: number, h: number): void {
@@ -48,11 +52,14 @@ export class Camera {
 
   private clampPos(): void {
     const { w, h } = this.size();
+    const { top, bottom } = this.chrome();
     const m = 60;
     const dw = this.W * this.k;
     const dh = this.H * this.k;
+    const y0 = top + m - dh;
+    const y1 = h - bottom - m;
     this.x = clamp(this.x, Math.min(m - dw, w - m), Math.max(w - m, m - dw));
-    this.y = clamp(this.y, Math.min(m - dh, h - m), Math.max(h - m, m - dh));
+    this.y = clamp(this.y, Math.min(y0, y1), Math.max(y0, y1));
   }
 
   set(x: number, y: number, k?: number): void {
@@ -76,40 +83,55 @@ export class Camera {
     this.set(px - (px - this.x) * r, py - (py - this.y) * r, k2);
   }
 
-  zoomCenter(factor: number): void {
+  /** The middle of the part of the canvas the chrome leaves free. */
+  private centre(): { x: number; y: number } {
     const { w, h } = this.size();
-    this.zoomAt(w / 2, h / 2, factor);
+    const { top, bottom } = this.chrome();
+    return { x: w / 2, y: (top + h - bottom) / 2 };
+  }
+
+  zoomCenter(factor: number): void {
+    const { x, y } = this.centre();
+    this.zoomAt(x, y, factor);
   }
 
   zoomTo(k: number): void {
-    const { w, h } = this.size();
-    this.zoomAt(w / 2, h / 2, k / this.k);
+    const { x, y } = this.centre();
+    this.zoomAt(x, y, k / this.k);
   }
 
   panBy(dx: number, dy: number): void {
     this.set(this.x + dx, this.y + dy);
   }
 
+  /** Room at each side, so the first and last layers are not under the canvas tools. */
+  private fitSide(): number {
+    return this.size().w < 720 ? 24 : 64;
+  }
+
   fitWidth(insetLeft: number): void {
     if (!this.W) return;
     const { w } = this.size();
-    const k = clamp((w - insetLeft - 48) / this.W, ZOOM_MIN, ZOOM_MAX);
-    this.set(insetLeft + (w - insetLeft - this.W * k) / 2, 24, k);
+    const k = clamp((w - insetLeft - 2 * this.fitSide()) / this.W, ZOOM_MIN, ZOOM_MAX);
+    // Starts below the Code button, so the top row of layers is clear of it.
+    this.set(insetLeft + (w - insetLeft - this.W * k) / 2, this.chrome().top + 52, k);
   }
 
   fitAll(insetLeft: number): void {
     if (!this.W) return;
     const { w, h } = this.size();
-    const k = clamp(Math.min((w - insetLeft - 48) / this.W, (h - 48) / this.H), ZOOM_MIN, ZOOM_MAX);
-    this.set(insetLeft + (w - insetLeft - this.W * k) / 2, (h - this.H * k) / 2, k);
+    const { top, bottom } = this.chrome();
+    const free = h - top - bottom;
+    const k = clamp(Math.min((w - insetLeft - 2 * this.fitSide()) / this.W, (free - 48) / this.H), ZOOM_MIN, ZOOM_MAX);
+    this.set(insetLeft + (w - insetLeft - this.W * k) / 2, top + (free - this.H * k) / 2, k);
   }
 
   /** First view of a diagram: fit the width but never zoom in past 100%. */
   initial(): void {
     if (!this.W) return;
     const { w } = this.size();
-    const k = clamp(Math.min(1, (w - 48) / this.W), ZOOM_MIN, 1);
-    this.set((w - this.W * k) / 2, 24, k);
+    const k = clamp(Math.min(1, (w - 2 * this.fitSide()) / this.W), ZOOM_MIN, 1);
+    this.set((w - this.W * k) / 2, this.chrome().top + 52, k);
   }
 
   glideTo(x: number, y: number, ms = 320): void {
@@ -133,12 +155,14 @@ export class Camera {
     this.anim = requestAnimationFrame(step);
   }
 
-  /** Visible area for the follow camera: canvas minus pinned header, open code panel and margins. */
+  /** Visible area for the follow camera: canvas minus chrome, pinned header, code panel and margins. */
   private visibleArea(headerHeight: number, insetLeft: number) {
     const { w, h } = this.size();
-    const top = headerHeight * this.k + 12;
+    const chrome = this.chrome();
+    const top = chrome.top + headerHeight * this.k + 12;
+    const bottom = h - chrome.bottom - 12;
     const left = insetLeft + 12;
-    return { x0: left, y0: top, x1: w - 12, y1: h - 56, w: w - 12 - left, h: h - 56 - top };
+    return { x0: left, y0: top, x1: w - 12, y1: bottom, w: w - 12 - left, h: bottom - top };
   }
 
   /** Brings a step's arrow into view, at 40% of the height when it fits, centred otherwise. */

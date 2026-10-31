@@ -2,22 +2,22 @@ import { parseFlow, type Flow, type ParsedFlow } from '@swv/core';
 import { create } from 'zustand';
 
 import { clamp } from '../lib/util.ts';
-import { loadSettings, saveSettings, type Settings } from '../storage/settings.ts';
+import { isDiagramTheme, loadSettings, saveSettings, type Settings } from '../storage/settings.ts';
 import { announce } from '../ui/announce.ts';
 import { toast } from '../ui/toast.ts';
 import { pathVisible, type PathMode } from './path.ts';
 import { followHits } from './search.ts';
 
-export type View = 'diagram' | 'table';
-
-/** The sections of the Insight panel. */
-export type InsightTab = 'layers' | 'endpoints' | 'errors' | 'behind' | 'glossary' | 'data';
+type View = 'diagram' | 'table';
 
 /** A word the user is following through the flow (double-click), with the steps that mention it. */
 export interface FollowState {
   token: string;
   hits: number[];
 }
+
+/** Mermaid's own default limit: longer code is refused before anything reads it. */
+export const MAX_CODE_SIZE = 50_000;
 
 export interface FlowState {
   code: string;
@@ -36,12 +36,20 @@ export interface FlowState {
   /** The text in the Find box; the table underlines the steps it matches. */
   findQuery: string;
   settings: Settings;
+  /** Goes up when the camera should start over at the next drawing. */
+  fitRequest: number;
   ui: {
     codeOpen: boolean;
-    insightOpen: boolean;
-    insightTab: InsightTab;
+    /** The tool shown in the big overlay, by its id in the tool registry; null when closed. */
+    overlayTool: string | null;
+    /** The question to ask before leaving the overlay, set while leaving would lose work (a running quiz). */
+    overlayGuard: string | null;
     controlsHidden: boolean;
     presenter: boolean;
+    /** The structure review overlay. */
+    reviewOpen: boolean;
+    /** The same overlay, opened on its threats. */
+    threatsOpen: boolean;
     askOpen: boolean;
     findOpen: boolean;
     noteOpen: boolean;
@@ -49,6 +57,9 @@ export interface FlowState {
     guideOpen: boolean;
     shortcutsOpen: boolean;
     importOpen: boolean;
+    quizOpen: boolean;
+    weakPointsOpen: boolean;
+    recapOpen: boolean;
     /** The table's "Include my notes" box; it also feeds the Export menu's table items. */
     tableNotes: boolean;
     /** Text the clipboard refused, shown in a "Copy this" dialog; null when closed. */
@@ -59,6 +70,8 @@ export interface FlowState {
   };
 
   setCode: (code: string) => void;
+  /** Code from outside the editor (the example, an import, a link): the camera starts over. */
+  loadCode: (code: string, theme?: string | null) => void;
   /** Mermaid refused the code: the walkthrough goes back to the flow of the last good drawing. */
   restoreFlow: (flow: Flow | null) => void;
   /** Moves to a step. `camera: false` leaves the diagram where it is. */
@@ -114,10 +127,12 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   settings: loadSettings(),
   ui: {
     codeOpen: false,
-    insightOpen: false,
-    insightTab: 'layers',
+    overlayTool: null,
+    overlayGuard: null,
     controlsHidden: false,
     presenter: false,
+    reviewOpen: false,
+    threatsOpen: false,
     askOpen: false,
     findOpen: false,
     noteOpen: false,
@@ -125,14 +140,23 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     guideOpen: false,
     shortcutsOpen: false,
     importOpen: false,
+    quizOpen: false,
+    weakPointsOpen: false,
+    recapOpen: false,
     tableNotes: false,
     copyFallback: null,
     askQuestion: null,
     tourOpen: false,
   },
   lastGo: { index: -1, camera: true, seq: 0 },
+  fitRequest: 0,
 
   setCode(code) {
+    // Refused when drawn; reading it first and showing its steps would stop the page for seconds.
+    if (code.length > MAX_CODE_SIZE) {
+      set({ code });
+      return;
+    }
     const parsed = parseFlow(code);
     const flow = parsed.flow;
     const steps = flow.isSequence ? flow.steps.length : 0;
@@ -145,6 +169,15 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       spot: s.spot && flow.participants.some((p) => p.alias === s.spot) ? s.spot : null,
       follow: refollow(flow, s.follow),
     }));
+  },
+
+  loadCode(code, theme) {
+    const { settings, updateSettings, setCode } = get();
+    if (isDiagramTheme(theme) && (theme !== settings.theme || settings.themeAuto)) {
+      updateSettings({ theme, themeAuto: false });
+    }
+    setCode(code);
+    set((s) => ({ fitRequest: s.fitRequest + 1 }));
   },
 
   restoreFlow(flow) {

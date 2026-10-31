@@ -149,7 +149,7 @@ describe('Tour', () => {
     loadCode(OTHER_CODE);
     const store = useFlowStore.getState();
     store.go(1);
-    store.setUi({ insightOpen: true });
+    store.setUi({ codeOpen: true });
     renderTour();
     act(() => {
       useFlowStore.getState().setUi({ tourOpen: true });
@@ -157,13 +157,13 @@ describe('Tour', () => {
 
     await currentStop();
     expect(useFlowStore.getState().code).toBe(DEFAULT_DIAGRAM);
-    expect(useFlowStore.getState().ui.insightOpen).toBe(false);
+    expect(useFlowStore.getState().ui.codeOpen).toBe(false);
 
     await user.click(screen.getByRole('button', { name: 'Skip tour' }));
     const after = useFlowStore.getState();
     expect(after.code).toBe(OTHER_CODE);
     expect(after.cur).toBe(1);
-    expect(after.ui.insightOpen).toBe(true);
+    expect(after.ui.codeOpen).toBe(true);
     expect(after.ui.tourOpen).toBe(false);
   });
 

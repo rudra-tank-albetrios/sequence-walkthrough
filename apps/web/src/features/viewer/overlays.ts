@@ -209,7 +209,7 @@ export function decorate(ctx: DrawContext, options: DecorateOptions): void {
 }
 
 /** Dotted vertical lines where neighbouring layers sit in different trust zones. */
-export function drawBoundaries(ctx: DrawContext): void {
+function drawBoundaries(ctx: DrawContext): void {
   const { svg, flow, geo, vb, dark } = ctx;
   remove(svg, '.swv-boundary');
   if (flow.boundaries.length === 0) return;
@@ -240,4 +240,26 @@ export function drawBoundaries(ctx: DrawContext): void {
     t.textContent = `${b.from} │ ${b.to}`;
     svg.appendChild(t);
   }
+}
+
+/** A small dot on every arrow that uses a side part; hovering it shows the part's details. */
+export function drawUsesDots(ctx: DrawContext): void {
+  const { svg, dom, flow, dark } = ctx;
+  remove(svg, '.swv-uses-dot');
+  flow.steps.forEach((step, i) => {
+    const d = dom[i];
+    if (!d || step.uses.length === 0) return;
+    const box = d.line.getBBox();
+    // A self call loops out to the right, so its dot sits on the far side of the loop.
+    const cx = step.kind === 'self' ? box.x + box.width : box.x + box.width / 2;
+    const dot = svgEl('circle', {
+      class: 'swv-uses-dot',
+      'data-uses': i,
+      cx,
+      cy: box.y + box.height / 2,
+      r: 6,
+      style: `fill: ${dark ? '#5eead4' : '#0f766e'}; stroke: ${dark ? '#171b23' : '#ffffff'}; stroke-width: 2px; cursor: help`,
+    });
+    (d.hitLabel ?? d.hitLine ?? d.line).after(dot);
+  });
 }

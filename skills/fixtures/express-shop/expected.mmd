@@ -1,0 +1,122 @@
+sequenceDiagram
+    %% @spec walkthrough/2
+    %% @title Place an order
+    %% @trigger The client posts a new order to the shop API.
+    %% @layer FE kind=client The caller of the API, outside this project.
+    %% @layer APP kind=app src/app.js mounts the routers and holds the error handler.
+    %% @layer RT kind=router src/routes/ maps a path and method to its chain.
+    %% @layer MW kind=middleware src/middleware/ authenticate and validate.
+    %% @layer VAL kind=validator src/validators/ the body schema.
+    %% @layer CTRL kind=controller src/controllers/ calls the service and sends the reply.
+    %% @layer SVC kind=service src/services/ business rules.
+    %% @layer REPO kind=repository src/repositories/ the only SQL.
+    %% @layer DB kind=db Postgres, through src/db.js.
+    %% @layer SER kind=serializer src/serializers/ picks the fields the client sees.
+    autonumber
+    participant FE as Client
+    participant APP as App
+    participant RT as Routes
+    participant MW as Middleware
+    participant VAL as Validator
+    participant CTRL as Controller
+    participant SVC as Service
+    participant REPO as Repository
+    participant DB as Database
+    participant SER as Serializer
+
+    %% @section Check the request
+    %% @summary Token and body are checked before any work starts.
+    %% @step The client sends the new order with its bearer token.
+    %% @payload.headers Authorization: Bearer <token>
+    %% @payload.body { productId, quantity }
+    %% @ref src/app.js:10
+    FE->>APP: POST /api/v1/orders
+    %% @step The app hands the request to the router mounted at that path.
+    %% @ref src/app.js:10
+    APP->>RT: orderRoutes
+    %% @step The route runs its chain in order before the controller.
+    %% @ref src/routes/order.routes.js:10
+    RT->>MW: router.post("/", authenticate, validate(createOrderSchema), OrderController.create)
+    %% @step authenticate turns the bearer token into req.user.
+    %% @uses util verifyToken src/utils/token.js:4 Decodes the token into a user, or nothing.
+    %% @ref src/middleware/auth.middleware.js:4
+    MW->>MW: authenticate()
+    alt no token, or an unknown one
+        %% @step The middleware passes an UnauthorizedError to the error handler.
+        %% @ref src/middleware/auth.middleware.js:8
+        MW-->>APP: next(new UnauthorizedError("Missing or invalid token"))
+        %% @step The error handler answers with the status and message of the error.
+        %% @payload.body { error, message }
+        %% @ref src/app.js:16
+        APP-->>FE: 401 Unauthorized<br/>"Missing or invalid token"
+    end
+    %% @step validate runs the schema's check over the body.
+    %% @ref src/middleware/validate.middleware.js:5
+    MW->>VAL: createOrderSchema.check(req.body)
+    %% @step The first failing rule comes back as a message, or nothing.
+    VAL-->>MW: problem or undefined
+    alt the body is wrong
+        %% @step The middleware passes a ValidationError with that message.
+        %% @ref src/middleware/validate.middleware.js:7
+        MW-->>APP: next(new ValidationError(problem))
+        %% @step The client gets 422 with the rule that failed.
+        %% @ref src/app.js:16
+        APP-->>FE: 422 Unprocessable Entity<br/>"productId must be a whole number"
+    end
+    %% @step The chain ends and the controller takes over.
+    %% @ref src/routes/order.routes.js:10
+    MW->>CTRL: next() → OrderController.create()
+
+    %% @section Place the order
+    %% @summary The service checks stock, then saves the order.
+    %% @step The controller passes the user id and the body to the service.
+    %% @ref src/controllers/order.controller.js:6
+    CTRL->>SVC: OrderService.place(req.user.id, req.body)
+    %% @step The service needs the product's price and stock.
+    %% @ref src/services/order.service.js:5
+    SVC->>REPO: OrderRepository.findProduct(productId)
+    %% @step One query reads the product row.
+    %% @ref src/repositories/order.repository.js:4
+    REPO->>DB: SELECT id, price, stock FROM products WHERE id = $1
+    %% @step The row comes back, or no row when the id is unknown.
+    DB-->>REPO: 1 row or 0 rows
+    %% @step The product decides whether the order can be placed.
+    REPO-->>SVC: product or undefined
+    alt no product, or stock below quantity
+        %% @step The service throws, and the controller passes the error on.
+        %% @ref src/services/order.service.js:7
+        SVC-->>CTRL: throw OutOfStockError("Not enough stock")
+        %% @step The controller hands every error to the error handler.
+        %% @ref src/controllers/order.controller.js:9
+        CTRL-->>APP: next(err)
+        %% @step The client gets 409 and the out_of_stock code.
+        %% @ref src/app.js:16
+        APP-->>FE: 409 Conflict<br/>"Not enough stock"
+    end
+    %% @step The order is saved with status placed and total price × quantity.
+    %% @ref src/services/order.service.js:9
+    SVC->>REPO: OrderRepository.insert({ userId, productId, quantity, total })
+    %% @step One insert writes the order and returns the row.
+    %% @ref src/repositories/order.repository.js:9
+    REPO->>DB: INSERT INTO orders (user_id, product_id, quantity, total, status) VALUES ($1, $2, $3, $4, $5) RETURNING *
+    %% @step The saved row comes back.
+    DB-->>REPO: 1 row
+    %% @step The service returns the saved order.
+    REPO-->>SVC: order
+    %% @step The controller gets the order to send.
+    SVC-->>CTRL: order
+
+    %% @section Reply
+    %% @summary Only the public fields leave.
+    %% @step The serializer picks the fields the client may see.
+    %% @ref src/controllers/order.controller.js:7
+    CTRL->>SER: serializeOrder(order)
+    %% @step Three fields, nothing internal.
+    SER-->>CTRL: { id, status, total }
+    %% @step The controller sends the reply with status 201.
+    %% @ref src/controllers/order.controller.js:7
+    CTRL-->>APP: res.status(201).json(body)
+    %% @step The client gets 201 Created with the new order.
+    %% @payload.body { id, status, total }
+    %% @ref src/controllers/order.controller.js:7
+    APP-->>FE: 201 Created

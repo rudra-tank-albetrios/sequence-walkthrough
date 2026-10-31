@@ -1,10 +1,11 @@
 import type { Flow } from '@swv/core';
 
-import { downloadBlob, fileName } from '../../shared/lib/util.ts';
-import type { NoteEntry, NotesData } from '../../shared/storage/notes.ts';
+import { saveFile } from '../../shared/lib/files.ts';
+import { fileName } from '../../shared/lib/util.ts';
+import { toNoteEntry, type NotesData } from '../../shared/storage/notes.ts';
 
 /** The `swv-notes/1` file version 2 wrote and reads back. */
-export interface NotesFile {
+interface NotesFile {
   format: 'swv-notes/1';
   flow: string;
   flowId: string;
@@ -12,31 +13,18 @@ export interface NotesFile {
   notes: NotesData;
 }
 
-export function notesFile(flow: Flow, id: string, notes: NotesData): NotesFile {
+function notesFile(flow: Flow, id: string, notes: NotesData): NotesFile {
   return { format: 'swv-notes/1', flow: flow.title, flowId: id, exported: new Date().toISOString(), notes };
 }
 
 /** Saves `<title> notes.json`. */
-export function exportNotes(flow: Flow, id: string, notes: NotesData): void {
-  const blob = new Blob([JSON.stringify(notesFile(flow, id, notes), null, 2)], { type: 'application/json' });
-  downloadBlob(blob, fileName(`${flow.title} notes`, 'json'));
+export function exportNotes(flow: Flow, id: string, notes: NotesData): Promise<void> {
+  const text = JSON.stringify(notesFile(flow, id, notes), null, 2);
+  return saveFile(fileName(`${flow.title} notes`, 'json'), text, 'application/json');
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
-
-function toEntry(value: unknown): NoteEntry | null {
-  if (!isRecord(value)) return null;
-  const entry: NoteEntry = {
-    star: value.star === true,
-    note: typeof value.note === 'string' ? value.note : '',
-  };
-  if (typeof value.n === 'number') entry.n = value.n;
-  if (typeof value.route === 'string') entry.route = value.route;
-  if (typeof value.label === 'string') entry.label = value.label;
-  if (typeof value.updated === 'string') entry.updated = value.updated;
-  return entry;
-}
 
 /**
  * Merges the notes of an exported file into the current set: an entry wins when its `updated`
@@ -48,8 +36,8 @@ export function importNotes(text: string, current: NotesData): { data: NotesData
   const data: NotesData = { ...current };
   let count = 0;
   for (const [key, raw] of Object.entries(parsed.notes)) {
-    const entry = toEntry(raw);
-    if (!entry) continue;
+    const entry = toNoteEntry(raw);
+    if (!entry || key === '__proto__') continue;
     const existing = data[key];
     if (!existing || (entry.updated ?? '') > (existing.updated ?? '')) {
       data[key] = entry;

@@ -56,6 +56,16 @@ export interface TourCardProps {
   onEnd: () => void;
 }
 
+function moveCard(card: HTMLDivElement, box: TourCardProps['box']): void {
+  const size = { width: card.offsetWidth, height: card.offsetHeight };
+  const { left, top } = placeCard(box, size, {
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+  card.style.left = `${left}px`;
+  card.style.top = `${top}px`;
+}
+
 /**
  * The card of one stop, as a modal dialog. Mount it after the stop's feature has opened: the layer
  * opened last is the one on top, so the card keeps the focus even over a feature's own dialog.
@@ -69,13 +79,7 @@ export function TourCard({ stop, index, total, box, onBack, onNext, onEnd }: Tou
   useLayoutEffect(() => {
     if (!card) return;
     const place = () => {
-      const size = { width: card.offsetWidth, height: card.offsetHeight };
-      const { left, top } = placeCard(box, size, {
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-      card.style.left = `${left}px`;
-      card.style.top = `${top}px`;
+      moveCard(card, box);
     };
     place();
     window.addEventListener('resize', place);

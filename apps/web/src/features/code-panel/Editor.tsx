@@ -14,7 +14,7 @@ import {
 } from 'react';
 
 import { useIsNarrow } from '../../shared/hooks/useMediaQuery.ts';
-import { LIVE_LINK_RE, readLiveState } from '../../shared/lib/codec.ts';
+import { isLiveLink, LIVE_LINK_RE, readLiveState } from '../../shared/lib/codec.ts';
 import { errorLine } from '../../shared/lib/mermaidLines.ts';
 import { cx, debounce } from '../../shared/lib/util.ts';
 import { useDiagramStore } from '../../shared/state/diagramStore.ts';
@@ -85,6 +85,7 @@ export const Editor = forwardRef<EditorHandle>(function Editor(_props, ref) {
   const cur = useFlowStore((s) => s.cur);
   const lastGo = useFlowStore((s) => s.lastGo);
   const setCode = useFlowStore((s) => s.setCode);
+  const loadCode = useFlowStore((s) => s.loadCode);
   const go = useFlowStore((s) => s.go);
   const error = useDiagramStore((s) => s.error);
   const narrow = useIsNarrow();
@@ -96,6 +97,7 @@ export const Editor = forwardRef<EditorHandle>(function Editor(_props, ref) {
   const caretLine = useRef(-1);
   const [text, setText] = useState(code);
   const textRef = useRef(code);
+  const unsaved = useRef(false);
 
   useEffect(() => {
     textRef.current = text;
@@ -104,6 +106,7 @@ export const Editor = forwardRef<EditorHandle>(function Editor(_props, ref) {
   const flush = useMemo(
     () =>
       debounce((value: string) => {
+        unsaved.current = false;
         setCode(value);
       }, EDIT_DEBOUNCE_MS),
     [setCode],
@@ -113,16 +116,17 @@ export const Editor = forwardRef<EditorHandle>(function Editor(_props, ref) {
   useEffect(() => {
     if (code !== textRef.current) {
       flush.cancel();
+      unsaved.current = false;
       setText(code);
     }
   }, [code, flush]);
 
-  // Closing the panel right after typing must not lose the edit.
+  // Closing the panel right after typing must not lose the edit. Only an edit: code that changed
+  // outside the editor in the same moment (the tour, an import) stays.
   useEffect(
     () => () => {
       flush.cancel();
-      const pending = textRef.current;
-      if (pending !== useFlowStore.getState().code) setCode(pending);
+      if (unsaved.current) setCode(textRef.current);
     },
     [flush, setCode],
   );
@@ -199,12 +203,14 @@ export const Editor = forwardRef<EditorHandle>(function Editor(_props, ref) {
       flush.cancel();
       setCode(value);
     } else {
+      unsaved.current = true;
       flush(value);
     }
   };
 
   const onPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
-    const match = LIVE_LINK_RE.exec(event.clipboardData.getData('text'));
+    const pastedText = event.clipboardData.getData('text');
+    const match = isLiveLink(pastedText) ? LIVE_LINK_RE.exec(pastedText) : null;
     if (!match) {
       pasted.current = true;
       return;
@@ -216,7 +222,7 @@ export const Editor = forwardRef<EditorHandle>(function Editor(_props, ref) {
         if (!state.code) throw new Error('The link holds no code');
         flush.cancel();
         setText(state.code);
-        setCode(state.code);
+        loadCode(state.code, state.theme);
         toast('Loaded the diagram from the mermaid.live link');
       })
       .catch(() => {

@@ -1,7 +1,7 @@
 /* The table view covers the canvas; on phones it is a full-screen sheet with stacked rows. */
 .view {
   position: absolute;
-  inset: 0;
+  inset: var(--chrome-top, 0px) 0 var(--chrome-bottom, 0px);
   z-index: 10;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
@@ -203,7 +203,7 @@
   .view {
     position: fixed;
     inset: 0;
-    z-index: 75;
+    z-index: calc(var(--z-chrome) + 1);
     padding-top: env(safe-area-inset-top, 0px);
   }
 

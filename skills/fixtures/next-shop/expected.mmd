@@ -1,0 +1,97 @@
+sequenceDiagram
+    %% @spec walkthrough/2
+    %% @title Place an order
+    %% @trigger The shopper submits the checkout form.
+    %% @layer U kind=person The shopper, signed in.
+    %% @layer PG kind=client app/checkout/page.tsx Pages: the checkout page.
+    %% @layer CMP kind=client components/CheckoutForm.tsx Components: the form and its submit.
+    %% @layer API kind=client lib/api-client.ts API Client: builds the request.
+    %% @layer MW kind=middleware middleware.ts runs for every /api/ path.
+    %% @layer CTRL kind=controller app/api/orders/route.ts the API route handler.
+    %% @layer SVC kind=service lib/orders.ts the stock check and the insert.
+    %% @layer DB kind=db Postgres, through lib/db.ts.
+    autonumber
+    actor U as Shopper
+    participant PG as Pages
+    participant CMP as Components
+    participant API as API Client
+    participant MW as Middleware
+    participant CTRL as API Route
+    participant SVC as Service
+    participant DB as Database
+
+    %% @section Submit the form
+    %% @summary The page renders the form, and the submit becomes one request.
+    %% @step The checkout page renders the form.
+    %% @ref app/checkout/page.tsx:7
+    PG->>CMP: CheckoutForm
+    %% @step The shopper fills code and units and presses Place order.
+    %% @ref components/CheckoutForm.tsx:16
+    U->>CMP: Place order
+    %% @step The form action calls the API client with the two fields.
+    %% @uses hook useState components/CheckoutForm.tsx:8 Keeps the message shown under the form.
+    %% @ref components/CheckoutForm.tsx:11
+    CMP->>API: placeOrder(code, units)
+    %% @step The client posts the order as JSON.
+    %% @payload.headers Content-Type: application/json
+    %% @payload.body { code, units }
+    %% @ref lib/api-client.ts:2
+    API->>MW: POST /api/orders
+
+    %% @section Check and place the order
+    %% @summary The middleware checks the session, then the route checks the body and the stock.
+    %% @step The middleware matches /api/:path* and looks for the session cookie.
+    %% @ref middleware.ts:4
+    MW->>MW: middleware(request)
+    alt no session cookie
+        %% @step The middleware answers 401 itself, so the route never runs.
+        %% @payload.body { error }
+        %% @ref middleware.ts:5
+        MW-->>API: 401 Unauthorized<br/>"Sign in first"
+    end
+    %% @step The middleware lets the request through to the route handler.
+    %% @ref middleware.ts:7
+    MW->>CTRL: NextResponse.next() → POST(request)
+    %% @step The route checks the body against its zod schema.
+    %% @ref app/api/orders/route.ts:9
+    CTRL->>CTRL: newOrder.safeParse(body)
+    alt the body is wrong
+        %% @step The client gets 400 with one fixed message.
+        %% @ref app/api/orders/route.ts:11
+        MW-->>API: 400 Bad Request<br/>"Check the order form"
+    end
+    %% @step The route passes the two fields to the order logic.
+    %% @ref app/api/orders/route.ts:14
+    CTRL->>SVC: createOrder(code, units)
+    %% @step One query reads what is left of the item.
+    %% @ref lib/orders.ts:6
+    SVC->>DB: SELECT left_count FROM stock WHERE code = $1
+    %% @step The row comes back, or nothing for an unknown code.
+    DB-->>SVC: 1 row or none
+    alt no row, or left_count below units
+        %% @step The logic throws, and the route maps it to a conflict.
+        %% @ref lib/orders.ts:8
+        SVC-->>CTRL: throw new SoldOutError(code)
+        %% @step The client gets 409 with the message.
+        %% @ref app/api/orders/route.ts:18
+        MW-->>API: 409 Conflict<br/>"That item just sold out"
+    end
+    %% @step The order is saved with phase new.
+    %% @ref lib/orders.ts:11
+    SVC->>DB: INSERT INTO orders (code, units, phase) VALUES ($1, $2, $3) RETURNING id, phase
+    %% @step The new row's id and phase come back.
+    DB-->>SVC: { id, phase }
+    %% @step The route gets the order to send.
+    SVC-->>CTRL: order
+    %% @step The client gets 201 Created with the order number and phase.
+    %% @payload.body { number, phase }
+    %% @ref app/api/orders/route.ts:15
+    MW-->>API: 201 Created
+
+    %% @section Show the result
+    %% @summary The form shows one line for success or failure.
+    %% @step The client hands the raw response back to the form.
+    API-->>CMP: Response
+    %% @step The form shows Thank you when the response is ok, otherwise Please try again.
+    %% @ref components/CheckoutForm.tsx:12
+    CMP->>CMP: setMessage(reply.ok ? "Thank you" : "Please try again")

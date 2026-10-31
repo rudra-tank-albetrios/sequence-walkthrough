@@ -1,16 +1,17 @@
 .pop {
   position: absolute;
-  top: 10px;
-  right: 16px;
-  z-index: 50;
+  top: calc(var(--chrome-top, 0px) + 12px);
+  right: 64px;
+  z-index: var(--z-chrome);
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 6px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  box-shadow: var(--shadow-1), var(--shadow-2);
+  background: var(--glass);
+  backdrop-filter: var(--glass-filter);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-float);
 }
 
 .pop input {

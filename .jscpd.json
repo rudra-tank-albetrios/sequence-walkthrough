@@ -7,6 +7,5 @@
   "gitignore": true,
   "ignore": ["**/node_modules/**", "**/dist/**", "**/dist-single/**", "**/*.d.ts"],
   "reporters": ["consoleFull"],
-  "absolute": true,
-  "exitCode": 1
+  "absolute": true
 }

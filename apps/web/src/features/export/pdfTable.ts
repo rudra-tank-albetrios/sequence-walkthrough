@@ -1,9 +1,23 @@
 import type { Flow, Step } from '@swv/core';
 
 import { route } from '../../shared/storage/notes.ts';
-import type { PdfPlan } from './pdf.ts';
-import { context2d, makeCanvas } from './raster.ts';
+import { context2d, makeCanvas } from '../../shared/lib/raster.ts';
 import type { NoteLookup } from '../../shared/lib/stepTable.ts';
+
+export interface PdfPlan {
+  page: { w: number; h: number };
+  margin: number;
+  titleH: number;
+  footH: number;
+  cw: number;
+  ch: number;
+  /** Millimetres per diagram unit. */
+  mm: number;
+  /** [top, bottom] of each page's slice in diagram units. */
+  slices: [number, number][];
+  /** [hdrTop, hdrH] when the participant row is repeated. */
+  hdr: [number, number] | null;
+}
 
 /** The step table drawn on canvas pages for the PDF, so any character prints correctly. */
 

@@ -1,1 +1,1 @@
-export { InsightPanel } from './InsightPanel.tsx';
+export { insightCount } from './derive.ts';

@@ -1,6 +1,6 @@
 {
   "name": "@swv/ai",
-  "version": "3.0.0-dev",
+  "version": "3.0.0",
   "private": true,
   "description": "Model clients, usage tracking, auto-switch, answer cache, prompts and reply schemas.",
   "type": "module",
@@ -8,9 +8,18 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./testing": {
+      "types": "./src/testing.ts",
+      "default": "./src/testing.ts"
     }
   },
   "scripts": {
     "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@swv/core": "*",
+    "idb-keyval": "^6.3.0",
+    "zod": "^4.6.7"
   }
 }

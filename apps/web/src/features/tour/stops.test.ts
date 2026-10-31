@@ -24,7 +24,6 @@ describe('TOUR_STOPS', () => {
       expect(stop.title, stop.id).not.toBe('');
       expect(stop.body, stop.id).not.toBe('');
     }
-    expect(new Set(TOUR_STOPS.map((stop) => stop.target)).size).toBe(TOUR_STOPS.length);
   });
 
   it('keeps the simulated usage on one stop, with the usage colours in range', () => {

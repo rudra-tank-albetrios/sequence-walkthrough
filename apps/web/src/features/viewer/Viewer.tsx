@@ -1,7 +1,7 @@
 import type { Flow } from '@swv/core';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { useIsNarrow, useReducedMotion } from '../../shared/hooks/useMediaQuery.ts';
+import { useIsNarrow, useMediaQuery, useReducedMotion } from '../../shared/hooks/useMediaQuery.ts';
 import { errorLine } from '../../shared/lib/mermaidLines.ts';
 import { clamp, MERMAID_VERSION } from '../../shared/lib/util.ts';
 import { useDiagramStore } from '../../shared/state/diagramStore.ts';
@@ -9,6 +9,7 @@ import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { noteMark, useNotesStore } from '../../shared/state/notesStore.ts';
 import { hasPaths, pathLabel, pathVisible } from '../../shared/state/path.ts';
 import { startFollow } from '../../shared/state/follow.ts';
+import { DARK_QUERY, diagramTheme } from '../../shared/storage/settings.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { toast } from '../../shared/ui/toast.ts';
 import { Camera, type CameraState } from './camera.ts';
@@ -17,19 +18,21 @@ import { DiagramSvg } from './DiagramSvg.tsx';
 import { addHits, measure, normalizeSvg, tagSteps, type Geo, type StepDom, type ViewBox } from './geometry.ts';
 import { buildHeader, headerPlacement, setActiveActors } from './header.ts';
 import { MermaidLoadError, renderDiagram, type RenderedDiagram } from './mermaid.ts';
-import { applyHighlight, decorate, drawChapterBand, type DrawContext } from './overlays.ts';
-import { LayerTooltip, StepTooltip } from './StepTooltip.tsx';
+import { applyHighlight, decorate, drawChapterBand, drawUsesDots, type DrawContext } from './overlays.ts';
+import { LayerTooltip, StepTooltip, UsesTooltip } from './StepTooltip.tsx';
 import { useCanvasPointer } from './useCanvasPointer.ts';
 import styles from './viewer.module.css';
 
 /** Tooltip target with its position inside the canvas, computed when the pointer moved. */
 type Tip =
   | { kind: 'step'; index: number; left: number; top: number }
+  | { kind: 'uses'; index: number; left: number; top: number }
   | { kind: 'actor'; alias: string; left: number; top: number };
 
 /** The drawing and the flow it was drawn from: they only ever change together. */
 interface Drawing extends RenderedDiagram {
   flow: Flow;
+  code: string;
 }
 
 interface Mounted {
@@ -76,6 +79,8 @@ export function Viewer() {
   const setZoom = useDiagramStore((s) => s.setZoom);
   const narrow = useIsNarrow();
   const reduced = useReducedMotion();
+  const systemDark = useMediaQuery(DARK_QUERY);
+  const theme = diagramTheme(settings, settings.pageTheme === 'system' ? systemDark : settings.pageTheme === 'dark');
 
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const layerRef = useRef<HTMLDivElement | null>(null);
@@ -84,6 +89,7 @@ export function Viewer() {
   const mountedRef = useRef<Mounted | null>(null);
   const renderSeq = useRef(0);
   const firstFit = useRef(true);
+  const fitDone = useRef(0);
   const reducedRef = useRef(reduced);
   useEffect(() => {
     reducedRef.current = reduced;
@@ -102,14 +108,17 @@ export function Viewer() {
       const canvas = canvasRef.current;
       if (layer) layer.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.k})`;
       if (canvas) {
-        const g = 20 * state.k;
+        // The dots double their spacing when zoomed out, so they never pack into a grey fog.
+        let g = 20 * state.k;
+        while (g < 14) g *= 2;
         canvas.style.backgroundSize = `${g}px ${g}px`;
         canvas.style.backgroundPosition = `${state.x}px ${state.y}px`;
       }
       const m = mountedRef.current;
       const hdr = hdrLayerRef.current;
       const band = hdrBandRef.current;
-      const placement = m?.header && m.flow.isSequence ? headerPlacement(m.geo, state) : null;
+      const insetTop = useDiagramStore.getState().insets.top;
+      const placement = m?.header && m.flow.isSequence ? headerPlacement(m.geo, state, insetTop) : null;
       if (hdr && band) {
         hdr.hidden = !placement;
         band.hidden = !placement;
@@ -131,8 +140,19 @@ export function Viewer() {
       () => ({ w: canvasRef.current?.clientWidth ?? 0, h: canvasRef.current?.clientHeight ?? 0 }),
       applyCamera,
       () => reducedRef.current,
+      () => useDiagramStore.getState().insets,
     );
   }, [camera, applyCamera]);
+
+  // The header or the dock changed size: keep the diagram inside the space they leave free.
+  useEffect(
+    () =>
+      useDiagramStore.subscribe((state, before) => {
+        if (state.insets !== before.insets) camera.refresh();
+      }),
+    [camera],
+  );
+
   const insetLeft = useCallback(() => {
     if (!codeOpen || narrow) return 0;
     return document.getElementById('codePanel')?.offsetWidth ?? 0;
@@ -145,11 +165,11 @@ export function Viewer() {
     const t0 = performance.now();
     setRendered({ rendering: true });
     const drawing = useFlowStore.getState().flow;
-    renderDiagram(code, settings.theme, `swv${seq}`)
+    renderDiagram(code, theme, `swv${seq}`)
       .then((result) => {
         if (seq !== renderSeq.current || !drawing) return;
         drawnFlow.current = drawing;
-        setRenderedState({ ...result, flow: drawing });
+        setRenderedState({ ...result, flow: drawing, code });
         setError(null);
         setLoadFailed(false);
         setRendered({ error: null, rendering: false, lastRenderMs: performance.now() - t0 });
@@ -166,7 +186,7 @@ export function Viewer() {
         setRendered({ error: message, rendering: false });
         useFlowStore.getState().restoreFlow(drawnFlow.current);
       });
-  }, [code, settings.theme, setRendered]);
+  }, [code, theme, setRendered]);
 
   // The SVG just reached the page: measure it, map arrows to steps, build the pinned header.
   useLayoutEffect(() => {
@@ -192,9 +212,11 @@ export function Viewer() {
     }
     mountedRef.current = mounted;
     camera.setContent(vb.w, vb.h);
-    if (firstFit.current) {
+    const fitRequest = useFlowStore.getState().fitRequest;
+    if (firstFit.current || fitDone.current !== fitRequest) {
       camera.initial();
       firstFit.current = false;
+      fitDone.current = fitRequest;
     } else camera.refresh();
     setRendered({ cleanSvg, themeBg: rendered.themeBg, themeDark: rendered.dark, width: vb.w, height: vb.h });
     setMountVersion((v) => v + 1);
@@ -216,6 +238,12 @@ export function Viewer() {
     const step = ctx.flow.steps[cur];
     setActiveActors(m.svg, m.header, m.geo, m.vb, step ? [step.from, step.to] : [], ctx.dark);
   }, [cur, settings.dim, settings.bands, drawContext, mountVersion]);
+
+  // The dots on the arrows that use side parts; they stay until the diagram is drawn again.
+  useEffect(() => {
+    const ctx = drawContext();
+    if (ctx) drawUsesDots(ctx);
+  }, [drawContext, mountVersion]);
 
   // Follow rings, bookmark marks, spotlight, path fading and trust boundaries.
   useEffect(() => {
@@ -240,6 +268,14 @@ export function Viewer() {
     if (d) camera.followStep(d.box, d.labelBox, m.flow.isSequence ? m.geo.hdrH : 0, insetLeft());
   }, [lastGo, view, camera, insetLeft, mountVersion]);
 
+  // Loading the code that is already drawn starts no drawing, so the camera starts over here.
+  const fitRequest = useFlowStore((s) => s.fitRequest);
+  useEffect(() => {
+    if (fitDone.current === fitRequest || rendered?.code !== code) return;
+    fitDone.current = fitRequest;
+    camera.initial();
+  }, [fitRequest, rendered, code, camera]);
+
   // Back from the table, the diagram shows the step that was picked there.
   const lastView = useRef(view);
   useEffect(() => {
@@ -254,11 +290,14 @@ export function Viewer() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    let frame = 0;
     const observer = new ResizeObserver(() => {
-      camera.refresh();
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => camera.refresh());
     });
     observer.observe(canvas);
     return () => {
+      cancelAnimationFrame(frame);
       observer.disconnect();
     };
   }, [camera]);
@@ -291,9 +330,9 @@ export function Viewer() {
     return {
       onClick(target: Element) {
         const m = mountedRef.current;
-        const stepEl = target.closest('[data-step]');
+        const stepEl = target.closest('[data-step], [data-uses]');
         if (stepEl && m?.flow.isSequence) {
-          go(Number(stepEl.getAttribute('data-step')));
+          go(Number(stepEl.getAttribute('data-step') ?? stepEl.getAttribute('data-uses')));
           return;
         }
         const actor = target.closest('.swv-actor');
@@ -310,7 +349,16 @@ export function Viewer() {
           return;
         }
         const r = canvas.getBoundingClientRect();
-        const at = { left: clamp(x - r.left + 14, 8, r.width - 320), top: clamp(y - r.top + 16, 8, r.height - 200) };
+        const insets = useDiagramStore.getState().insets;
+        const at = {
+          left: clamp(x - r.left + 14, 8, r.width - 320),
+          top: clamp(y - r.top + 16, insets.top + 8, r.height - insets.bottom - 200),
+        };
+        const usesEl = target.closest('[data-uses]');
+        if (usesEl) {
+          setTip({ kind: 'uses', index: Number(usesEl.getAttribute('data-uses')), ...at });
+          return;
+        }
         const actor = target.closest('.swv-actor');
         const alias = actor?.getAttribute('data-alias');
         if (alias) {
@@ -329,9 +377,15 @@ export function Viewer() {
         const d = hit && m ? m.dom[Number(hit.getAttribute('data-step'))] : undefined;
         if (!d) return;
         for (const t of d.texts) {
-          const ctm = t.getScreenCTM();
-          if (!ctm || !(t instanceof SVGTextContentElement)) continue;
-          const pt = new DOMPoint(x, y).matrixTransform(ctm.inverse());
+          if (!(t instanceof SVGTextContentElement)) continue;
+          // The pointer's place in the label's own units, from its box on screen and its box in the drawing.
+          const box = t.getBoundingClientRect();
+          const own = t.getBBox();
+          if (!box.width || !box.height) continue;
+          const pt = new DOMPoint(
+            own.x + ((x - box.left) * own.width) / box.width,
+            own.y + ((y - box.top) * own.height) / box.height,
+          );
           let ci: number;
           try {
             ci = t.getCharNumAtPosition(pt);
@@ -361,7 +415,7 @@ export function Viewer() {
   };
   const spotCount = spot && flow ? flow.steps.filter((s) => s.from === spot || s.to === spot).length : 0;
   const pathCount = flow ? flow.steps.filter((s) => pathVisible(s, path)).length : 0;
-  const tipStep = tip?.kind === 'step' && flow ? flow.steps[tip.index] : undefined;
+  const tipStep = tip && tip.kind !== 'actor' && flow ? flow.steps[tip.index] : undefined;
 
   return (
     <div
@@ -376,7 +430,7 @@ export function Viewer() {
       data-tour="layers"
       hidden={view !== 'diagram'}
     >
-      <div ref={layerRef} className={styles.layer}>
+      <div ref={layerRef} className={styles.layer} data-testid="layer">
         {rendered ? <DiagramSvg svg={rendered.svg} className="" /> : null}
       </div>
       <div ref={hdrBandRef} className={styles.hdrBand} hidden />
@@ -433,6 +487,8 @@ export function Viewer() {
         >
           {tip.kind === 'actor' ? (
             <LayerTooltip flow={flow} alias={tip.alias} />
+          ) : tip.kind === 'uses' && tipStep ? (
+            <UsesTooltip flow={flow} step={tipStep} />
           ) : tipStep ? (
             <StepTooltip flow={flow} step={tipStep} note={noteEntry(tipStep)} current={tipStep.idx === cur} />
           ) : null}

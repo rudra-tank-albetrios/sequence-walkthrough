@@ -5,12 +5,13 @@ import { copyWithFallback, inArtifact, saveFile } from '../../shared/lib/files.t
 import { fileName } from '../../shared/lib/util.ts';
 import { useDiagramStore } from '../../shared/state/diagramStore.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
+import { diagramTheme, pageIsDark } from '../../shared/storage/settings.ts';
 import { toast } from '../../shared/ui/toast.ts';
 import { makePdf, type PdfOptions } from './pdf.ts';
-import { canvasBlob, rasterize } from './raster.ts';
+import { canvasBlob, rasterize } from '../../shared/lib/raster.ts';
 import { liveLinkText, openInNewTab, viewerLink } from './share.ts';
 import { cropRaster, pinnedHeader, visibleCrop } from './stepImage.ts';
-import { diagramSvgString } from './svgExport.ts';
+import { diagramSvgString } from '../../shared/lib/svgExport.ts';
 
 /** What each item of the Export menu does. Every action reads the stores when it runs. */
 
@@ -82,12 +83,12 @@ export async function exportPdf(options: PdfOptions): Promise<void> {
 
 export async function openLive(): Promise<void> {
   const { code, settings } = useFlowStore.getState();
-  openInNewTab(await liveLink(code, settings.theme, settings.grid));
+  openInNewTab(await liveLink(code, diagramTheme(settings, pageIsDark(settings.pageTheme)), settings.grid));
 }
 
 export async function copyLiveLink(): Promise<void> {
   const { code, settings } = useFlowStore.getState();
-  const share = await liveLinkText(code, settings.theme, settings.grid);
+  const share = await liveLinkText(code, diagramTheme(settings, pageIsDark(settings.pageTheme)), settings.grid);
   await copyWithFallback(share.text, share.message);
 }
 

@@ -28,6 +28,7 @@ export const CSV_COLUMNS = [
   'Also involved',
   'Effects',
   'Unconfirmed',
+  'Threats',
   'Ref',
 ] as const;
 
@@ -52,6 +53,7 @@ export function tableRows(flow: Flow, notes?: NoteLookup): { head: string[]; row
       s.uses.map((u) => `${u.kind} ${u.name}${u.ref ? ` (${u.ref})` : ''}`).join('; '),
       s.effects.join('; '),
       s.unconfirmed.join('; '),
+      s.threats.map((t) => `${t.level}: ${t.text}`).join('; '),
       s.refs.join(' '),
     ];
     if (notes) {
@@ -63,8 +65,13 @@ export function tableRows(flow: Flow, notes?: NoteLookup): { head: string[]; row
   return { head, rows };
 }
 
-const csvCell = (value: string): string =>
-  /[",\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+/** A spreadsheet runs a cell that starts with one of these, so it gets an apostrophe in front. */
+const FORMULA_START = /^[=+\-@\t\r]/;
+
+function csvCell(value: string): string {
+  const cell = FORMULA_START.test(value) ? `'${value}` : value;
+  return /[",\n\r]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell;
+}
 
 const BOM = String.fromCharCode(0xfeff);
 
@@ -74,7 +81,26 @@ export function csvText(flow: Flow, notes?: NoteLookup): string {
   return `${BOM}${[head, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n')}\r\n`;
 }
 
-const mdCell = (value: string): string => value.replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
+/**
+ * Diagram text in a Markdown document: any reader shows it as words. With `<`, `[` and `]` escaped
+ * it cannot open an HTML tag, a link or an image; with the backslash escaped too, one in the text
+ * cannot undo the next escape. One pass, so nothing is escaped twice.
+ */
+const mdText = (value: string): string =>
+  value.replace(/[\\[\]<]/g, (mark) => (mark === '<' ? '&lt;' : `\\${mark}`));
+
+/**
+ * A code span, which readers never treat as markup, so a backslash in it stays as it is. No
+ * backtick inside can end it early and no line end can break the table row.
+ */
+const mdCode = (value: string): string => `\`${value.replace(/`/g, "'").replace(/\r?\n/g, ' ')}\``;
+
+/**
+ * Makes finished text or a finished code span fit in a table cell, leaving what `mdText` and
+ * `mdCode` wrote alone. A table reads a backslash and a pipe as a pipe in both.
+ */
+const mdCell = (value: string): string =>
+  value.replace(/\||\r?\n/g, (mark) => (mark === '|' ? '\\|' : '<br>'));
 
 export function markdownText(flow: Flow, options: TableOptions = {}): string {
   const { notes } = options;
@@ -85,43 +111,46 @@ export function markdownText(flow: Flow, options: TableOptions = {}): string {
       ...s.uses.map((u) => `${u.kind} ${u.name}`),
       ...s.effects.map((t) => `effect: ${t}`),
       ...s.unconfirmed.map((t) => `unconfirmed: ${t}`),
+      ...s.threats.map((t) => `possible problem (${t.level}): ${t.text}`),
     ].join('; ');
     const cells = [
       String(s.n),
-      route(s),
-      `\`${s.label.join(' / ').replace(/`/g, "'")}\``,
-      s.explain || '_No explanation_',
-      branchText(s),
-      also,
-      s.refs.join(' '),
+      mdText(route(s)),
+      mdCode(s.label.join(' / ')),
+      s.explain ? mdText(s.explain) : '_No explanation_',
+      mdText(branchText(s)),
+      mdText(also),
+      mdText(s.refs.join(' ')),
     ];
     if (notes) {
       const entry = notes(s);
-      cells.push(`${entry?.star ? '★ ' : ''}${entry?.note ?? ''}`);
+      cells.push(`${entry?.star ? '★ ' : ''}${mdText(entry?.note ?? '')}`);
     }
     return `| ${cells.map(mdCell).join(' | ')} |`;
   };
   const table = (steps: Step[]): string =>
     [`| ${cols.join(' | ')} |`, `|${cols.map(() => ' --- ').join('|')}|`, ...steps.map(row)].join('\n');
 
-  let md = `# ${flow.title}\n\n${flow.steps.length} steps, ${flow.participants.length} layers.\n\n`;
-  if (flow.trigger) md += `**Starts when:** ${flow.trigger}\n\n`;
-  if (flow.scope) md += `**Scope:** ${flow.scope}\n\n`;
+  let md = `# ${mdText(flow.title)}\n\n${flow.steps.length} steps, ${flow.participants.length} layers.\n\n`;
+  if (flow.trigger) md += `**Starts when:** ${mdText(flow.trigger)}\n\n`;
+  if (flow.scope) md += `**Scope:** ${mdText(flow.scope)}\n\n`;
   if (flow.proposed) md += `**Proposed design:** this flow does not exist in the code yet.\n\n`;
   if (flow.sections.length) {
     flow.sections.forEach((sec, i) => {
-      const summary = sec.summary ? `${sec.summary}\n\n` : '';
-      md += `## ${i + 1}. ${sec.name}\n\n${summary}${table(flow.steps.filter((s) => s.section === i))}\n\n`;
+      const summary = sec.summary ? `${mdText(sec.summary)}\n\n` : '';
+      md += `## ${i + 1}. ${mdText(sec.name)}\n\n${summary}${table(flow.steps.filter((s) => s.section === i))}\n\n`;
     });
   } else md += `${table(flow.steps)}\n`;
   if (flow.uses.length) {
     const lines = flow.uses.map(
       (u) =>
-        `- **${u.kind}** \`${u.name}\`${u.ref ? ` (${u.ref})` : ''}: ${u.text} (steps ${u.steps.map((i) => i + 1).join(', ')})`,
+        `- **${mdText(u.kind)}** ${mdCode(u.name)}${u.ref ? ` (${mdText(u.ref)})` : ''}: ${mdText(u.text)} (steps ${u.steps.map((i) => i + 1).join(', ')})`,
     );
     md += `\n## Behind the scenes\n\n${lines.join('\n')}\n`;
   }
   const terms = options.terms ?? flow.terms;
-  if (terms.length) md += `\n## Glossary\n\n${terms.map((t) => `- **${t.term}**: ${t.def}`).join('\n')}\n`;
+  if (terms.length) {
+    md += `\n## Glossary\n\n${terms.map((t) => `- **${mdText(t.term)}**: ${mdText(t.def)}`).join('\n')}\n`;
+  }
   return md;
 }

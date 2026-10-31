@@ -1,52 +1,50 @@
 import { useRef, type CSSProperties } from 'react';
 
-import { cx } from '../../shared/lib/util.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
-import { BehindPopover } from './BehindPopover.tsx';
-import { BookmarksPopover } from './BookmarksPopover.tsx';
 import { Cards } from './Cards.tsx';
-import { ChaptersNav } from './ChaptersNav.tsx';
+import { Dock } from './Dock.tsx';
 import { FollowStrip } from './FollowStrip.tsx';
-import { PathSelect } from './PathSelect.tsx';
-import { ProgressBar } from './ProgressBar.tsx';
 import { ResizeHandle } from './ResizeHandle.tsx';
 import { useWheelStep } from './useWheelStep.ts';
 import styles from './walkbar.module.css';
 
-/** The footer: chapters, Follow, path filter, Behind and bookmarks, progress, and the three cards. */
-export function WalkBar() {
+export interface WalkBarProps {
+  /** The fold tab put the cards away: the dock stays, and the diagram takes the room. */
+  deckFolded?: boolean;
+}
+
+/** The floating bottom of the page: the deck of step cards above the dock with the Flow Rail. */
+export function WalkBar({ deckFolded = false }: WalkBarProps) {
   const flow = useFlowStore((s) => s.flow);
   const cardH = useFlowStore((s) => s.settings.cardH);
   const barRef = useRef<HTMLElement | null>(null);
   const centreRef = useRef<HTMLDivElement | null>(null);
   const onWheel = useWheelStep(centreRef);
 
-  if (!flow) return <footer id="wbar" className={styles.bar} aria-label="Walkthrough" />;
+  if (!flow) return <footer id="wbar" className={styles.bar} aria-label="Walkthrough" data-chrome="bottom" />;
 
-  const sized = cardH !== undefined;
-  const style = sized ? ({ '--card-h': `${cardH}px` } as CSSProperties) : undefined;
+  const style = cardH === undefined ? undefined : ({ '--card-h': `${String(cardH)}px` } as CSSProperties);
 
   return (
     <footer
       ref={barRef}
       id="wbar"
-      className={cx(styles.bar, sized && styles.sized)}
+      className={styles.bar}
       aria-label="Walkthrough"
+      data-chrome="bottom"
       style={style}
       onWheel={onWheel}
     >
-      <ResizeHandle barRef={barRef} />
       {flow.isSequence ? (
         <>
-          <div className={styles.top}>
-            <ChaptersNav flow={flow} />
-            <FollowStrip />
-            <PathSelect flow={flow} />
-            <BehindPopover flow={flow} />
-            <BookmarksPopover flow={flow} />
-          </div>
-          <ProgressBar flow={flow} />
-          <Cards flow={flow} centreRef={centreRef} />
+          <FollowStrip />
+          {deckFolded ? null : (
+            <div className={styles.deck} data-tour="deck">
+              <ResizeHandle barRef={barRef} />
+              <Cards flow={flow} centreRef={centreRef} />
+            </div>
+          )}
+          <Dock flow={flow} />
         </>
       ) : (
         <div className={styles.offline} role="status">

@@ -3,8 +3,19 @@
   "configurations": [
     {
       "name": "sequence-viewer",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8766", "--bind", "127.0.0.1", "--directory", "dist"],
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "-w",
+        "@swv/web",
+        "--",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8766",
+        "--strictPort"
+      ],
       "port": 8766
     }
   ]

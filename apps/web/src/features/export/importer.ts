@@ -1,25 +1,21 @@
-import { LIVE_LINK_RE, readLiveState } from '../../shared/lib/codec.ts';
+import { isLiveLink, LIVE_LINK_RE, readLiveState } from '../../shared/lib/codec.ts';
 
 /**
  * Reading pasted text, links and files into Mermaid code, exactly as version 2's `Importer` did.
  * Nothing here touches the page: the result says what to load and what to tell the user.
  */
 
-const LIVE_LINK_START_RE = /^\s*https?:\/\/(www\.)?mermaid\.(live|ink)\/[^\s]*#(pako|base64):/;
-
 const DIAGRAM_KEYWORD_RE =
   /^(sequenceDiagram|flowchart|graph|classDiagram|stateDiagram|erDiagram|gantt|pie|journey|gitGraph|mindmap|timeline|quadrantChart|xychart|sankey|block|packet|kanban|architecture|requirementDiagram|C4)/;
 
 const MARKDOWN_BLOCK_RE = /```\s*mermaid[^\n]*\n([\s\S]*?)```/i;
 
-export const ACCEPTED_EXTENSIONS = ['mmd', 'md', 'txt', 'mermaid', 'markdown'] as const;
+const ACCEPTED_EXTENSIONS = ['mmd', 'md', 'txt', 'mermaid', 'markdown'] as const;
 
 /** The `accept` of the hidden file input. */
 export const FILE_ACCEPT = '.mmd,.md,.txt,.mermaid,text/plain,text/markdown';
 
 export const DROP_HINT = 'Drop a .mmd, .md or .txt file';
-
-export const isLiveLink = (text: string): boolean => LIVE_LINK_START_RE.test(text);
 
 /** True when the first real line (not a `%%` comment or `---` front matter) starts a diagram. */
 export function looksLikeMermaid(text: string): boolean {
@@ -41,7 +37,7 @@ export type ImportResult =
   | { ok: false; message: string };
 
 /** Reads a mermaid.live or mermaid.ink link's state. */
-export async function importLiveLink(link: string): Promise<ImportResult> {
+async function importLiveLink(link: string): Promise<ImportResult> {
   const match = LIVE_LINK_RE.exec(link.trim());
   if (!match?.[1] || !match[2]) return { ok: false, message: 'Could not import: This is not a mermaid.live link' };
   try {
@@ -59,7 +55,7 @@ export async function importText(text: string): Promise<ImportResult> {
   return { ok: true, code: extractMarkdown(text) ?? text, theme: null, message: null };
 }
 
-export const fileExtension = (name: string): string => (name.split('.').pop() ?? '').toLowerCase();
+const fileExtension = (name: string): string => (name.split('.').pop() ?? '').toLowerCase();
 
 /** `.mmd`, `.txt` and `.mermaid` files are code; `.md` and `.markdown` must hold a mermaid block. */
 export async function importFile(file: { name: string; text: () => Promise<string> }): Promise<ImportResult> {
