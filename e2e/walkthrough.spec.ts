@@ -1,13 +1,16 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
+import { TOUR_SEEN } from './visitors.ts';
+
 const NOTES_KEY = 'swv:notes:t:Place an order';
 
 async function openFresh(page: Page): Promise<void> {
   await page.goto('/');
-  await page.evaluate(() => {
+  await page.evaluate((seen) => {
     localStorage.clear();
-  });
+    localStorage.setItem(seen.name, seen.value);
+  }, TOUR_SEEN);
   await page.reload();
   await expect(page.getByTestId('overview')).toBeVisible({ timeout: 30_000 });
 }
