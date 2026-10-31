@@ -5,6 +5,7 @@ import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { useNotesStore } from '../../shared/state/notesStore.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Chip } from '../../shared/ui/Chip.tsx';
+import { ThreatChip } from '../../shared/ui/ThreatChip.tsx';
 import { toast } from '../../shared/ui/toast.ts';
 import styles from './card.module.css';
 
@@ -77,6 +78,15 @@ export function StepHeader({ flow, step }: { flow: Flow; step: Step }) {
         <Chip key={i} tone="unconfirmed" title={t}>
           unconfirmed
         </Chip>
+      ))}
+      {step.threats.map((threat, i) => (
+        <ThreatChip
+          key={i}
+          threat={threat}
+          onClick={() => {
+            setUi({ threatsOpen: true });
+          }}
+        />
       ))}
       {flow.proposed ? (
         <Chip tone="unconfirmed" title="This flow is a design; this step does not exist in the code yet">

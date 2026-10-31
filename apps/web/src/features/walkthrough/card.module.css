@@ -342,6 +342,15 @@
   font-weight: 600;
 }
 
+.threats {
+  width: 100%;
+  color: var(--danger);
+}
+
+.threats b {
+  font-weight: 600;
+}
+
 .uses {
   margin-top: 8px;
   padding-top: 6px;

@@ -14,7 +14,7 @@ describe('step table exports', () => {
     const lines = csv.split('\r\n');
     expect(csv.startsWith(BOM)).toBe(true);
     expect(lines[0]).toBe(`${BOM}${CSV_COLUMNS.join(',')}`);
-    expect(lines[0]).toContain('Step,Chapter,From,To,Kind,Status,Sends,Does,Branch,Payload,Also involved,Effects,Unconfirmed,Ref');
+    expect(lines[0]).toContain('Step,Chapter,From,To,Kind,Status,Sends,Does,Branch,Payload,Also involved,Effects,Unconfirmed,Threats,Ref');
     // one row per step, then the trailing line end
     expect(lines.length).toBe(flow.steps.length + 2);
     expect(lines[lines.length - 1]).toBe('');

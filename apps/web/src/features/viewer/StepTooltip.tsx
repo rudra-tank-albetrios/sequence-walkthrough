@@ -91,6 +91,11 @@ export function StepTooltip({
           <b>Unconfirmed</b> {cut(step.unconfirmed.join('; '), 140)}
         </div>
       ) : null}
+      {step.threats.length > 0 ? (
+        <div className={`${styles.tipRow} ${styles.tipThreat}`}>
+          <b>Possible problem</b> {cut(step.threats.map((t) => t.text).join('; '), 140)}
+        </div>
+      ) : null}
       {step.refs.length > 0 ? (
         <div className={styles.tipRow}>
           <b>Code</b> <span className="mono">{step.refs.join(' ')}</span>

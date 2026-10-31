@@ -73,6 +73,20 @@ export function RefsRow({ step }: { step: Step }) {
   );
 }
 
+/** `@threat` lines say "possible problem, please check", never that something is wrong. */
+export function ThreatList({ step }: { step: Step }) {
+  if (step.threats.length === 0) return null;
+  return (
+    <div className={styles.threats} data-testid="threats">
+      {step.threats.map((threat, i) => (
+        <div key={i}>
+          <b>Possible problem, please check:</b> {threat.text}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function UnconfirmedList({ step }: { step: Step }) {
   if (step.unconfirmed.length === 0) return null;
   return (

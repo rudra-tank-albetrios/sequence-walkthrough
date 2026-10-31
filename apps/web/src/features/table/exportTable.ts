@@ -26,6 +26,7 @@ export function tableRows(flow: Flow, notes: NotesData, includeNotes: boolean): 
     'Also involved',
     'Effects',
     'Unconfirmed',
+    'Threats',
     'Ref',
   ];
   if (includeNotes) head.push('Bookmarked', 'Note');
@@ -44,6 +45,7 @@ export function tableRows(flow: Flow, notes: NotesData, includeNotes: boolean): 
       s.uses.map((u) => `${u.kind} ${u.name}${u.ref ? ` (${u.ref})` : ''}`).join('; '),
       s.effects.join('; '),
       s.unconfirmed.join('; '),
+      s.threats.map((t) => `${t.level}: ${t.text}`).join('; '),
       s.refs.join(' '),
     ];
     if (includeNotes) {
@@ -78,6 +80,7 @@ export function tableMarkdown(flow: Flow, notes: NotesData, includeNotes: boolea
       ...s.uses.map((u) => `${u.kind} ${u.name}`),
       ...s.effects.map((t) => `effect: ${t}`),
       ...s.unconfirmed.map((t) => `unconfirmed: ${t}`),
+      ...s.threats.map((t) => `possible problem (${t.level}): ${t.text}`),
     ].join('; ');
     const cells = [
       String(s.n),

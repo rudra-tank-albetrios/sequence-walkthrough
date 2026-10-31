@@ -7,7 +7,7 @@ import { NoteBlock } from './NoteEditor.tsx';
 import { PayloadDiffBox, RepliesList } from './Pairing.tsx';
 import { PayloadBox, SchemaBox, StateBox } from './Payloads.tsx';
 import { TermText } from './RichText.tsx';
-import { EffectsRow, FieldsRow, RefsRow, UnconfirmedList } from './StepFacts.tsx';
+import { EffectsRow, FieldsRow, RefsRow, ThreatList, UnconfirmedList } from './StepFacts.tsx';
 import { StepHeader } from './StepHeader.tsx';
 import { RouteLine, StepLabel } from './StepLabel.tsx';
 import { UsesStrip } from './UsesStrip.tsx';
@@ -43,6 +43,7 @@ export function StepCard({ flow, step }: { flow: Flow; step: Step }) {
     step.effects.length > 0 ||
     step.refs.length > 0 ||
     step.unconfirmed.length > 0 ||
+    step.threats.length > 0 ||
     step.answers >= 0;
   return (
     <div data-testid="step-card">
@@ -66,6 +67,7 @@ export function StepCard({ flow, step }: { flow: Flow; step: Step }) {
           <EffectsRow step={step} />
           <RefsRow step={step} />
           <UnconfirmedList step={step} />
+          <ThreatList step={step} />
         </div>
       ) : null}
       <UsesStrip step={step} />

@@ -10,6 +10,7 @@ import { findHits } from '../../shared/state/search.ts';
 import { route, type NotesData } from '../../shared/storage/notes.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Chip } from '../../shared/ui/Chip.tsx';
+import { ThreatChip } from '../../shared/ui/ThreatChip.tsx';
 import { toast } from '../../shared/ui/toast.ts';
 import { tableCsv, tableMarkdown } from './exportTable.ts';
 import styles from './table.module.css';
@@ -77,7 +78,8 @@ function Row({ flow, step, hasChapters, chapterStart, isCur, follow, hit, notes 
   const section = flow.sections[step.section];
   const entry = notes[step.key];
   const note = `${entry?.star ? '★ ' : ''}${entry?.note ?? ''}`;
-  const behind = step.uses.length + step.effects.length + step.unconfirmed.length > 0;
+  const behind =
+    step.uses.length + step.effects.length + step.unconfirmed.length + step.threats.length > 0;
   return (
     <tr
       data-step={step.idx}
@@ -143,6 +145,9 @@ function Row({ flow, step, hasChapters, chapterStart, isCur, follow, hit, notes 
               <Chip key={`c${i}`} tone="unconfirmed" title={t}>
                 unconfirmed
               </Chip>
+            ))}
+            {step.threats.map((threat, i) => (
+              <ThreatChip key={`t${i}`} threat={threat} />
             ))}
           </>
         ) : null}

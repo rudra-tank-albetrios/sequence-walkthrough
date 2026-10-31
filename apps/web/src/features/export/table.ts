@@ -28,6 +28,7 @@ export const CSV_COLUMNS = [
   'Also involved',
   'Effects',
   'Unconfirmed',
+  'Threats',
   'Ref',
 ] as const;
 
@@ -52,6 +53,7 @@ export function tableRows(flow: Flow, notes?: NoteLookup): { head: string[]; row
       s.uses.map((u) => `${u.kind} ${u.name}${u.ref ? ` (${u.ref})` : ''}`).join('; '),
       s.effects.join('; '),
       s.unconfirmed.join('; '),
+      s.threats.map((t) => `${t.level}: ${t.text}`).join('; '),
       s.refs.join(' '),
     ];
     if (notes) {
@@ -85,6 +87,7 @@ export function markdownText(flow: Flow, options: TableOptions = {}): string {
       ...s.uses.map((u) => `${u.kind} ${u.name}`),
       ...s.effects.map((t) => `effect: ${t}`),
       ...s.unconfirmed.map((t) => `unconfirmed: ${t}`),
+      ...s.threats.map((t) => `possible problem (${t.level}): ${t.text}`),
     ].join('; ');
     const cells = [
       String(s.n),

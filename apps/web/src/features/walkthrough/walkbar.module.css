@@ -377,6 +377,10 @@
   opacity: 0.3;
 }
 
+.cell.threat {
+  background: var(--danger);
+}
+
 /* Cards row */
 .cards {
   display: grid;

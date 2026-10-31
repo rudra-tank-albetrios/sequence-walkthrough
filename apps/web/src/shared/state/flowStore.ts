@@ -35,6 +35,10 @@ export interface FlowState {
     insightOpen: boolean;
     controlsHidden: boolean;
     presenter: boolean;
+    /** The structure review overlay. */
+    reviewOpen: boolean;
+    /** The same overlay, opened on its threats. */
+    threatsOpen: boolean;
     headerFolded: boolean;
     barFolded: boolean;
     askOpen: boolean;
@@ -96,6 +100,8 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     insightOpen: false,
     controlsHidden: false,
     presenter: false,
+    reviewOpen: false,
+    threatsOpen: false,
     headerFolded: false,
     barFolded: false,
     askOpen: false,

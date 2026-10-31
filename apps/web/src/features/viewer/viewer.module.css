@@ -223,6 +223,10 @@
   color: light-dark(#7a3e00, #ffd2a6);
 }
 
+.tipThreat b {
+  color: var(--danger);
+}
+
 .tipFoot {
   margin-top: 6px;
   color: var(--faint);
