@@ -45,6 +45,15 @@ describe('the Markdown files', () => {
     expect(out).not.toMatch(/(^|[^\\])!\[x\]/m);
   });
 
+  it('escapes table cells: a topic from a model is text, and cannot add a column', () => {
+    const out = blocksToMarkdown([
+      { kind: 'table', head: ['Topic'], rows: [['<img src=x onerror=alert(1)> | [x](javascript:y)']] },
+    ]);
+    expect(out).not.toMatch(/(^|[^\\])<img/m);
+    expect(out).not.toMatch(/(^|[^\\])\[x\]/m);
+    expect(out).toContain(String.raw`\| `);
+  });
+
   it('cannot be broken out of with a line break or a heading', () => {
     const out = blocksToMarkdown([{ kind: 'text', text: 'first\n\n# A heading of its own' }]);
     expect(out).toBe(String.raw`first \# A heading of its own` + '\n');

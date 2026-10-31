@@ -1,9 +1,10 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { open } from './helpers.ts';
 import {
   EASY_CHOICE,
   EASY_CHOICE_COUNT,
+  freezeClock,
   openQuiz,
   questionItems,
   startQuiz,
@@ -27,11 +28,18 @@ test.afterEach(() => {
 
 const MINUTE = 60_000;
 
+/** The set-up screen with the clock stopped, so the quiz starts at a known instant. */
+async function openFrozen(page: Page) {
+  await page.clock.install();
+  await open(page);
+  const dialog = await openQuiz(page);
+  await freezeClock(page);
+  return dialog;
+}
+
 test.describe('Timer', () => {
   test('T1 a custom timer warns near the end and submits at zero', async ({ page }) => {
-    await page.clock.install();
-    await open(page);
-    const dialog = await openQuiz(page);
+    const dialog = await openFrozen(page);
     await startQuiz(dialog, { ...EASY_CHOICE, time: 'Timer', minutes: 1 });
     const timer = dialog.getByRole('timer', { name: 'Time left' });
     await expect(timer).toContainText('1:00');
@@ -57,9 +65,9 @@ test.describe('Timer', () => {
     await open(page);
     const dialog = await openQuiz(page);
     await dialog.getByRole('radio', { name: 'Timer' }).check();
-    await expect(dialog.getByRole('radio', { name: '5 minutes' })).toBeChecked();
+    await expect(dialog.getByRole('radio', { name: '5 minutes', exact: true })).toBeChecked();
     await dialog.getByRole('radio', { name: 'Custom' }).check();
-    const minutes = dialog.getByLabel('Minutes');
+    const minutes = dialog.getByRole('spinbutton', { name: 'Minutes' });
     await expect(minutes).toHaveValue('20');
     await minutes.fill('0');
     await expect(dialog.getByRole('alert')).toHaveText('Enter whole minutes from 1 to 180.');
@@ -76,9 +84,7 @@ test.describe('Timer', () => {
   });
 
   test('T2 the stopwatch counts up and stops on submit', async ({ page }) => {
-    await page.clock.install();
-    await open(page);
-    const dialog = await openQuiz(page);
+    const dialog = await openFrozen(page);
     await startQuiz(dialog, EASY_CHOICE);
     const timer = dialog.getByRole('timer', { name: 'Time taken' });
     await expect(timer).toContainText('0:00');
@@ -123,9 +129,7 @@ test.describe('Timer', () => {
   });
 
   test('T3 the timer reaching zero after a submit changes nothing', async ({ page }) => {
-    await page.clock.install();
-    await open(page);
-    const dialog = await openQuiz(page);
+    const dialog = await openFrozen(page);
     await startQuiz(dialog, { ...EASY_CHOICE, time: 'Timer', minutes: 1 });
     await page.clock.fastForward(30 * 1000);
     await submitButton(dialog).click();

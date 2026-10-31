@@ -1,10 +1,12 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { extractText, getDocumentProxy } from 'unpdf';
 
+import { mdText as md } from '../apps/web/src/shared/lib/markdown.ts';
 import { DEMO_TITLE, demoFlow, download, open, type SavedFile } from './helpers.ts';
 import {
   answerAllWrong,
   EASY_CHOICE,
+  freezeClock,
   openQuiz,
   questionItems,
   questionText,
@@ -44,7 +46,7 @@ async function readPdf(file: SavedFile): Promise<PdfText> {
 /** Opens the Downloads panel and saves one file. */
 async function save(page: Page, dialog: Locator, name: string): Promise<SavedFile> {
   const details = dialog.locator('details').filter({ hasText: 'Downloads' });
-  if (!(await details.getAttribute('open'))) await details.locator('summary').click();
+  if ((await details.getAttribute('open')) === null) await details.locator('summary').click();
   return download(page, () => dialog.getByRole('button', { name, exact: true }).click());
 }
 
@@ -66,8 +68,8 @@ test.describe('Quiz downloads', () => {
     expect(plain.name).toBe(`${DEMO_TITLE} - quiz.md`);
     expect(plain.text.startsWith(`# ${DEMO_TITLE}: quiz\n\n5 questions, without answers.`)).toBe(true);
     samples.forEach((sample, i) => {
-      expect(plain.text).toContain(`### ${i + 1}. ${sample.question}`);
-      for (const option of sample.options ?? []) expect(plain.text).toContain(`- [ ] ${option}`);
+      expect(plain.text).toContain(`### ${i + 1}. ${md(sample.question)}`);
+      for (const option of sample.options ?? []) expect(plain.text).toContain(`- [ ] ${md(option)}`);
     });
     expect(plain.text).toMatch(/\*Step \d+: .*\. Multiple choice\. Easy\*/);
     expect(plain.text).not.toContain('Correct answer');
@@ -78,9 +80,9 @@ test.describe('Quiz downloads', () => {
     expect(answered.name).toBe(`${DEMO_TITLE} - quiz with answers.md`);
     expect(answered.text).toContain('5 questions, with answers.');
     for (const sample of samples) {
-      expect(answered.text).toContain(`- [x] ${sample.answer}`);
-      expect(answered.text).toContain(`**Correct answer:** ${sample.answer}`);
-      expect(answered.text).toContain(`**Reason:** ${sample.why}`);
+      expect(answered.text).toContain(`- [x] ${md(sample.answer)}`);
+      expect(answered.text).toContain(`**Correct answer:** ${md(sample.answer)}`);
+      expect(answered.text).toContain(`**Reason:** ${md(sample.why)}`);
     }
 
     const pdf = await readPdf(await save(page, dialog, 'Quiz as PDF'));
@@ -97,6 +99,7 @@ test.describe('Quiz downloads', () => {
     await page.clock.install();
     await open(page);
     const dialog = await openQuiz(page);
+    await freezeClock(page);
     await expect(dialog.getByRole('button', { name: 'Result as Markdown' })).toHaveCount(0);
     await startQuiz(dialog, EASY_CHOICE);
     await expect(dialog.getByRole('button', { name: 'Result as Markdown' })).toHaveCount(0);
@@ -105,20 +108,20 @@ test.describe('Quiz downloads', () => {
     await page.clock.fastForward(72_000);
     await submitQuiz(dialog);
 
-    const md = await save(page, dialog, 'Result as Markdown');
-    expect(md.name).toBe(`${DEMO_TITLE} - result.md`);
-    expect(md.text.startsWith(`# ${DEMO_TITLE}: quiz result\n\nScore: 0 of 5 (0%)\n\nTime: 1:12.`)).toBe(true);
-    expect(md.text).toContain('## Score per chapter\n\n| Chapter | Score |');
-    expect(md.text).toContain('## Score per difficulty\n\n| Difficulty | Score |\n| --- | --- |\n| Easy | 0 of 5 (0%) |');
-    expect(md.text).toContain('## Weak points found\n\n| Topic | Answers that fell short |');
-    expect(md.text).toContain('## Questions and answers');
+    const file = await save(page, dialog, 'Result as Markdown');
+    expect(file.name).toBe(`${DEMO_TITLE} - result.md`);
+    expect(file.text.startsWith(`# ${DEMO_TITLE}: quiz result\n\n${md('Score: 0 of 5 (0%)')}\n\nTime: 1:12.`)).toBe(true);
+    expect(file.text).toContain('## Score per chapter\n\n| Chapter | Score |');
+    expect(file.text).toContain(`## Score per difficulty\n\n| Difficulty | Score |\n| --- | --- |\n| Easy | ${md('0 of 5 (0%)')} |`);
+    expect(file.text).toContain('## Weak points found\n\n| Topic | Answers that fell short |');
+    expect(file.text).toContain('## Questions and answers');
     for (const sample of samples) {
       const wrong = (sample.options ?? []).find((option) => option !== sample.answer);
-      expect(md.text).toContain(`**Your answer:** ${wrong}`);
-      expect(md.text).toContain(`**Correct answer:** ${sample.answer}`);
+      expect(file.text).toContain(`**Your answer:** ${md(wrong ?? '')}`);
+      expect(file.text).toContain(`**Correct answer:** ${md(sample.answer)}`);
     }
-    expect(md.text).toContain('**Mark:** Wrong');
-    expect(md.text).not.toContain('AI marked');
+    expect(file.text).toContain('**Mark:** Wrong');
+    expect(file.text).not.toContain('AI marked');
 
     const pdf = await readPdf(await save(page, dialog, 'Result as PDF'));
     expect(pdf.pages).toBeGreaterThanOrEqual(1);
@@ -134,13 +137,13 @@ test.describe('Quiz downloads', () => {
     const dialog = await openQuiz(page);
     await startQuiz(dialog, EASY_CHOICE);
 
-    const md = await save(page, dialog, 'Quiz with flow as Markdown');
-    expect(md.name).toBe(`${DEMO_TITLE} - quiz with flow.md`);
-    expect(md.text.startsWith(`# ${DEMO_TITLE}: quiz\n`)).toBe(true);
-    expect(md.text).toContain('## The flow\n\nThe diagram and its Mermaid code, as they were on screen.');
-    expect(md.text).toContain(`![Diagram of ${DEMO_TITLE}](data:image/png;base64,`);
-    expect(md.text).toContain('## Mermaid code\n\n```mermaid\n');
-    expect(md.text).toContain(demoFlow().trim());
+    const file = await save(page, dialog, 'Quiz with flow as Markdown');
+    expect(file.name).toBe(`${DEMO_TITLE} - quiz with flow.md`);
+    expect(file.text.startsWith(`# ${DEMO_TITLE}: quiz\n`)).toBe(true);
+    expect(file.text).toContain('## The flow\n\nThe diagram and its Mermaid code, as they were on screen.');
+    expect(file.text).toContain(`![Diagram of ${DEMO_TITLE}](data:image/png;base64,`);
+    expect(file.text).toContain('## Mermaid code\n\n```mermaid\n');
+    expect(file.text).toContain(demoFlow().trim());
 
     const pdf = await readPdf(await save(page, dialog, 'Quiz with flow as PDF'));
     // The questions, then a page for the diagram, then the code.

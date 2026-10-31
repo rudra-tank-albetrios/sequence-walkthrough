@@ -16,7 +16,7 @@ function blockText(block: DocBlock): string {
     case 'fact':
       return `**${mdText(block.label)}:** ${mdText(block.text)}`;
     case 'table':
-      return mdTable(block.head, block.rows);
+      return mdTable(block.head.map(mdText), block.rows.map((row) => row.map(mdText)));
     case 'image':
       return `![${mdText(block.alt)}](${block.dataUrl})`;
     case 'code':

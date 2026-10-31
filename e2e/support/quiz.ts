@@ -9,7 +9,6 @@ import type { SampleQuestion } from '../../apps/web/src/features/quiz/sample/typ
 import type {
   Difficulty,
   DifficultyChoice,
-  QuestionType,
   TypeChoice,
 } from '../../apps/web/src/features/quiz/types.ts';
 import { demoFlow, open } from '../helpers.ts';
@@ -236,7 +235,7 @@ export async function chooseSetup(dialog: Locator, choices: SetupChoices): Promi
     if ([5, 10, 15].includes(choices.minutes)) await pick(`${choices.minutes} minutes`);
     else {
       await pick('Custom');
-      await dialog.getByLabel('Minutes').fill(String(choices.minutes));
+      await dialog.getByRole('spinbutton', { name: 'Minutes' }).fill(String(choices.minutes));
     }
   }
   if (choices.source) await pick(choices.source);
@@ -317,4 +316,8 @@ export function watchErrors(page: Page): string[] {
 export const EASY_CHOICE: SetupChoices = { difficulty: 'easy', type: 'choice', count: 5 };
 export const EASY_CHOICE_COUNT = EASY.filter((sample) => sample.type === 'choice').length;
 
-export type { QuestionType };
+/**
+ * Stops the page's clock, which `page.clock.install()` left running, so a time read on screen is
+ * exact however busy the machine is. From here time moves only with `page.clock.fastForward`.
+ */
+export const freezeClock = (page: Page) => page.clock.pauseAt(Date.now() + 60_000);

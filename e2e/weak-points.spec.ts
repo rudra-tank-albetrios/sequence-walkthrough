@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
+import { mdText } from '../apps/web/src/shared/lib/markdown.ts';
 import { DEMO_TITLE, download, open, toastBox } from './helpers.ts';
 import {
   answerAllRight,
@@ -92,14 +93,17 @@ test.describe('Weak points', () => {
   test('WP2 a later correct answer lowers the count, and at zero the point goes away', async ({ page }) => {
     await open(page);
     await missEverything(page);
-    await missEverything(page).catch(() => undefined);
+    const dialog = quizDialog(page);
+    await dialog.getByRole('button', { name: 'New quiz' }).click();
+    await startQuiz(dialog, EASY_CHOICE);
+    await answerAllWrong(dialog);
+    await submitQuiz(dialog);
     let weak = await openWeakPoints(page);
     await expect(items(weak)).toHaveCount(EASY_CHOICE_COUNT);
     await expect(weak.getByText(/^2 times, last on/)).toHaveCount(EASY_CHOICE_COUNT);
     await page.keyboard.press('Escape');
     await expect(weak).toBeHidden();
 
-    const dialog = quizDialog(page);
     await dialog.getByRole('button', { name: 'New quiz' }).click();
     await startQuiz(dialog, EASY_CHOICE);
     await answerAllRight(dialog);
@@ -129,10 +133,10 @@ test.describe('Weak points', () => {
     const file = await download(page, () => weak.getByRole('button', { name: 'Export as Markdown' }).click());
     expect(file.name).toBe(`${DEMO_TITLE} - weak points.md`);
     expect(file.text.startsWith('# Weak points\n')).toBe(true);
-    for (const question of asked) expect(file.text).toContain(`## ${question}`);
+    for (const question of asked) expect(file.text).toContain(`## ${mdText(question)}`);
     expect(file.text).toContain(`- **Flow:** ${DEMO_TITLE}`);
     expect(file.text).toContain('- **Times missed:** 1');
-    expect(file.text).not.toContain('<');
+    expect(file.text).not.toMatch(/(^|[^\\])</m);
     await expect(toastBox(page)).toContainText(`Downloaded ${DEMO_TITLE} - weak points.md`);
 
     await weak.getByRole('button', { name: 'Clear', exact: true }).click();

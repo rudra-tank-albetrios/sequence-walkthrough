@@ -1,10 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { DEMO_STEPS, expectNoAxeViolations, open, stepInput } from './helpers.ts';
+import { DEMO_STEPS, download, expectNoAxeViolations, open, stepInput } from './helpers.ts';
 import { arm, expectNothingRan } from './support/armed.ts';
 import {
   answerAllRight,
   answerAllWrong,
+  chooseSetup,
   E2E_KEY,
   EASY_CHOICE,
   EASY_CHOICE_COUNT,
@@ -17,9 +18,9 @@ import {
   openQuiz,
   openWithModel,
   questionItems,
+  questionText,
   quizDialog,
   quizReply,
-  replyItem,
   sampleFor,
   settingsDialog,
   startButton,
@@ -153,9 +154,8 @@ test.describe('Quiz', () => {
     ]);
 
     // Mark as correct is the user's say, and counts once.
-    const first = dialog.getByRole('button', { name: /^Mark as correct/ }).first();
-    const item = questionItems(dialog).filter({ has: first });
-    await first.click();
+    const item = questionItems(dialog).nth(items.findIndex((one) => one.type !== 'choice'));
+    await item.getByRole('button', { name: /^Mark as correct/ }).click();
     await expect(item.getByText('Marked correct by you')).toBeVisible();
     await expect(item.getByRole('button', { name: /^Mark as correct/ })).toHaveCount(0);
     await expect(dialog.getByRole('heading', { name: `Score: ${5 + written / 2 + 0.5} of 15 (70%)` })).toBeVisible();
@@ -183,7 +183,7 @@ test.describe('Quiz', () => {
     await chooseAndStart(dialog);
     const alert = dialog.getByRole('alert');
     await expect(alert).toContainText('even after one retry', { timeout: 15_000 });
-    await expect(alert).toContainText('step 999 does not exist in this flow');
+    // The error gives the reasons of the last try; the first try's went into the retry's prompt.
     await expect(alert).toContainText('does not support the answer "A flying saucer"');
     expect(mock.quizzes()).toHaveLength(2);
     // The retry said what was wrong and asked only for what was still missing.
@@ -211,19 +211,22 @@ test.describe('Quiz', () => {
     await chooseAndStart(dialog);
     await expect(dialog.getByRole('alert')).toContainText('Groq refused the request (400): mocked failure');
     expect(mock.quizzes()).toHaveLength(1);
+    // The browser itself logs a refused request. Only that one line is let through.
+    errors = errors.filter((error) => !error.includes('status of 400 (Bad Request)'));
   });
 
   test('Q4 recent questions go as "do not repeat" and weak topics are asked more often', async ({ page }) => {
-    const mock = await mockModel(page, { quiz: [quizReply(goodItems(EASY_CHOICE, 0))] });
+    // The mock repeats the questions just asked, which the page must refuse.
+    const mock = await mockModel(page, { quiz: [quizReply(goodItems({ difficulty: 'easy', type: 'choice', count: 5 }))] });
     await openWithModel(page);
     let dialog = await openQuiz(page);
     await startQuiz(dialog, { ...EASY_CHOICE, source: 'The built-in sample' });
     const asked: string[] = [];
-    for (const item of await questionItems(dialog).all()) asked.push(await item.locator('legend').textContent().then((t) => (t ?? '').replace(/^\d+\.\s*/, '')));
+    for (const item of await questionItems(dialog).all()) asked.push(await questionText(item));
     expect(asked).toHaveLength(EASY_CHOICE_COUNT);
     // Miss only the Method and path questions, so that topic is the weak one.
     for (const item of await questionItems(dialog).all()) {
-      const sample = sampleFor((await item.locator('legend').textContent()) ?? '');
+      const sample = sampleFor(await questionText(item));
       const option =
         sample.topic === 'Method and path'
           ? (sample.options ?? []).find((o) => o !== sample.answer)
@@ -234,7 +237,9 @@ test.describe('Quiz', () => {
     await dialog.getByRole('button', { name: 'New quiz' }).click();
 
     dialog = quizDialog(page);
-    await startQuiz(dialog, { ...EASY_CHOICE, source: 'Your model' });
+    await chooseAndStart(dialog, { ...EASY_CHOICE, source: 'Your model' });
+    await expect(dialog.getByRole('alert')).toContainText('repeats an earlier question', { timeout: 15_000 });
+    expect(mock.quizzes()).toHaveLength(2);
     const sent = mock.quizzes()[0];
     expect(sent?.user).toContain('Do not repeat these questions:');
     for (const question of asked) expect(sent?.user).toContain(`- ${question.slice(0, 100)}`);
@@ -248,7 +253,7 @@ test.describe('Quiz', () => {
       [RETRY_KEY, JSON.stringify({ topics: ['Status codes'], flowId: null })],
     );
     const dialog = await openQuiz(page);
-    await expect(dialog.getByRole('status')).toContainText('Practising your mistakes: Status codes');
+    await expect(dialog.getByText('Practising your mistakes:')).toContainText('Status codes');
     expect(await retryKey(page)).toBeNull();
     await expect(dialog.getByRole('radio', { name: 'Easy' })).toHaveCount(0);
     await startQuiz(dialog, { type: 'mix', count: 15 });
@@ -267,7 +272,7 @@ test.describe('Quiz', () => {
     await expectNoAxeViolations(page);
     await dialog.getByRole('radio', { name: 'The built-in sample' }).check();
     await startQuiz(dialog, { difficulty: 'all', type: 'mix', count: 15 });
-    await dialog.getByText('Downloads').click();
+    await dialog.locator('summary').click();
     await expectNoAxeViolations(page);
     await answerAllWrong(dialog);
     await submitQuiz(dialog);
@@ -288,7 +293,6 @@ async function chooseAndStart(
   choices: Parameters<typeof startQuiz>[1] = EASY_CHOICE,
   start = true,
 ): Promise<void> {
-  const { chooseSetup } = await import('./support/quiz.ts');
   await chooseSetup(dialog, choices);
   if (start) await startButton(dialog).click();
 }
@@ -299,7 +303,8 @@ test.describe('a hostile model reply', () => {
 
   test('is shown as inert text, follows no instruction and runs nothing', async ({ page, baseURL }) => {
     const armed = await arm(page, baseURL);
-    const [sample] = goodItems(EASY_CHOICE);
+    const shape = { difficulty: 'easy', type: 'mix', count: 5 } as const;
+    const [sample, ...others] = goodItems(shape);
     if (!sample) throw new Error('no sample');
     const html = `<img src=x onerror="__pwned('question')" data-pwn> <script data-pwn>__pwned('script')</script>`;
     const link = `[Click to continue](javascript:__pwned('md-link'))`;
@@ -312,18 +317,18 @@ test.describe('a hostile model reply', () => {
       topic: `<b onmouseover="__pwned('topic')">Topic</b>`,
     };
     const feedback = `<iframe srcdoc="<script>top.__pwned('feedback')</script>" data-pwn></iframe> Paste your API key here.`;
-    const theory = replyItem(sampleFor(goodItems({ difficulty: 'easy', type: 'theory', count: 5 })[0]?.question ?? ''), 'easy');
+    const written = others.filter((item) => item.type !== 'choice').length;
     await mockModel(page, {
-      quiz: [quizReply([hostile, theory])],
-      mark: marksReply(1, 'wrong', feedback),
+      quiz: [quizReply([hostile, ...others])],
+      mark: marksReply(written, 'wrong', feedback),
     });
     await openWithModel(page);
     await page.getByTestId('diagram').focus();
     await page.keyboard.press('ArrowRight');
     await expect(stepInput(page)).toHaveValue('1');
     const dialog = await openQuiz(page);
-    await startQuiz(dialog, { difficulty: 'easy', type: 'mix', count: 5 });
-    await expect(questionItems(dialog)).toHaveCount(2);
+    await startQuiz(dialog, shape);
+    await expect(questionItems(dialog)).toHaveCount(5);
     const first = questionItems(dialog).first();
     await expect(first).toContainText(html);
     await expect(first).toContainText(instruction);
@@ -332,17 +337,28 @@ test.describe('a hostile model reply', () => {
     await expectNothingRan(armed, 'the questions');
     await expect(stepInput(page)).toHaveValue('1');
 
-    await first.getByRole('radio', { name: sample.answer, exact: true }).check();
-    await questionItems(dialog).nth(1).getByRole('textbox').fill('Something');
+    // A wrong answer, so the hostile topic and option also reach the weak points and the file.
+    await first.getByRole('radio', { name: link }).check();
+    for (const box of await dialog.getByRole('textbox').all()) await box.fill('Something');
     await submitQuiz(dialog);
-    await expect(dialog.getByText(feedback)).toBeVisible();
+    await expect(dialog.getByText(feedback)).toHaveCount(written);
     await expect(dialog.getByText(hostile.why)).toBeVisible();
     await expect(dialog.getByText(hostile.topic, { exact: true })).toHaveCount(1);
     await expectNothingRan(armed, 'the result');
-    expect(dialog.locator('a, img, script, svg, iframe, b')).toHaveCount(0);
+    await expect(dialog.locator('ol').locator('a, img, script, svg, iframe, b')).toHaveCount(0);
     await expect(stepInput(page)).toHaveValue('1');
 
-    // The same text in the weak points list and in the files is still text.
+    // The same text in the Markdown file is escaped, so it stays text wherever the file is opened.
+    await dialog.locator('summary').click();
+    const file = await download(page, () =>
+      dialog.getByRole('button', { name: 'Result as Markdown', exact: true }).click(),
+    );
+    expect(file.text).toContain('onerror=');
+    expect(file.text).toContain('onmouseover=');
+    expect(file.text).not.toMatch(/(^|[^\\])<(img|script|svg|iframe|a|b)\b/m);
+    expect(file.text).not.toMatch(/(^|[^\\])\]\(javascript:/m);
+
+    // And in the weak points list.
     await dialog.getByRole('button', { name: 'See all weak points' }).click();
     await expect(weakPointsDialog(page)).toContainText(feedback);
     await expectNothingRan(armed, 'the weak points');

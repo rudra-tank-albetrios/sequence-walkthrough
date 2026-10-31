@@ -36,6 +36,8 @@ function QuizClock() {
     if (view.expired) submit(true);
   }, [view.expired, submit]);
 
+  // Off means no clock at all (plan section 8.9).
+  if (time.kind === 'off') return null;
   if (view.remainingMs === null) {
     return (
       <div className={styles.clock} role="timer" aria-label="Time taken">
