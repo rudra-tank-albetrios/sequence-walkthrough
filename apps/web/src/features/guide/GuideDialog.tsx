@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { downloadSkillKit } from '../../shared/lib/files.ts';
+import { downloadSkillKit, IS_ONE_FILE_BUILD } from '../../shared/lib/files.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Dialog } from '../../shared/ui/Dialog.tsx';
@@ -89,6 +89,15 @@ export function GuideDialog() {
           Nothing is uploaded by the viewer itself. Diagrams, notes, bookmarks, saved terms and AI keys stay in this
           browser; an AI question goes only to the provider you picked.
         </li>
+        {IS_ONE_FILE_BUILD ? null : (
+          <li>
+            To use the viewer with no internet,{' '}
+            <a href="./sequence-walkthrough-one-file.zip" download>
+              download it as one file
+            </a>
+            .
+          </li>
+        )}
       </ul>
       <h3 className={styles.h3}>Set up the Claude skill (once)</h3>
       <ul className={styles.points}>

@@ -48,7 +48,7 @@ function policyFor(code: string): string {
 }
 
 /** Both pages, from the document Vite wrote. Throws when anything is left outside the page. */
-export function assemblePages(html: string): { page: string; artifact: string } {
+function assemblePages(html: string): { page: string; artifact: string } {
   const open = /<script type="module"[^>]*>/.exec(html);
   if (!open) throw new Error('the page has no inlined module script');
   const codeStart = open.index + open[0].length;

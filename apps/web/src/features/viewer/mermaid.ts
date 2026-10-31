@@ -48,12 +48,14 @@ function luminance(color: string): number {
 /**
  * Pasted code is untrusted (plan section 4): Mermaid runs at `securityLevel: 'strict'` and every
  * SVG it produces goes through DOMPurify before it reaches the page. `name` is kept because Mermaid
- * marks participants with it, and `<style>` because the theme lives there.
+ * marks participants with it, `<style>` because the theme lives there, and `<foreignObject>` because
+ * flowcharts, class and state diagrams put their labels in it, as HTML that is sanitised the same way.
  */
 function sanitize(svg: string): string {
   return DOMPurify.sanitize(svg, {
     USE_PROFILES: { svg: true, svgFilters: true, html: true },
-    ADD_TAGS: ['style'],
+    ADD_TAGS: ['style', 'foreignObject'],
+    HTML_INTEGRATION_POINTS: { foreignobject: true },
     ADD_ATTR: ['name', 'dominant-baseline', 'marker-end', 'marker-start'],
     FORBID_TAGS: ['script', 'iframe', 'object', 'embed'],
     FORBID_ATTR: ['onload', 'onerror', 'onclick', 'onmouseover', 'href', 'xlink:href'],

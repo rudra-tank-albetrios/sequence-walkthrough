@@ -194,6 +194,29 @@ describe('the request', () => {
       /Claude is not available on this page/,
     );
   });
+
+  it('says so too when the host cannot run the capability in this view', async () => {
+    (window as unknown as { claude?: unknown }).claude = { use: () => Promise.resolve(null) };
+    await expect(complete(settingsWith({ provider: 'claude' }), 'Q')).rejects.toThrow(
+      /Claude is not available on this page/,
+    );
+  });
+
+  it("shows the host's own words when it refuses, and keeps the refusal as the cause", async () => {
+    const refusal = { code: 'rate_limited', message: 'Too many questions just now.' };
+    const sample = () => Promise.reject(refusal as unknown as Error);
+    (window as unknown as { claude?: unknown }).claude = { use: () => Promise.resolve(sample) };
+    const error = await complete(settingsWith({ provider: 'claude' }), 'Q').catch((err: unknown) => err);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe('Too many questions just now.');
+    expect((error as Error).cause).toBe(refusal);
+  });
+
+  it('has a sentence of its own when the refusal carries no message', async () => {
+    const sample = () => Promise.reject({ code: 'unknown' } as unknown as Error);
+    (window as unknown as { claude?: unknown }).claude = { use: () => Promise.resolve(sample) };
+    await expect(complete(settingsWith({ provider: 'claude' }), 'Q')).rejects.toThrow('Claude did not answer.');
+  });
 });
 
 describe('asking with the cache', () => {

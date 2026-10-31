@@ -1,6 +1,6 @@
 # Feature parity checklist: version 2 → React viewer
 
-Built from `README.md` and `src/body.html`, `src/style.css`, `src/js/*.js` of the version 2 page (plan section 7.2). Each row is one observable feature; the React viewer is done when every row has a passing Playwright test. **(old data)** marks features that read storage written by version 2 (keys and shapes in `docs/v2-internals.md`). Element ids and class names are the old ones, given so a test can be written against the old page first and then adapted.
+Built from `README.md` and `src/body.html`, `src/style.css`, `src/js/*.js` of the version 2 page (plan section 7.2), which stay in git history at commit `398d08e`. Each row is one observable feature; the React viewer is done when every row has a passing Playwright test. **(old data)** marks features that read storage written by version 2 (keys and shapes in `docs/v2-internals.md`). Element ids and class names are the old ones, given so a test can be written against the old page first and then adapted.
 
 Areas follow the plan: Diagram, Walkthrough, Step details, Views, Personal data, Sharing and files, AI, Other.
 
@@ -180,7 +180,7 @@ Areas follow the plan: Diagram, Walkthrough, Step details, Views, Personal data,
 | O9 | Light / dark UI | UI colours follow `prefers-color-scheme: dark` unless `<html data-theme="light|dark">` forces one; token overrides for chips, tooltip, editor colours. | Emulate dark scheme; expect `body` background `rgb(14, 17, 23)`. |
 | O10 | Fonts | Recursive (4 woff2 subsets) inlined in `<style id="swv-font-css">`; re-registered as "Recursive Variable" for the redux themes before measuring; exports embed the needed subsets. | Expect `document.fonts.check('16px "Recursive Variable"')` true after load. |
 | O11 | Reduced motion | `prefers-reduced-motion: reduce` disables card slide animation and camera glide. | Emulate; after ArrowRight expect the transform to be final immediately. |
-| O12 | Claude artifact build | `dist-claude/sequence-viewer.html` is the same head+body+script without doctype/html/meta skeleton; in that host `window.claude.use` enables the Claude provider, `downloads` saves and fragment-only share links. | Build-level check: file exists and contains no `<!doctype`. |
+| O12 | Claude artifact build | `dist-claude/sequence-viewer.html` is the same head+body+script without doctype/html/meta skeleton; in that host `window.claude.use` enables the Claude provider, `downloads` saves and fragment-only share links. Now `apps/web/dist-single/sequence-viewer.html`. | `e2e/one-file.spec.ts`: no skeleton and no policy of its own; runs in the Artifact tool's skeleton against a stub of the runtime contract, with Ask AI through `sample`, files through `downloads` and fragment-only links. |
 | O13 | Debug object | `window.SWV` exposes the modules (list in `v2-internals.md`), e.g. `SWV.S.flow`, `SWV.Path.set('happy')`, `SWV.Insight.show('errors')`; `SWV.App.debug.ready` true after the first render, `lastSave`, `lastPdf`. | `page.evaluate(() => SWV.App.debug.ready)` true; `SWV.Path.set('happy')` shows the notice. |
 | O14 | Skill kit download | Covered by F18. | — |
 | O15 | Themes | Covered by D10. | — |

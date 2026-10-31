@@ -43,7 +43,7 @@ apps/web/dist/index.html                            the website: the viewer, wit
 apps/web/dist/sequence-walkthrough.zip              the skill, ready to upload to Claude
 apps/web/dist/sequence-walkthrough-skill-kit.zip    the skill, its setup guide and install scripts
 apps/web/dist/sequence-walkthrough-one-file.zip     the two pages below, as one download
-apps/web/dist-single/sequence-walkthrough.html      the whole viewer in one file (about ONEFILE_MB MB)
+apps/web/dist-single/sequence-walkthrough.html      the whole viewer in one file (about 7 MB)
 apps/web/dist-single/sequence-viewer.html           the same page, only for publishing as a Claude artifact
 ```
 
