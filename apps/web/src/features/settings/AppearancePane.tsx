@@ -1,4 +1,6 @@
 import { useMediaQuery } from '../../shared/hooks/useMediaQuery.ts';
+import { useVoices } from '../../shared/hooks/useVoices.ts';
+import { pickVoice, VOICE_RATES } from '../../shared/lib/speech.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import {
   DARK_QUERY,
@@ -42,7 +44,57 @@ function Toggle({
   );
 }
 
-/** The page's colours, the diagram's theme, and how the diagram is shown. */
+/** How the voice reads a step while playing. Hidden where the device has no voices. */
+function VoiceBlock() {
+  const rate = useFlowStore((s) => s.settings.voiceRate);
+  const savedVoice = useFlowStore((s) => s.settings.voiceURI);
+  const updateSettings = useFlowStore((s) => s.updateSettings);
+  const voices = useVoices();
+  if (voices.length === 0) return null;
+  return (
+    <section className={styles.block}>
+      <h3 className={styles.heading}>Voice</h3>
+      <label className={styles.field}>
+        <span>Voice speed</span>
+        <Select
+          aria-label="Voice speed"
+          value={rate}
+          onChange={(event) => {
+            updateSettings({ voiceRate: Number(event.target.value) });
+          }}
+        >
+          {VOICE_RATES.map((option) => (
+            <option key={option} value={option}>
+              {option}x
+            </option>
+          ))}
+        </Select>
+      </label>
+      <label className={styles.field}>
+        <span>Voice</span>
+        <Select
+          aria-label="Voice"
+          value={pickVoice(voices, savedVoice, navigator.language)?.voiceURI ?? ''}
+          onChange={(event) => {
+            updateSettings({ voiceURI: event.target.value });
+          }}
+        >
+          {voices.map((voice) => (
+            <option key={voice.voiceURI} value={voice.voiceURI}>
+              {voice.name} ({voice.lang})
+            </option>
+          ))}
+        </Select>
+      </label>
+      <p className={styles.intro}>
+        Voices come from this device, so how they sound depends on it. Some voices are online services run by your
+        browser or system, and they receive the text they read.
+      </p>
+    </section>
+  );
+}
+
+/** The page's colours, the diagram's theme, how the diagram is shown, and the voice. */
 export function AppearancePane() {
   const settings = useFlowStore((s) => s.settings);
   const updateSettings = useFlowStore((s) => s.updateSettings);
@@ -130,6 +182,7 @@ export function AppearancePane() {
           }}
         />
       </section>
+      <VoiceBlock />
     </div>
   );
 }

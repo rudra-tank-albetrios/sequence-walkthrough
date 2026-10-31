@@ -37,6 +37,8 @@ const fullscreen = (page: Page) =>
         .fullscreenElement !== null,
   );
 
+const MUTED = { 'swv:settings': JSON.stringify({ voiceMuted: true }) };
+
 test.describe('walkthrough', () => {
   test('W1 the bar shows the cards around the current step, with ends disabled', async ({
     page,
@@ -181,7 +183,8 @@ test.describe('walkthrough', () => {
   test('W7 Space plays at the chosen speed, Esc stops, the speed is remembered', async ({
     page,
   }) => {
-    await openFocused(page);
+    // Muted: this is the timer alone. voice.spec.ts covers a step waiting for the voice.
+    await openFocused(page, { storage: MUTED });
     await page.getByLabel('Seconds per step').selectOption('1000');
     await diagram(page).focus();
     await page.keyboard.press('Space');
@@ -198,7 +201,7 @@ test.describe('walkthrough', () => {
   });
 
   test('W7 playing stops at the last step and starts over from there', async ({ page }) => {
-    await openFocused(page, { code: SHORT });
+    await openFocused(page, { code: SHORT, storage: MUTED });
     await page.getByLabel('Seconds per step').selectOption('1000');
     await page.getByRole('button', { name: /^Play/ }).click();
     await expect(stepInput(page)).toHaveValue('3', { timeout: 6_000 });

@@ -1,3 +1,4 @@
+import { VOICE_RATES } from '../lib/speech.ts';
 import { Store } from './store.ts';
 
 /** Mermaid themes the viewer offers, as version 2 did. */
@@ -31,6 +32,12 @@ export interface Settings {
   /** Milliseconds per step while playing. */
   speed: number;
   bands: boolean;
+  /** Silences only the voice; the flow keeps playing. */
+  voiceMuted: boolean;
+  /** How fast the voice reads, as a multiple of normal speech. */
+  voiceRate: number;
+  /** The chosen voice, or empty for the clearest one installed. */
+  voiceURI: string;
   /** Height of the step bar in pixels, when the user dragged it. */
   cardH?: number;
   /** Which parts the user folded away: the header (`top`) and the step bar (`bar`). */
@@ -48,6 +55,9 @@ export const DEFAULT_SETTINGS: Settings = {
   grid: true,
   speed: 3000,
   bands: true,
+  voiceMuted: false,
+  voiceRate: 1,
+  voiceURI: '',
 };
 
 export const isDiagramTheme = (value: unknown): value is DiagramTheme =>
@@ -64,6 +74,9 @@ export function loadSettings(): Settings {
   if (typeof merged.speed !== 'number' || !Number.isFinite(merged.speed)) {
     merged.speed = DEFAULT_SETTINGS.speed;
   }
+  merged.voiceMuted = (stored.voiceMuted as unknown) === true;
+  if (!(VOICE_RATES as readonly number[]).includes(merged.voiceRate)) merged.voiceRate = DEFAULT_SETTINGS.voiceRate;
+  if (typeof merged.voiceURI !== 'string') merged.voiceURI = DEFAULT_SETTINGS.voiceURI;
   return merged;
 }
 

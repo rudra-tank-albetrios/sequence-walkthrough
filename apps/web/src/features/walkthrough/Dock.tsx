@@ -1,6 +1,7 @@
 import type { Flow } from '@swv/core';
-import { Lock, LockOpen, Pause, Play, StepBack, StepForward } from 'lucide-react';
+import { Lock, LockOpen, Pause, Play, StepBack, StepForward, Volume2, VolumeX } from 'lucide-react';
 
+import { useVoices } from '../../shared/hooks/useVoices.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Select } from '../../shared/ui/Select.tsx';
@@ -14,7 +15,31 @@ import { PathSelect } from './PathSelect.tsx';
 
 const SPEEDS = [1000, 2000, 3000, 4000, 5000];
 
-/** Play, the steppers and the speed, in the middle of the dock. */
+/** The speaker beside Play. It controls only the voice, and is hidden where there is none. */
+function VoiceButton() {
+  const muted = useFlowStore((s) => s.settings.voiceMuted);
+  const updateSettings = useFlowStore((s) => s.updateSettings);
+  if (useVoices().length === 0) return null;
+  const label = muted ? 'Turn the voice on' : 'Mute the voice';
+  return (
+    <Button
+      variant="ghost"
+      icon
+      className={styles.stepper}
+      pressed={muted}
+      aria-label="Mute the voice"
+      title={`${label}. The flow keeps playing.`}
+      data-tour="voice"
+      onClick={() => {
+        updateSettings({ voiceMuted: !muted });
+      }}
+    >
+      {muted ? <VolumeX size={18} aria-hidden="true" /> : <Volume2 size={18} aria-hidden="true" />}
+    </Button>
+  );
+}
+
+/** Play, the steppers, the voice and the speed, in the middle of the dock. */
 function Transport({ flow }: { flow: Flow }) {
   const cur = useFlowStore((s) => s.cur);
   const playing = useFlowStore((s) => s.playing);
@@ -88,6 +113,7 @@ function Transport({ flow }: { flow: Flow }) {
       >
         <StepForward size={18} aria-hidden="true" />
       </Button>
+      <VoiceButton />
     </>
   );
 }
