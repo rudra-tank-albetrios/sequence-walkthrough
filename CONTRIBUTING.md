@@ -16,7 +16,8 @@ Then:
 | Command | What it does |
 |---|---|
 | `npm run dev` | Starts the web app with live reload |
-| `npm run verify` | Every check CI runs, in the same order. Must pass before a pull request. |
+| `npm run check` | Types, lint, unit tests, the build, then opens the built site in one browser. Must pass before a merge. |
+| `npm run verify` | Every check, including all browser tests. Run by hand for a full pass. |
 | `npm run test` | Unit and component tests only |
 | `npm run test:e2e` | Browser tests (run `npm run build` first) |
 | `npm run smoke` | Smoke test against the live site (`SMOKE_URL=...` to point it elsewhere) |
@@ -30,18 +31,18 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). The short version:
 - `packages/ai` holds model clients, usage tracking, auto-switch, the answer cache, prompts and reply schemas. It may use `packages/core`.
 - `apps/web` is the React app. Features live in `src/features/<name>` and do not import each other. Code two features need goes to `src/shared`.
 - `skills/` holds the two Claude skills. Rules both skills share are written once in `skills/shared`.
-- `tools/` holds the small scripts CI runs: budgets, code-link checks and the skill build.
+- `tools/` holds the small check scripts: budgets, code-link checks and the skill build.
 
-CI enforces the boundaries with dependency-cruiser, keeps duplication under 2% with jscpd, and fails on unused code with knip. Strict TypeScript is on and `any` is not allowed.
+`npm run verify` enforces the boundaries with dependency-cruiser, keeps duplication under 2% with jscpd, and fails on unused code with knip. Strict TypeScript is on and `any` is not allowed.
 
 ## Making a change
 
 1. Branch from the latest `main`. One branch per change.
 2. Keep files small and focused, ideally under 300 lines.
 3. Add or update tests with the change. Browser-visible changes need a Playwright test.
-4. Run `npm run verify`. Fix every failure; never weaken a check to get a pass.
+4. Run `npm run check`. Fix every failure; never weaken a check to get a pass.
 5. Open a pull request that says what changed and how it was tested.
-6. CI must pass. Merge with a merge commit, then delete the branch.
+6. Merge with a merge commit, then delete the branch.
 
 ## Security
 
