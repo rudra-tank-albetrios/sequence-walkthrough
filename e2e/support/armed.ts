@@ -161,8 +161,7 @@ export const shareLink = {
   z: (code: string): string => `/#z.${base64url(deflateSync(code))}`,
   pako: (code: string): string =>
     `/#pako:${base64url(deflateSync(JSON.stringify({ code, mermaid: '{"theme":"default"}' })))}`,
-  base64: (code: string): string =>
-    `/#base64:${base64url(Buffer.from(JSON.stringify({ code })))}`,
+  base64: (code: string): string => `/#base64:${base64url(Buffer.from(JSON.stringify({ code })))}`,
 };
 
 export const diagramSvg = (page: Page) => page.getByTestId('diagram').locator('svg').first();

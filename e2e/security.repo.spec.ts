@@ -50,7 +50,9 @@ test('no shipped code writes markup or runs text as code', () => {
 });
 
 test('Mermaid stays at the strict level, set in one place', () => {
-  expect(shippedFilesMatching(/securityLevel/)).toEqual(['apps/web/src/features/viewer/mermaid.ts']);
+  expect(shippedFilesMatching(/securityLevel/)).toEqual([
+    'apps/web/src/features/viewer/mermaid.ts',
+  ]);
   const source = read('apps/web/src/features/viewer/mermaid.ts');
   expect(source).toContain("securityLevel: 'strict'");
   expect(source).not.toMatch(/securityLevel:\s*'(?:loose|antiscript|sandbox)'/);

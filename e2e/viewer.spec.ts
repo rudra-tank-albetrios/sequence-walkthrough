@@ -111,7 +111,9 @@ test.describe('diagram', () => {
     await expect.poll(async () => (await camera(page)).y).toBeCloseTo(scrolled.y, 0);
   });
 
-  test('D5 plus and minus zoom, the percentage sets 100, the range stops at 8', async ({ page }) => {
+  test('D5 plus and minus zoom, the percentage sets 100, the range stops at 8', async ({
+    page,
+  }) => {
     await openFocused(page);
     const pct = page.getByTitle('Set zoom to 100%');
     const start = await camera(page);
@@ -269,7 +271,9 @@ test.describe('diagram', () => {
     await expect(header).toBeHidden();
   });
 
-  test('D12 D17 the current step gets halos, marker, pill, ring and its class', async ({ page }) => {
+  test('D12 D17 the current step gets halos, marker, pill, ring and its class', async ({
+    page,
+  }) => {
     await openFocused(page);
     await page.keyboard.press('ArrowRight');
     await expect(svg(page).locator('.swv-halo')).toHaveCount(4);

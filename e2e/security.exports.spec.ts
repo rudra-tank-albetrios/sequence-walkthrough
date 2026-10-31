@@ -285,9 +285,9 @@ sequenceDiagram
       const { name } = await exported(page, item);
       expect(name).not.toMatch(/[\\/:*?"<>|]/);
     }
-    await expect(
-      page.getByRole('status').filter({ hasText: 'Downloaded' }).first(),
-    ).toContainText('evil');
+    await expect(page.getByRole('status').filter({ hasText: 'Downloaded' }).first()).toContainText(
+      'evil',
+    );
     await expectNothingRan(armed, 'file names');
   });
 

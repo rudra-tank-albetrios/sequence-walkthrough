@@ -1,6 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { arm, expectNothingRan, openDrawn, readReport, seedStorage, shareLink } from './support/armed.ts';
+import {
+  arm,
+  expectNothingRan,
+  openDrawn,
+  readReport,
+  seedStorage,
+  shareLink,
+} from './support/armed.ts';
 import { hostile } from './support/attacks.ts';
 import {
   answerBody,
@@ -155,7 +162,9 @@ test.describe('a hostile model reply', () => {
     },
     'an error message of the wrong type': {
       status: 400,
-      body: JSON.stringify({ error: { message: { html: `<img src=x onerror="__pwned('err-4')">` } } }),
+      body: JSON.stringify({
+        error: { message: { html: `<img src=x onerror="__pwned('err-4')">` } },
+      }),
     },
   };
 

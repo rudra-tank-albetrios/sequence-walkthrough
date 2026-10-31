@@ -59,7 +59,10 @@ const pick = async (page: Page, name: RegExp) => {
 const exported = (page: Page, name: RegExp) => download(page, () => pick(page, name));
 
 /** The width and height in a PNG's header. */
-const pngSize = (bytes: Buffer) => ({ width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) });
+const pngSize = (bytes: Buffer) => ({
+  width: bytes.readUInt32BE(16),
+  height: bytes.readUInt32BE(20),
+});
 
 /** Reports that a modal asks the file input: a chooser is not needed, the input is in the page. */
 const fileInput = (page: Page) => page.getByTestId('import-file');
@@ -242,7 +245,9 @@ test.describe('export menu', () => {
       pick(page, /^Open in mermaid.live/),
     ]);
     expect(tab.url()).toContain('https://mermaid.live/edit#pako:');
-    expect(await tab.evaluate(() => (globalThis as unknown as { opener: unknown }).opener)).toBeNull();
+    expect(
+      await tab.evaluate(() => (globalThis as unknown as { opener: unknown }).opener),
+    ).toBeNull();
   });
 });
 
@@ -276,7 +281,10 @@ test.describe('import', () => {
   });
 
   test('F5 a mermaid.live link brings its theme, and the camera starts over', async ({ page }) => {
-    await open(page, { clipboard: true, code: 'sequenceDiagram\n  %% @title Linked\n  A->>B: one' });
+    await open(page, {
+      clipboard: true,
+      code: 'sequenceDiagram\n  %% @title Linked\n  A->>B: one',
+    });
     await page.locator('#themeSel').selectOption('forest');
     await pick(page, /^Copy mermaid.live link/);
     await expect(toastBox(page)).toContainText('Copied the mermaid.live link');
@@ -295,7 +303,9 @@ test.describe('import', () => {
     await expect(page.locator('#themeSel')).toHaveValue('forest');
   });
 
-  test('F6 a file loads, a Markdown file needs a block, other types are refused', async ({ page }) => {
+  test('F6 a file loads, a Markdown file needs a block, other types are refused', async ({
+    page,
+  }) => {
     await open(page);
     const input = fileInput(page);
     await input.setInputFiles({
@@ -367,7 +377,10 @@ test.describe('import', () => {
   test('F7 a mermaid.live link pasted in the editor imports instead of inserting', async ({
     page,
   }) => {
-    await open(page, { clipboard: true, code: 'sequenceDiagram\n  %% @title Linked\n  A->>B: one' });
+    await open(page, {
+      clipboard: true,
+      code: 'sequenceDiagram\n  %% @title Linked\n  A->>B: one',
+    });
     await pick(page, /^Copy mermaid.live link/);
     await expect(toastBox(page)).toContainText('Copied the mermaid.live link');
     const link = await copied(page);
@@ -451,7 +464,10 @@ test.describe('saving and copying', () => {
     await expect(toastBox(page)).toContainText('Downloaded sequence-walkthrough-skill-kit.zip');
     await page.getByRole('button', { name: 'How it works' }).click();
     const fromGuide = await download(page, () =>
-      page.getByRole('dialog', { name: 'How it works' }).getByRole('button', { name: 'Download the skill' }).click(),
+      page
+        .getByRole('dialog', { name: 'How it works' })
+        .getByRole('button', { name: 'Download the skill' })
+        .click(),
     );
     expect(fromGuide.name).toBe('sequence-walkthrough-skill-kit.zip');
     await expect(stepInput(page)).toBeHidden();

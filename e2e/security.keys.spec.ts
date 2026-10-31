@@ -386,7 +386,8 @@ test.describe('a model address that redirects', () => {
         req.url === '/v1'
           ? {
               status: 307,
-              location: kind === 'another site' ? `http://127.0.0.1:${second.port}/steal` : '/steal',
+              location:
+                kind === 'another site' ? `http://127.0.0.1:${second.port}/steal` : '/steal',
             }
           : { status: 200 },
       );

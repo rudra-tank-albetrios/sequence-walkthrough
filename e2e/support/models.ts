@@ -69,8 +69,11 @@ export async function mockModel(
   url: string,
   reply: ModelReply | string,
 ): Promise<void> {
-  const { status = 200, contentType = 'application/json', body } =
-    typeof reply === 'string' ? { body: answerBody(reply) } : reply;
+  const {
+    status = 200,
+    contentType = 'application/json',
+    body,
+  } = typeof reply === 'string' ? { body: answerBody(reply) } : reply;
   const handler = async (route: Route) => {
     if (route.request().method() === 'OPTIONS') {
       await route.fulfill({ status: 204, headers: CORS });

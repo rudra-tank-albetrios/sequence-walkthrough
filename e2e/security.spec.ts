@@ -34,9 +34,7 @@ const injectRawMarkup = (html: string): string =>
 
 /** The id of the current drawing. Each new drawing has its own. */
 const drawingId = (page: Page) =>
-  page.evaluate<string>(
-    `document.querySelector('[data-testid="diagram"] svg')?.id ?? ''`,
-  );
+  page.evaluate<string>(`document.querySelector('[data-testid="diagram"] svg')?.id ?? ''`);
 
 /** 'drawn' or 'refused' once the code dropped after this drawing has been dealt with, else ''. */
 const drawingEnded = (page: Page, before: string) =>
@@ -351,7 +349,8 @@ test.describe('malicious values left in browser storage', () => {
     },
     'notes of another flow that are null': { 'swv:notes:t:Other': 'null' },
     'notes that target the prototype': {
-      'swv:notes:t:Stored': '{"__proto__":{"star":true,"note":"x"},"constructor":{"star":true,"note":"x"}}',
+      'swv:notes:t:Stored':
+        '{"__proto__":{"star":true,"note":"x"},"constructor":{"star":true,"note":"x"}}',
     },
     'glossary with markup': {
       'swv:terms:t:Stored': JSON.stringify({
@@ -394,7 +393,10 @@ test.describe('malicious values left in browser storage', () => {
       await expect(page.getByRole('heading', { name: 'Bookmarks and notes' })).toBeVisible();
       await page.keyboard.press('Escape');
       await page.keyboard.press('i');
-      await page.getByTestId('insight').getByRole('tab', { name: /Glossary/ }).click();
+      await page
+        .getByTestId('insight')
+        .getByRole('tab', { name: /Glossary/ })
+        .click();
       await expectNothingRan(armed, name);
     });
   }
@@ -402,7 +404,7 @@ test.describe('malicious values left in browser storage', () => {
   for (const [name, stored] of Object.entries({
     'an object': '{"a":1}',
     'a number': '123',
-    'null': 'null',
+    null: 'null',
     'a list': '[1]',
     'broken JSON': '{nope',
   })) {
@@ -425,7 +427,6 @@ test.describe('malicious values left in browser storage', () => {
     await expect(flowTitle(page)).toContainText('onerror=');
     await expectNothingRan(armed, 'saved code');
   });
-
 });
 
 test.describe('a malicious notes file', () => {
@@ -471,7 +472,8 @@ test.describe('a malicious notes file', () => {
     null: 'null',
     'notes of the wrong type': '{"notes":"text"}',
     'entries of the wrong type': '{"notes":{"a":1,"b":null,"c":[1],"d":"x"}}',
-    'fields of the wrong type': '{"notes":{"a":{"star":"yes","note":1,"n":"x","route":2,"label":3,"updated":4}}}',
+    'fields of the wrong type':
+      '{"notes":{"a":{"star":"yes","note":1,"n":"x","route":2,"label":3,"updated":4}}}',
     'keys that target the prototype':
       '{"notes":{"__proto__":{"star":true,"note":"x","updated":"z"},"constructor":{"star":true,"note":"x","updated":"z"}}}',
   };
