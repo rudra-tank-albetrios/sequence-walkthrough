@@ -360,8 +360,15 @@ test.describe('keys in exports', () => {
     await expect(dialog).toBeHidden();
 
     const made: Record<string, string> = {};
-    for (const item of ['SVG', '1×', 'Step image', /^Code/, 'Step table']) {
-      made[item] = (await exported(page, item)).bytes.toString('latin1');
+    const files: [string, string | RegExp][] = [
+      ['SVG', 'SVG'],
+      ['1×', '1×'],
+      ['Step image', 'Step image'],
+      ['Code', /^Code/],
+      ['Step table', 'Step table'],
+    ];
+    for (const [label, item] of files) {
+      made[label] = (await exported(page, item)).bytes.toString('latin1');
     }
     made.PDF = (await exportedPdf(page, true)).bytes.toString('latin1');
     for (const item of ['Copy table as Markdown', 'Copy viewer link', 'Copy link to this step']) {
