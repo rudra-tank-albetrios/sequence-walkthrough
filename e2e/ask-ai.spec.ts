@@ -391,7 +391,9 @@ test.describe('Ask AI', () => {
       await dialog.getByRole('button', { name: 'Why this step?' }).click();
       await expect(dialog.getByTestId('ask-answer')).toContainText(`${name} · ${model}`);
       expect(sent).toHaveLength(1);
-      const { headers, body } = sent[0] as Sent;
+      const first = sent[0];
+      if (!first) throw new Error('Nothing was sent');
+      const { headers, body } = first;
       expect(headers.authorization).toBe(`Bearer key-${id}`);
       expect(headers['content-type']).toBe('application/json');
       expect(body.model).toBe(model);

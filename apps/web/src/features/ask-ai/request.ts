@@ -214,6 +214,8 @@ export async function complete(settings: AiSettings, user: string, options: Comp
     return hideKey(await completeHttp(endpoint, user, options), endpoint.key);
   } catch (err) {
     const message = hideKey(err instanceof Error ? err.message : String(err), endpoint.key);
+    // The caught error is not attached as the cause: its message may repeat the key.
+    // eslint-disable-next-line preserve-caught-error -- the cause could carry the key into a log
     throw new Error(NETWORK_FAILURE.test(message) ? unreachable(provider) : message);
   }
 }
