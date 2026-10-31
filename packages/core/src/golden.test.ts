@@ -24,7 +24,7 @@ interface V2Info {
   arrows: Omit<SequenceArrow, 'line'>[];
 }
 
-type V2Step = Omit<Step, 'branch' | 'inElse'> & Partial<Pick<Step, 'branch' | 'inElse'>>;
+type V2Step = Omit<Step, 'branch' | 'inElse' | 'threats'> & Partial<Pick<Step, 'branch' | 'inElse'>>;
 
 interface V2Flow extends Omit<Flow, 'endings' | 'syntax' | 'steps' | 'main'> {
   endings: V2Step[];
@@ -82,6 +82,8 @@ function normaliseGolden(golden: Golden): Omit<Flow, 'syntax'> {
     ...rest,
     branch,
     inElse,
+    // Recorded difference 7: `@threat` is new in version 3, so version 2's steps have none.
+    threats: [],
   }));
   return {
     ...flow,
@@ -97,6 +99,11 @@ function normaliseGolden(golden: Golden): Omit<Flow, 'syntax'> {
     uses: flow.uses.map((u) => ({ ...u, steps: [...new Set(u.steps)] })),
     // Recorded difference 6: `main` is always present; version 2 left it out of non-sequence flows.
     main: flow.main ?? -1,
+    // Recorded difference 7: the unknown-tag message lists every known tag, and `@threat` is one now.
+    lint: flow.lint.map((entry) => ({
+      ...entry,
+      msg: entry.msg.replace('@unconfirmed)', '@unconfirmed, @threat)'),
+    })),
   };
 }
 

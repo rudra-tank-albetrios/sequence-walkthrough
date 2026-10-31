@@ -17,6 +17,7 @@ export const STEP_TAGS = [
   'timeout',
   'idempotent',
   'unconfirmed',
+  'threat',
 ] as const;
 export const KNOWN_TAGS: readonly string[] = [...FLOW_TAGS, 'section', 'summary', ...STEP_TAGS];
 

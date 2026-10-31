@@ -6,6 +6,15 @@ export { parseFlow, type ParsedFlow } from './parse.ts';
 export { cutHash, parseSequence } from './sequence.ts';
 export { decodeEntities, isCodeRef, isFollowable, normLabel, splitLabel, tokens } from './text.ts';
 export type * from './types.ts';
+export type { Severity } from './validate-rules.ts';
+export {
+  validateDiagram,
+  type CodeLink,
+  type ValidateOptions,
+  type ValidationIssue,
+  type ValidationResult,
+  type ValidationSummary,
+} from './validate.ts';
 export { APP_VERSION, SPEC_VERSION } from './version.ts';
 export {
   CHAPTER_HUES,

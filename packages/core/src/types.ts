@@ -54,6 +54,14 @@ export interface StateText {
   after: string;
 }
 
+export type ThreatLevel = 'high' | 'medium' | 'low';
+
+/** `@threat <high|medium|low> <short text>`: a possible problem seen in the code, to be checked. */
+export interface Threat {
+  level: ThreatLevel;
+  text: string;
+}
+
 export type FlagTag = 'async' | 'retry' | 'timeout' | 'idempotent';
 
 /** `@async`, `@retry 3×` and so on: the text, or `true` when the tag has none. */
@@ -101,6 +109,7 @@ export interface AnnotatedArrow {
   state: StateText;
   flags: Flags;
   unconfirmed: string[];
+  threats: Threat[];
   section: string | null;
   sectionLine: number;
   annLines: number[];
@@ -234,6 +243,7 @@ export interface Step {
   state: StateText;
   flags: Flags;
   unconfirmed: string[];
+  threats: Threat[];
   http: HttpCall | null;
   status: Status | null;
   section: number;

@@ -203,6 +203,7 @@ function makeStep(
     state: a ? a.state : { before: '', after: '' },
     flags: a ? a.flags : {},
     unconfirmed: a ? a.unconfirmed : [],
+    threats: a ? a.threats : [],
     http: http?.[1] && http[2] ? { method: http[1], path: http[2] } : null,
     status: statusCode !== null ? { code: statusCode, reason: (status?.[2] ?? '').trim() } : null,
     section: sectionIdx,

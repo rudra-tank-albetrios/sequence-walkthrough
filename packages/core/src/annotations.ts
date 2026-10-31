@@ -12,6 +12,7 @@ import type {
   SchemaRule,
   StateText,
   StepUses,
+  Threat,
   Uses,
 } from './types.ts';
 import { FLAG_TAGS, KNOWN_TAGS, PAYLOAD_PARTS, SEQ_KEYWORD, STEP_TAGS } from './vocabulary.ts';
@@ -29,6 +30,7 @@ interface Pending {
   state: { before: string[]; after: string[] };
   flags: Flags;
   unconfirmed: string[];
+  threats: Threat[];
   section: string | null;
   sectionLine: number;
   firstLine: number;
@@ -48,6 +50,7 @@ function newPending(): Pending {
     state: { before: [], after: [] },
     flags: {},
     unconfirmed: [],
+    threats: [],
     section: null,
     sectionLine: -1,
     firstLine: -1,
@@ -67,7 +70,8 @@ function hasStepContent(p: Pending): boolean {
     p.state.before.length > 0 ||
     p.state.after.length > 0 ||
     Object.keys(p.flags).length > 0 ||
-    p.unconfirmed.length > 0
+    p.unconfirmed.length > 0 ||
+    p.threats.length > 0
   );
 }
 
@@ -244,6 +248,20 @@ export function parseAnnotations(code: string): Annotations {
       case 'unconfirmed':
         pending.unconfirmed.push(val || 'Not confirmed from the code');
         break;
+      case 'threat': {
+        const m = /^(high|medium|low)\s+(.+)$/i.exec(val);
+        const level = m?.[1]?.toLowerCase();
+        if ((level === 'high' || level === 'medium' || level === 'low') && m?.[2]) {
+          pending.threats.push({ level, text: m[2].trim() });
+        } else {
+          warn(
+            line,
+            '@threat needs a level and a short text: @threat medium The token is logged',
+            'threat-format',
+          );
+        }
+        break;
+      }
       default:
         if (isFlagTag(name)) pending.flags[name] = val || true;
         else {
@@ -311,6 +329,7 @@ export function parseAnnotations(code: string): Annotations {
         state: joinState(pending.state),
         flags: { ...pending.flags },
         unconfirmed: pending.unconfirmed.slice(),
+        threats: pending.threats.slice(),
         section: pending.section,
         sectionLine: pending.sectionLine,
         annLines: pending.lines.slice(),
