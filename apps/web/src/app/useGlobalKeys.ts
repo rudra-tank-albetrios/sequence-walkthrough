@@ -29,10 +29,11 @@ export function useGlobalKeys(narrow: boolean): void {
       if (ev.key === 'Escape') {
         if (target?.tagName === 'SELECT') return;
         if (document.querySelector('[role="dialog"], [role="menu"]')) return;
+        ev.preventDefault();
         escapeCascade(narrow);
         return;
       }
-      if (inField) return;
+      if (inField || document.querySelector('[data-modal], [role="menu"]')) return;
       if (target?.tagName === 'BUTTON' && (ev.key === ' ' || ev.key === 'Enter')) return;
       const s = useFlowStore.getState();
       const commands = useDiagramStore.getState().commands;
@@ -105,7 +106,6 @@ function letter(key: string, s: ReturnType<typeof useFlowStore.getState>, steps:
       return true;
     case 'k':
       s.toggleChapterLock();
-      toast(s.chapterLock ? 'Arrow keys unlocked' : 'Arrow keys stay inside this chapter');
       return true;
     case 't':
       s.setView(s.view === 'diagram' ? 'table' : 'diagram');
@@ -115,6 +115,7 @@ function letter(key: string, s: ReturnType<typeof useFlowStore.getState>, steps:
       return true;
     case 'a':
       if (steps && s.cur >= 0) s.setUi({ askOpen: true });
+      else toast('Pick a step first, then ask about it');
       return true;
     case 'h':
       s.setUi({ controlsHidden: !s.ui.controlsHidden, presenter: false });
@@ -127,10 +128,7 @@ function letter(key: string, s: ReturnType<typeof useFlowStore.getState>, steps:
       return true;
     case 'b': {
       const step = s.flow?.steps[s.cur];
-      if (step) {
-        const starred = useNotesStore.getState().toggleStar(step);
-        toast(starred ? `Step ${step.n} bookmarked` : `Bookmark removed from step ${step.n}`);
-      }
+      if (step) useNotesStore.getState().toggleStar(step);
       return true;
     }
     case 'n':

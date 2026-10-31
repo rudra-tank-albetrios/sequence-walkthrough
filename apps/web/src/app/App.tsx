@@ -8,7 +8,7 @@ import { GuideDialog, ShortcutsDialog } from '../features/guide/index.ts';
 import { InsightPanel } from '../features/insight/index.ts';
 import { TableView } from '../features/table/index.ts';
 import { Viewer } from '../features/viewer/index.ts';
-import { PresenterCard, WalkBar } from '../features/walkthrough/index.ts';
+import { PresenterCard, SelectionMenu, WalkBar, WalkthroughRuntime } from '../features/walkthrough/index.ts';
 import { useIsNarrow } from '../shared/hooks/useMediaQuery.ts';
 import { debounce } from '../shared/lib/util.ts';
 import { useFlowStore } from '../shared/state/flowStore.ts';
@@ -26,6 +26,7 @@ import { useDocumentTitle } from './title.ts';
 import { TopBar } from './TopBar.tsx';
 import { loadInitialCode } from './boot.ts';
 import { useGlobalKeys } from './useGlobalKeys.ts';
+import { useHideMode } from './useHideMode.ts';
 
 function EdgeTab({
   side,
@@ -69,6 +70,7 @@ export function App() {
   useGlobalKeys(narrow);
   useDropImport();
   useDocumentTitle(flow);
+  useHideMode();
 
   // First load: the link, then the autosaved code, then the demo flow.
   useEffect(() => {
@@ -111,18 +113,24 @@ export function App() {
   const topFolded = Boolean(settings.fold?.top);
   const barFolded = Boolean(settings.fold?.bar);
   const showTop = !hidden && !topFolded;
-  const showBar = !hidden && !barFolded && flow?.isSequence !== false;
+  const showBar = !hidden && !barFolded;
+  const codeShown = ui.codeOpen && !hidden;
 
   return (
     <TooltipProvider>
       <div className={styles.app} data-hidden={hidden || undefined}>
         {showTop ? <TopBar /> : <div />}
-        <main className={styles.stage} id="stage">
+        <main
+          className={styles.stage}
+          id="stage"
+          data-code-open={codeShown || undefined}
+          data-insight-open={ui.insightOpen || undefined}
+        >
           <Viewer />
-          <FindPopover />
+          {hidden ? null : <FindPopover />}
           <PresenterCard />
           <InsightPanel />
-          {hidden ? (
+          {hidden && !ui.presenter ? (
             <Button
               className={styles.showControls}
               onClick={() => setUi({ controlsHidden: false, presenter: false })}
@@ -144,18 +152,17 @@ export function App() {
                 label={barFolded ? 'Show the step bar' : 'Hide the step bar'}
                 onClick={() => updateSettings({ fold: { ...settings.fold, bar: !barFolded } })}
               />
-              <EdgeTab
-                side="left"
-                expanded={ui.codeOpen}
-                label={ui.codeOpen ? 'Hide the code' : 'Show the code (C)'}
-                onClick={() => setUi({ codeOpen: !ui.codeOpen })}
-              />
+              {ui.codeOpen ? (
+                <EdgeTab side="left" expanded label="Hide the code" onClick={() => setUi({ codeOpen: false })} />
+              ) : null}
             </>
           ) : null}
-          <CodePanel />
+          {hidden ? null : <CodePanel />}
           <TableView />
         </main>
         {showBar ? <WalkBar /> : <div />}
+        <WalkthroughRuntime />
+        <SelectionMenu />
         <AskDialog />
         <AiSettingsDialog />
         <GuideDialog />

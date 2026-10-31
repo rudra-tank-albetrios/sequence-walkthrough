@@ -2,8 +2,8 @@
 import { parseFlow } from '@swv/core';
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_DIAGRAM } from '../../shared/lib/defaultDiagram.ts';
-import { CSV_COLUMNS, csvText, markdownText, tableRows } from './table.ts';
+import { DEFAULT_DIAGRAM } from './defaultDiagram.ts';
+import { CSV_COLUMNS, csvText, markdownText, tableRows } from './stepTable.ts';
 
 const flow = parseFlow(DEFAULT_DIAGRAM).flow;
 const BOM = String.fromCharCode(0xfeff);

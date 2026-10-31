@@ -110,18 +110,6 @@
   font-weight: 700;
 }
 
-.term {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-decoration: underline dotted var(--follow);
-  text-decoration-thickness: 1.5px;
-  text-underline-offset: 2px;
-  cursor: help;
-}
-
 .status {
   padding: 0 4px;
   border-radius: 4px;
@@ -482,36 +470,6 @@
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 6px;
-}
-
-/* Glossary term popover */
-.termPop {
-  z-index: 100;
-  width: min(360px, calc(100vw - 32px));
-  padding: 10px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  box-shadow: var(--shadow-1), var(--shadow-2);
-  font-size: var(--text-md);
-}
-
-.termPop h4 {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0 0 6px;
-  font-size: var(--text-base);
-}
-
-.termPop p {
-  margin: 0 0 8px;
-}
-
-.termActs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
 }
 
 @media (max-width: 720px) {

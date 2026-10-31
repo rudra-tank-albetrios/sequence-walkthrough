@@ -45,6 +45,3 @@ export function usesSummary(uses: readonly { kind: string }[]): string {
   for (const u of uses) byKind.set(u.kind, (byKind.get(u.kind) ?? 0) + 1);
   return [...byKind.entries()].map(([kind, n]) => `${n} ${kind}${n === 1 ? '' : 's'}`).join(' · ');
 }
-
-/** True when a link is a web address rather than a `path:line` code reference. */
-export const isUrl = (ref: string): boolean => /^https?:\/\//i.test(ref);

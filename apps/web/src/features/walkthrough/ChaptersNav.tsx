@@ -1,10 +1,8 @@
 import type { Flow } from '@swv/core';
 import { Fragment, useEffect, useRef, type CSSProperties } from 'react';
 
-import { plural } from '../../shared/lib/util.ts';
+import { cx, plural } from '../../shared/lib/util.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
-import { toast } from '../../shared/ui/toast.ts';
-import { cx } from './cx.ts';
 import styles from './walkbar.module.css';
 
 /** One tab per chapter in its hue; the current one is underlined. Hidden when there are none. */
@@ -50,10 +48,7 @@ export function ChaptersNav({ flow }: { flow: Flow }) {
         aria-pressed={chapterLock}
         aria-label="Stay inside the current chapter"
         title="Stay inside the current chapter (K)"
-        onClick={() => {
-          toggleChapterLock();
-          toast(chapterLock ? 'Arrow keys unlocked' : 'Arrow keys stay inside this chapter');
-        }}
+        onClick={toggleChapterLock}
       >
         <span aria-hidden="true">{chapterLock ? '🔒' : '🔓'}</span>
       </button>

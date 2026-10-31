@@ -6,7 +6,6 @@ import { useNotesStore } from '../../shared/state/notesStore.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Chip } from '../../shared/ui/Chip.tsx';
 import { ThreatChip } from '../../shared/ui/ThreatChip.tsx';
-import { toast } from '../../shared/ui/toast.ts';
 import styles from './card.module.css';
 
 /** "Step [n] of N": Enter jumps to the typed step, Esc restores the number. */
@@ -113,8 +112,7 @@ export function StepHeader({ flow, step }: { flow: Flow; step: Step }) {
         title="Bookmark (B)"
         data-testid="star-btn"
         onClick={() => {
-          const on = toggleStar(step);
-          toast(on ? `Step ${step.n} bookmarked` : `Bookmark removed from step ${step.n}`);
+          toggleStar(step);
         }}
       >
         {starred ? '★' : '☆'}

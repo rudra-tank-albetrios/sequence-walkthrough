@@ -1,7 +1,7 @@
 import type { Flow, Step } from '@swv/core';
 
-import type { NoteEntry } from '../../shared/storage/notes.ts';
-import { route } from '../../shared/storage/notes.ts';
+import type { NoteEntry } from '../storage/notes.ts';
+import { route } from '../storage/notes.ts';
 
 /** The step table as a CSV file and as a Markdown document, in version 2's exact shapes. */
 

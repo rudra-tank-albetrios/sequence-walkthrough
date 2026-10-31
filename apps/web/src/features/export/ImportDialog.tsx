@@ -80,8 +80,11 @@ function PasteDialog() {
 
 /** Shown when the clipboard refused the text, so it can still be selected and copied by hand. */
 function CopyTextDialog() {
-  const text = useExportUi((s) => s.copyFallback);
-  const setText = useExportUi((s) => s.setCopyFallback);
+  const text = useFlowStore((s) => s.ui.copyFallback);
+  const setUi = useFlowStore((s) => s.setUi);
+  const setText = (copyFallback: string | null) => {
+    setUi({ copyFallback });
+  };
   const areaRef = useRef<HTMLTextAreaElement | null>(null);
   useEffect(() => {
     if (text !== null) {

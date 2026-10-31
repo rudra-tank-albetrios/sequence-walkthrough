@@ -1,8 +1,9 @@
 import { STATUS_TEXT, type Flow, type Step } from '@swv/core';
-import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { Fragment, useEffect, useMemo, useRef, type CSSProperties } from 'react';
 
 import { useIsNarrow } from '../../shared/hooks/useMediaQuery.ts';
-import { copyText, downloadBlob, fileName } from '../../shared/lib/util.ts';
+import { copyTableMarkdown, saveTableCsv } from '../../shared/lib/tableActions.ts';
+import { cx } from '../../shared/lib/util.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { useNotesStore } from '../../shared/state/notesStore.ts';
 import { pathVisible } from '../../shared/state/path.ts';
@@ -11,11 +12,7 @@ import { route, type NotesData } from '../../shared/storage/notes.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Chip } from '../../shared/ui/Chip.tsx';
 import { ThreatChip } from '../../shared/ui/ThreatChip.tsx';
-import { toast } from '../../shared/ui/toast.ts';
-import { tableCsv, tableMarkdown } from './exportTable.ts';
 import styles from './table.module.css';
-
-const cx = (...parts: (string | false | null | undefined)[]): string => parts.filter(Boolean).join(' ');
 
 /** `src/a/b.ts:12` with a break opportunity after every slash, so long paths wrap in the cell. */
 function Ref({ text }: { text: string }) {
@@ -177,7 +174,8 @@ export function TableView() {
   const setView = useFlowStore((s) => s.setView);
   const notes = useNotesStore((s) => s.data);
   const narrow = useIsNarrow();
-  const [includeNotes, setIncludeNotes] = useState(false);
+  const includeNotes = useFlowStore((s) => s.ui.tableNotes);
+  const setUi = useFlowStore((s) => s.setUi);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const open = view === 'table';
 
@@ -197,20 +195,6 @@ export function TableView() {
     if (!open) return;
     scrollRef.current?.querySelector('tr[aria-current="step"]')?.scrollIntoView({ block: 'nearest' });
   }, [cur, open, rows]);
-
-  const copyMarkdown = () => {
-    if (!flow) return;
-    void copyText(tableMarkdown(flow, notes, includeNotes)).then((ok) =>
-      toast(ok ? 'Copied the step table as Markdown' : 'Could not copy the table'),
-    );
-  };
-
-  const downloadCsv = () => {
-    if (!flow) return;
-    const name = fileName(flow.title, 'csv');
-    downloadBlob(new Blob([tableCsv(flow, notes, includeNotes)], { type: 'text/csv;charset=utf-8' }), name);
-    toast(`Downloaded ${name}`);
-  };
 
   const hasChapters = (flow?.sections.length ?? 0) > 0;
   const columns = hasChapters ? 9 : 8;
@@ -265,15 +249,17 @@ export function TableView() {
                 type="checkbox"
                 id="tvNotes"
                 checked={includeNotes}
-                onChange={(e) => setIncludeNotes(e.target.checked)}
+                onChange={(e) => {
+                  setUi({ tableNotes: e.target.checked });
+                }}
               />
               Include my notes
             </label>
             {narrow ? <Button onClick={() => setView('diagram')}>Back to diagram</Button> : null}
-            <Button onClick={copyMarkdown} disabled={!flow?.isSequence}>
+            <Button onClick={() => void copyTableMarkdown()} disabled={!flow?.isSequence}>
               Copy as Markdown
             </Button>
-            <Button onClick={downloadCsv} disabled={!flow?.isSequence}>
+            <Button onClick={() => void saveTableCsv()} disabled={!flow?.isSequence}>
               Download CSV
             </Button>
           </footer>

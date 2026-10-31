@@ -1,11 +1,11 @@
 import type { Flow } from '@swv/core';
 import { useEffect, useRef, type RefObject } from 'react';
 
+import { cx } from '../../shared/lib/util.ts';
 import { useReducedMotion } from '../../shared/hooks/useMediaQuery.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { toast } from '../../shared/ui/toast.ts';
-import { cx } from './cx.ts';
 import { OverviewCard } from './OverviewCard.tsx';
 import { SideCard } from './SideCard.tsx';
 import { StepCard } from './StepCard.tsx';

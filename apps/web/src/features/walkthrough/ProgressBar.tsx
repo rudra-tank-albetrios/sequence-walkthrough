@@ -1,10 +1,9 @@
 import type { Flow, Section } from '@swv/core';
 import type { CSSProperties } from 'react';
 
-import { plural } from '../../shared/lib/util.ts';
+import { cx, plural } from '../../shared/lib/util.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { pathVisible } from '../../shared/state/path.ts';
-import { cx } from './cx.ts';
 import styles from './walkbar.module.css';
 
 /**
