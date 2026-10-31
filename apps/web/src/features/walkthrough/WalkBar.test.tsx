@@ -1,10 +1,11 @@
 import { parseFlow, type Flow } from '@swv/core';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { DEFAULT_DIAGRAM } from '../../shared/lib/defaultDiagram.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { useNotesStore } from '../../shared/state/notesStore.ts';
+import { WalkthroughRuntime } from './LiveRegion.tsx';
 import { WalkBar } from './WalkBar.tsx';
 
 const NOTES_KEY = 'swv:notes:t:Place an order';
@@ -26,22 +27,6 @@ function load(code: string): Flow {
   useNotesStore.getState().load(flow);
   return flow;
 }
-
-beforeAll(() => {
-  // jsdom has neither; the bar only needs them to exist.
-  window.matchMedia = (query: string) =>
-    ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-      addListener: () => undefined,
-      removeListener: () => undefined,
-      dispatchEvent: () => false,
-    }) as MediaQueryList;
-  Element.prototype.scrollIntoView = () => undefined;
-});
 
 beforeEach(() => {
   localStorage.clear();
@@ -72,7 +57,7 @@ describe('WalkBar with the demo flow', () => {
     render(<WalkBar />);
     const replies = within(screen.getByTestId('replies')).getAllByRole('button');
     expect(replies.length).toBeGreaterThanOrEqual(2);
-    expect(replies.some((b) => b.textContent?.startsWith('409 Conflict'))).toBe(true);
+    expect(replies.some((b) => b.textContent.startsWith('409 Conflict'))).toBe(true);
   });
 
   it('shows the overview card at the start with the endings and the layers', () => {
@@ -100,7 +85,7 @@ describe('WalkBar with the demo flow', () => {
     const select = screen.getByTestId<HTMLSelectElement>('path-select');
     const labels = [...select.options].map((o) => o.textContent);
     expect(labels.slice(0, 3)).toEqual(['Path: all steps', 'Happy path only', 'Errors only']);
-    expect(labels.some((l) => l?.startsWith('alt ') || l?.startsWith('else '))).toBe(true);
+    expect(labels.some((l) => l.startsWith('alt ') || l.startsWith('else '))).toBe(true);
     fireEvent.change(select, { target: { value: 'happy' } });
     expect(useFlowStore.getState().path).toBe('happy');
   });
@@ -123,11 +108,17 @@ describe('WalkBar with the demo flow', () => {
     expect(localStorage.getItem(NOTES_KEY)).toBe('{}');
   });
 
-  it('announces the step for screen readers', () => {
+  it('announces the step for screen readers', async () => {
     load(DEFAULT_DIAGRAM);
-    useFlowStore.setState({ cur: 0 });
-    render(<WalkBar />);
-    expect(screen.getByTestId('live').textContent).toMatch(/^Step 1 of \d+\. Shopper to Pages: Click "Place order"\./);
+    render(<WalkthroughRuntime />);
+    act(() => {
+      useFlowStore.getState().go(0);
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('live').textContent).toMatch(
+        /^Step 1 of \d+\. Shopper to Pages: Click "Place order"\./,
+      );
+    });
   });
 });
 

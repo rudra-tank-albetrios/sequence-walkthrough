@@ -1,5 +1,5 @@
 import { clamp } from '../../shared/lib/util.ts';
-import type { Box } from './geometry.ts';
+import type { Box } from '../../shared/lib/box.ts';
 
 export interface CameraState {
   x: number;

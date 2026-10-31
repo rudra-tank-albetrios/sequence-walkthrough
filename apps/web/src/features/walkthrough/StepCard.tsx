@@ -1,12 +1,13 @@
 import type { Flow, Step } from '@swv/core';
 import type { CSSProperties } from 'react';
 
+import { cx } from '../../shared/lib/util.ts';
+import { TermText } from '../../shared/ui/TermText.tsx';
+
 import styles from './card.module.css';
-import { cx } from './cx.ts';
 import { NoteBlock } from './NoteEditor.tsx';
 import { PayloadDiffBox, RepliesList } from './Pairing.tsx';
 import { PayloadBox, SchemaBox, StateBox } from './Payloads.tsx';
-import { TermText } from './RichText.tsx';
 import { EffectsRow, FieldsRow, RefsRow, UnconfirmedList } from './StepFacts.tsx';
 import { StepHeader } from './StepHeader.tsx';
 import { RouteLine, StepLabel } from './StepLabel.tsx';

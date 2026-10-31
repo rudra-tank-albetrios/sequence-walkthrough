@@ -1,13 +1,11 @@
 import { SPEC_VERSION } from '@swv/core';
 
+import { MERMAID_VERSION } from '../../shared/lib/util.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Dialog } from '../../shared/ui/Dialog.tsx';
 import { Kbd } from '../../shared/ui/Kbd.tsx';
 import styles from './guide.module.css';
-
-/** The Mermaid build the viewer bundles; mermaid.live may run a different one. */
-const MERMAID_VERSION = '12.2.0';
 
 interface Row {
   /** Each key or gesture is drawn as a key cap; `join` sits between them. */

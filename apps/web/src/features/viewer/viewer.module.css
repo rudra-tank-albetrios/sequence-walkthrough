@@ -259,3 +259,8 @@
     display: none;
   }
 }
+
+.countErr {
+  background: var(--danger);
+  color: #fff;
+}

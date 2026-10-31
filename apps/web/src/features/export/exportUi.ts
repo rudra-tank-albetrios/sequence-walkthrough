@@ -7,28 +7,21 @@ import { create } from 'zustand';
  */
 export interface ExportUiState {
   pdfOpen: boolean;
-  /** Text the clipboard refused, shown in a "Copy this" dialog; null when closed. */
-  copyFallback: string | null;
   /** Files are being dragged over the window. */
   dragging: boolean;
   /** Set by the mounted file input, called by "Open a file…". */
   fileInput: HTMLInputElement | null;
   setPdfOpen: (open: boolean) => void;
-  setCopyFallback: (text: string | null) => void;
   setDragging: (dragging: boolean) => void;
   setFileInput: (input: HTMLInputElement | null) => void;
 }
 
 export const useExportUi = create<ExportUiState>((set) => ({
   pdfOpen: false,
-  copyFallback: null,
   dragging: false,
   fileInput: null,
   setPdfOpen(pdfOpen) {
     set({ pdfOpen });
-  },
-  setCopyFallback(copyFallback) {
-    set({ copyFallback });
   },
   setDragging(dragging) {
     set({ dragging });
