@@ -40,9 +40,11 @@ export class MermaidLoadError extends Error {
 
 /** Perceived brightness 0..1 of a CSS colour that Mermaid gives as a hex string. */
 function luminance(color: string): number {
-  const m = /^#([0-9a-f]{6})$/i.exec(color.trim());
+  // Mermaid's dark themes use the short form, "#333".
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color.trim());
   if (!m?.[1]) return 1;
-  const n = parseInt(m[1], 16);
+  const hex = m[1].length === 3 ? m[1].replace(/./g, '$&$&') : m[1];
+  const n = parseInt(hex, 16);
   const r = (n >> 16) & 255;
   const g = (n >> 8) & 255;
   const b = n & 255;

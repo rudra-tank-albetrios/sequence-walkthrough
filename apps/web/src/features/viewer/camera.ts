@@ -104,11 +104,17 @@ export class Camera {
     this.set(this.x + dx, this.y + dy);
   }
 
+  /** Room at each side, so the first and last layers are not under the canvas tools. */
+  private fitSide(): number {
+    return this.size().w < 720 ? 24 : 64;
+  }
+
   fitWidth(insetLeft: number): void {
     if (!this.W) return;
     const { w } = this.size();
-    const k = clamp((w - insetLeft - 48) / this.W, ZOOM_MIN, ZOOM_MAX);
-    this.set(insetLeft + (w - insetLeft - this.W * k) / 2, this.chrome().top + 24, k);
+    const k = clamp((w - insetLeft - 2 * this.fitSide()) / this.W, ZOOM_MIN, ZOOM_MAX);
+    // Starts below the Code button, so the top row of layers is clear of it.
+    this.set(insetLeft + (w - insetLeft - this.W * k) / 2, this.chrome().top + 52, k);
   }
 
   fitAll(insetLeft: number): void {
@@ -116,7 +122,7 @@ export class Camera {
     const { w, h } = this.size();
     const { top, bottom } = this.chrome();
     const free = h - top - bottom;
-    const k = clamp(Math.min((w - insetLeft - 48) / this.W, (free - 48) / this.H), ZOOM_MIN, ZOOM_MAX);
+    const k = clamp(Math.min((w - insetLeft - 2 * this.fitSide()) / this.W, (free - 48) / this.H), ZOOM_MIN, ZOOM_MAX);
     this.set(insetLeft + (w - insetLeft - this.W * k) / 2, top + (free - this.H * k) / 2, k);
   }
 
@@ -124,8 +130,8 @@ export class Camera {
   initial(): void {
     if (!this.W) return;
     const { w } = this.size();
-    const k = clamp(Math.min(1, (w - 48) / this.W), ZOOM_MIN, 1);
-    this.set((w - this.W * k) / 2, this.chrome().top + 24, k);
+    const k = clamp(Math.min(1, (w - 2 * this.fitSide()) / this.W), ZOOM_MIN, 1);
+    this.set((w - this.W * k) / 2, this.chrome().top + 52, k);
   }
 
   glideTo(x: number, y: number, ms = 320): void {

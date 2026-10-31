@@ -174,10 +174,11 @@
   .side {
     flex-direction: row;
     align-items: center;
-    padding: 10px 56px 10px var(--space-2);
+    padding: 10px 76px 10px var(--space-2);
     overflow-x: auto;
     border-right: 0;
-    border-bottom: 1px solid var(--line);
+    /* The tabs fade out before they reach the close button. */
+    mask-image: linear-gradient(to left, transparent 52px, #000 76px);
   }
 
   .group {
@@ -196,6 +197,10 @@
 
   .tab {
     width: auto;
+  }
+
+  .main {
+    border-top: 1px solid var(--line);
   }
 
   .title {

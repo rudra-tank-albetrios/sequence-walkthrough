@@ -178,6 +178,10 @@
 
 /* Phone: Play keeps the middle, the tools take a second row */
 @media (max-width: 720px) {
+  .pathSel {
+    min-width: 112px;
+  }
+
   .dock {
     padding: 4px 10px 6px;
     border-radius: var(--r-lg);

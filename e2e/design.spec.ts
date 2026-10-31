@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   boxOf,
   closeOverlay,
+  diagram,
   expectNoAxeViolations,
   heading,
   open,
@@ -10,6 +11,7 @@ import {
   openPanel,
   stepInput,
   svg,
+  topActor,
 } from './helpers.ts';
 
 // Plan 8.7 and section 10, row Design: the header, the Flow Rail and the dock, in light and dark,
@@ -125,6 +127,28 @@ test.describe('header, Flow Rail and dock', () => {
     await expect(tip).toContainText('Adds and removes items');
     await expect(tip).toContainText('src/frontend/hooks/useCart.ts:14');
     await expect(tip).toContainText(/Used on steps? \d/);
+  });
+
+  test('a dark diagram gets the dark chapter band, and the dot grid stays open when zoomed out', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await openFocused(page);
+    await page.keyboard.press('ArrowRight');
+    await expect(svg(page).locator('rect.swv-band').first()).toHaveAttribute('style', /45% 28%/);
+    await expect(diagram(page)).toHaveCSS('background-size', /^(1[4-9]|2[0-7])(\.\d+)?px/);
+  });
+
+  test('fit leaves the first row and the last layer clear of the canvas tools', async ({ page }) => {
+    await openFocused(page);
+    const code = await boxOf(page.getByRole('button', { name: 'Code', exact: true }));
+    const first = await boxOf(await topActor(page, 'U'));
+    expect(first.y).toBeGreaterThanOrEqual(code.y + code.height);
+    const tools = await boxOf(page.getByRole('group', { name: 'Diagram view' }));
+    let right = 0;
+    for (const actor of await svg(page).locator('.swv-actor').all()) {
+      const box = await actor.boundingBox();
+      if (box) right = Math.max(right, box.x + box.width);
+    }
+    expect(right).toBeLessThanOrEqual(tools.x);
   });
 
   test('the dark scheme keeps its contrast with the card, the overlay and the settings open', async ({

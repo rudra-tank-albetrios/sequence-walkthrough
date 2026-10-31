@@ -29,8 +29,6 @@
   color: var(--faint);
   font-size: var(--text-sm);
   font-weight: 650;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .choice {

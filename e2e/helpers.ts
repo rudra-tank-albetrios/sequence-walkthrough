@@ -226,6 +226,21 @@ export async function closeOverlay(page: Page): Promise<void> {
 export const themeSelect = (page: Page) => overlay(page).locator('#themeSel');
 
 /** Picks a diagram theme in the Theme pane and closes it again. */
+/** A layer's box in the top row: Mermaid also draws one at the bottom, usually under the step bar. */
+export async function topActor(page: Page, alias: string): Promise<Locator> {
+  const all = svg(page).locator(`.swv-actor[data-alias="${alias}"]`);
+  let best = all.first();
+  let top = Infinity;
+  for (const actor of await all.all()) {
+    const box = await actor.boundingBox();
+    if (box && box.y < top) {
+      top = box.y;
+      best = actor;
+    }
+  }
+  return best;
+}
+
 export async function setDiagramTheme(page: Page, theme: string): Promise<void> {
   await openPanel(page, 'Settings', 'Theme and display');
   await themeSelect(page).selectOption(theme);

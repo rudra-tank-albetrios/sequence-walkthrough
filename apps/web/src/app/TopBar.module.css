@@ -60,7 +60,11 @@
 }
 
 .meta {
-  flex: none;
+  /* Gives way before the title does. */
+  flex: 0 1000 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--muted);
   font-size: var(--text-sm);
   font-weight: 500;

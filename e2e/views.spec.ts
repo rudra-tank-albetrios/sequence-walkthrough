@@ -17,6 +17,7 @@ import {
   overlay,
   stepInput,
   svg,
+  topActor,
   toastBox,
 } from './helpers.ts';
 
@@ -118,7 +119,8 @@ test.describe('table view', () => {
 
   test('V2 spotlight, path, Follow and Find reach the rows', async ({ page }) => {
     await openFocused(page);
-    await svg(page).locator('.swv-actor[data-alias="RD"]').first().click({ force: true });
+    await (await topActor(page, 'RD')).click();
+    await expect(page.getByText('Showing only')).toBeVisible();
     await page.keyboard.press('t');
     const spotCount = await table(page).locator('tbody tr').count();
     expect(spotCount).toBeLessThan(DEMO_STEPS);
@@ -345,6 +347,9 @@ test.describe('insight', () => {
     }
     await insight(page).locator('[data-go="3"]').first().click();
     await expect(stepInput(page)).toHaveValue('4');
+    // A step link closes the overlay, since the diagram is what the jump is for; reopened, it marks the step.
+    await expect(insight(page)).toBeHidden();
+    await page.keyboard.press('i');
     await expect(insight(page).locator('[data-go="3"]').first()).toHaveAttribute(
       'aria-current',
       'step',

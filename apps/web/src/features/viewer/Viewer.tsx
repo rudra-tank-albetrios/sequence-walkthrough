@@ -108,7 +108,9 @@ export function Viewer() {
       const canvas = canvasRef.current;
       if (layer) layer.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.k})`;
       if (canvas) {
-        const g = 20 * state.k;
+        // The dots double their spacing when zoomed out, so they never pack into a grey fog.
+        let g = 20 * state.k;
+        while (g < 14) g *= 2;
         canvas.style.backgroundSize = `${g}px ${g}px`;
         canvas.style.backgroundPosition = `${state.x}px ${state.y}px`;
       }

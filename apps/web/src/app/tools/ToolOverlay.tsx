@@ -135,7 +135,10 @@ export function ToolOverlay() {
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     // I opens the overlay, so it closes it too, as it did for the Insight panel.
     const inField = event.target instanceof Element && event.target.closest(FIELD);
-    if (event.key.toLowerCase() === 'i' && !inField && !event.ctrlKey && !event.metaKey && !event.altKey) close();
+    if (event.key.toLowerCase() !== 'i' || inField || event.ctrlKey || event.metaKey || event.altKey) return;
+    // Handled here: the page's own key map runs after the overlay is gone and would open it again.
+    event.preventDefault();
+    close();
   };
 
   return (
