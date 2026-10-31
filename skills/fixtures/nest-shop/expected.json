@@ -1,0 +1,27 @@
+{
+  "framework": "NestJS",
+  "prompt": "How does placing an order work? Diagram it.",
+  "request": {
+    "method": "POST",
+    "path": "/api/orders",
+    "evidence": [
+      ["src/main.ts", "app.setGlobalPrefix('api')"],
+      ["src/orders/orders.controller.ts", "@Controller('orders')"]
+    ]
+  },
+  "layers": ["app", "middleware", "validator", "controller", "service", "repository", "db", "dto"],
+  "statuses": {
+    "201": ["src/orders/orders.controller.ts", "@HttpCode(201)"],
+    "400": ["src/main.ts", "new ValidationPipe({ whitelist: true })"],
+    "401": ["src/auth/jwt-auth.guard.ts", "throw new UnauthorizedException('Invalid session')"],
+    "409": ["src/orders/orders.service.ts", "throw new ConflictException('Sold out')"]
+  },
+  "messages": {
+    "401": ["src/auth/jwt-auth.guard.ts", "Invalid session"],
+    "409": ["src/orders/orders.service.ts", "Sold out"]
+  },
+  "requestFields": { "file": "src/orders/dto/create-order.dto.ts", "fields": ["sku", "qty"] },
+  "replyFields": { "file": "src/orders/dto/order-response.dto.ts", "fields": ["ref", "state", "amount"] },
+  "names": ["JwtAuthGuard", "OrdersController.create", "OrdersService.place", "findItem", "OrderResponseDto.from"],
+  "offPath": ["src/billing/billing.module.ts", "test/orders.e2e-spec.ts"]
+}

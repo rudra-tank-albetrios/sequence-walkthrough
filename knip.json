@@ -15,6 +15,10 @@
       "entry": ["src/*.ts"],
       "project": ["src/**/*.ts"]
     },
+    "tools/build-skills": {
+      "entry": ["src/index.ts", "src/*-cli.ts"],
+      "project": ["src/**/*.ts"]
+    },
     "examples/*": {
       "entry": ["src/backend/app/app.ts", "src/frontend/pages/CheckoutPage.ts"],
       "project": ["src/**/*.ts"]

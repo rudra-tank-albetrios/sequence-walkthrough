@@ -1,4 +1,5 @@
 import { FLAG_TAGS, type Flow, type Step } from '@swv/core';
+import { MessageCircleQuestion, Pencil, Star } from 'lucide-react';
 import { useState } from 'react';
 
 import { useFlowStore } from '../../shared/state/flowStore.ts';
@@ -58,7 +59,7 @@ export function StepHeader({ flow, step }: { flow: Flow; step: Step }) {
       </span>
       {section ? (
         <Chip tone="chapter" hue={section.hue} title={section.summary || section.name}>
-          · {step.idx - section.firstStep + 1} of {section.count} in <b>{section.name}</b>
+          {step.idx - section.firstStep + 1} of {section.count} in <b>{section.name}</b>
         </Chip>
       ) : null}
       {step.branch.map((b) => (
@@ -97,14 +98,14 @@ export function StepHeader({ flow, step }: { flow: Flow; step: Step }) {
       ) : null}
       <span className={styles.spacer} />
       <Button
-        variant="ghost"
-        className={styles.ibtn}
+        className={styles.ask}
         title="Ask AI about this step (A)"
+        data-tour="ask-ai"
         onClick={() => {
           setUi({ askOpen: true });
         }}
       >
-        <span aria-hidden="true">?</span> Ask AI
+        <MessageCircleQuestion size={15} aria-hidden="true" /> Ask AI
       </Button>
       <Button
         variant="ghost"
@@ -118,7 +119,7 @@ export function StepHeader({ flow, step }: { flow: Flow; step: Step }) {
           toggleStar(step);
         }}
       >
-        {starred ? '★' : '☆'}
+        <Star size={16} fill={starred ? 'currentColor' : 'none'} aria-hidden="true" />
       </Button>
       <Button
         variant="ghost"
@@ -131,7 +132,7 @@ export function StepHeader({ flow, step }: { flow: Flow; step: Step }) {
           setUi({ noteOpen: !noteOpen });
         }}
       >
-        ✎
+        <Pencil size={15} aria-hidden="true" />
       </Button>
     </div>
   );

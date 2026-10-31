@@ -147,18 +147,30 @@ type ClaudeSampler = (
   options: { modelTier: 'quick'; cache: boolean },
 ) => Promise<unknown>;
 interface ClaudeHost {
-  use(capability: 'sample'): Promise<ClaudeSampler>;
+  /** Resolves null when this view cannot run the capability. */
+  use(capability: 'sample'): Promise<ClaudeSampler | null>;
 }
 
 const CLAUDE_MISSING = 'Claude is not available on this page. Open the viewer as a Claude artifact, or pick another provider.';
+
+/** The host refuses with a plain `{ code, message }`, not an Error, so its words are picked out here. */
+function claudeRefusal(err: unknown): Error {
+  const message: unknown = typeof err === 'object' && err !== null ? Reflect.get(err, 'message') : undefined;
+  return new Error(typeof message === 'string' && message ? message : 'Claude did not answer.', { cause: err });
+}
 
 async function completeClaude(user: string, options: CompleteOptions): Promise<string> {
   if (!hasClaudeHost()) throw new Error(CLAUDE_MISSING);
   const host = (window as unknown as { claude: ClaudeHost }).claude;
   const sample = await host.use('sample');
-  const reply = await sample([{ role: 'user', content: `${options.system ?? AI_SYSTEM}\n\n${user}` }], { modelTier: 'quick', cache: false });
-  const parsed = HOST_REPLY.safeParse(reply);
-  return parsed.success ? parsed.data.text : '';
+  if (!sample) throw new Error(CLAUDE_MISSING);
+  try {
+    const reply = await sample([{ role: 'user', content: `${options.system ?? AI_SYSTEM}\n\n${user}` }], { modelTier: 'quick', cache: false });
+    const parsed = HOST_REPLY.safeParse(reply);
+    return parsed.success ? parsed.data.text : '';
+  } catch (err) {
+    throw claudeRefusal(err);
+  }
 }
 
 const NETWORK_FAILURE = /failed to fetch|networkerror|load failed/i;

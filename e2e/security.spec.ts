@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { openPanel } from './helpers.ts';
 import {
   arm,
   deliveries,
@@ -407,11 +408,7 @@ test.describe('malicious values left in browser storage', () => {
       await page.getByTestId('bm-btn').click();
       await expect(page.getByRole('heading', { name: 'Bookmarks and notes' })).toBeVisible();
       await page.keyboard.press('Escape');
-      await page.keyboard.press('i');
-      await page
-        .getByTestId('insight')
-        .getByRole('tab', { name: /Glossary/ })
-        .click();
+      await openPanel(page, 'Learn', 'Glossary');
       await expectNothingRan(armed, name);
     });
   }

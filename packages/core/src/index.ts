@@ -7,8 +7,25 @@ export { REVIEW_AREA_LABEL, REVIEW_RULES, reviewFlow } from './review/index.ts';
 export type * from './review/types.ts';
 export { cutHash, parseSequence } from './sequence.ts';
 export { skipFrontMatter, splitStatements } from './statements.ts';
-export { decodeEntities, isCodeRef, isFollowable, normLabel, splitLabel, tokens } from './text.ts';
+export {
+  decodeEntities,
+  hashStr,
+  isCodeRef,
+  isFollowable,
+  normLabel,
+  splitLabel,
+  tokens,
+} from './text.ts';
 export type * from './types.ts';
+export type { Severity } from './validate-rules.ts';
+export {
+  validateDiagram,
+  type CodeLink,
+  type ValidateOptions,
+  type ValidationIssue,
+  type ValidationResult,
+  type ValidationSummary,
+} from './validate.ts';
 export { APP_VERSION, SPEC_VERSION } from './version.ts';
 export {
   CHAPTER_HUES,

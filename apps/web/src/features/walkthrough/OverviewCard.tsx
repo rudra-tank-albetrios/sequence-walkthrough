@@ -1,7 +1,7 @@
 import type { Flow } from '@swv/core';
 
 import { cx, plural } from '../../shared/lib/util.ts';
-import { useFlowStore, type InsightTab } from '../../shared/state/flowStore.ts';
+import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Chip } from '../../shared/ui/Chip.tsx';
 import { Kbd } from '../../shared/ui/Kbd.tsx';
 import { TermText } from '../../shared/ui/TermText.tsx';
@@ -16,8 +16,8 @@ export function OverviewCard({ flow }: { flow: Flow }) {
   const setUi = useFlowStore((s) => s.setUi);
   const n = flow.steps.length;
   const chapters = flow.sections.length > 0 ? ` in ${plural(flow.sections.length, 'chapter')}` : '';
-  const openInsight = (insightTab: InsightTab) => () => {
-    setUi({ insightOpen: true, insightTab });
+  const openTool = (overlayTool: string) => () => {
+    setUi({ overlayTool });
   };
   return (
     <div className={styles.overview} data-testid="overview">
@@ -111,17 +111,17 @@ export function OverviewCard({ flow }: { flow: Flow }) {
             </Chip>
           ) : null}
           {flow.uses.length > 0 ? (
-            <Chip data-open="behind" onClick={openInsight('behind')}>
+            <Chip data-open="behind" onClick={openTool('side-parts')}>
               {plural(flow.uses.length, 'side part')}
             </Chip>
           ) : null}
           {flow.terms.length > 0 ? (
-            <Chip data-open="glossary" onClick={openInsight('glossary')}>
+            <Chip data-open="glossary" onClick={openTool('glossary')}>
               {plural(flow.terms.length, 'term')}
             </Chip>
           ) : null}
           {flow.unconfirmed > 0 ? (
-            <Chip tone="unconfirmed" data-open="errors" onClick={openInsight('errors')}>
+            <Chip tone="unconfirmed" data-open="errors" onClick={openTool('errors')}>
               {plural(flow.unconfirmed, 'unconfirmed detail')}
             </Chip>
           ) : null}

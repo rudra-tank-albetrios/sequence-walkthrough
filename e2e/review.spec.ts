@@ -164,7 +164,8 @@ const explainButton = (page: Page) =>
 
 /** The one place the tests look for the way in, so moving the entry changes only this. */
 async function openReview(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Review this flow' }).click();
+  await page.getByRole('button', { name: 'Analyze', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Review this flow' }).click();
   await expect(review(page)).toBeVisible();
 }
 
@@ -268,7 +269,7 @@ test.describe('structure review', () => {
 
   test('a threat shows on its step, and its chip opens the threats', async ({ page }) => {
     await open(page, { code: FLOW });
-    await expect(page.getByTestId('progress').locator('[data-threat]')).toHaveCount(1);
+    await expect(page.getByTestId('progress').locator('[data-marker="threat"]')).toHaveCount(1);
     await page.keyboard.press('ArrowRight');
 
     await expect(page.getByTestId('threats')).toContainText(
@@ -303,8 +304,10 @@ test.describe('structure review', () => {
     await open(page, { code: FLOW });
     // By keyboard: WebKit does not focus a button on a mouse click, so there would be nothing to
     // give back. The other browsers do, and the shared Dialog treats both ways the same.
-    const opener = page.getByRole('button', { name: 'Review this flow' });
+    const opener = page.getByRole('button', { name: 'Analyze', exact: true });
     await opener.focus();
+    await page.keyboard.press('Enter');
+    await page.getByRole('menuitem', { name: 'Review this flow' }).focus();
     await page.keyboard.press('Enter');
     await expect(review(page)).toBeVisible();
     // The open dialog hides the page from the accessibility tree, so this one looks by attribute.
@@ -316,8 +319,8 @@ test.describe('structure review', () => {
     await expect(opener).toBeFocused();
   });
 
-  test('the ⋯ menu opens it too, on a narrow window', async ({ page }) => {
-    await page.setViewportSize({ width: 1000, height: 700 });
+  test('the ⋯ menu opens it too, at phone width', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 700 });
     await open(page, { code: FLOW });
 
     await page.getByRole('button', { name: 'More' }).click();
@@ -345,7 +348,9 @@ test.describe('structure review', () => {
   test('fits a phone: nothing scrolls sideways', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 700 });
     await open(page, { code: FLOW });
-    await openReview(page);
+    await page.getByRole('button', { name: 'More' }).click();
+    await page.getByRole('menuitem', { name: 'Review this flow' }).click();
+    await expect(review(page)).toBeVisible();
 
     const box = await review(page).boundingBox();
     expect(box).not.toBeNull();

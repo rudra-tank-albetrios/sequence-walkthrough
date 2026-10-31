@@ -1,12 +1,13 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 
 import {
-  DEMO_NOTES_KEY,
   copied,
+  DEMO_NOTES_KEY,
   diagram,
   goToStep,
   open,
   openFocused,
+  openPanel,
   rightClickWord,
   stepInput,
   toastBox,
@@ -524,9 +525,7 @@ test.describe('Ask AI', () => {
     await answer.getByRole('button', { name: 'Add to glossary' }).click();
     await expect(toastBox(page)).toContainText('"billing_service" added to the glossary');
     await page.keyboard.press('Escape');
-    await diagram(page).focus();
-    await page.keyboard.press('i');
-    await page.getByRole('tab', { name: /Glossary/ }).click();
+    await openPanel(page, 'Learn', 'Glossary');
     await expect(
       page.getByTestId('insight').locator('[data-term="billing_service"]'),
     ).toContainText('saved answer');

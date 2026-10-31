@@ -2,9 +2,9 @@
 .host {
   position: fixed;
   left: 50%;
-  bottom: 16px;
+  bottom: calc(var(--chrome-bottom, 0px) + 8px);
   transform: translateX(-50%);
-  z-index: 100;
+  z-index: var(--z-toast);
   pointer-events: none;
 }
 
@@ -16,8 +16,8 @@
   border-radius: 999px;
   font-size: var(--text-md);
   font-weight: 500;
-  box-shadow: var(--shadow-1), var(--shadow-2);
-  animation: rise 160ms ease-out;
+  box-shadow: var(--shadow-float);
+  animation: rise 160ms var(--ease-out);
 }
 
 @keyframes rise {

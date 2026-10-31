@@ -86,6 +86,8 @@ module.exports = {
           '/src/test/setup\\.ts$',
           // Package entry points are imported from outside the package
           '^(packages|tools)/[^/]+/src/index\\.ts$',
+          // Bundled into the built skills, and run from there
+          '^tools/build-skills/src/[^/]+-cli[.]ts$',
         ],
       },
       to: {},

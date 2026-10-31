@@ -49,30 +49,36 @@ export function StepCard({ flow, step }: { flow: Flow; step: Step }) {
   return (
     <div data-testid="step-card">
       <StepHeader flow={flow} step={step} />
-      <RouteLine flow={flow} step={step} />
-      <StepLabel step={step} />
-      {summary ? (
-        <p className={styles.summary} style={{ '--ch': summary.hue } as CSSProperties} data-testid="chapter-summary">
-          <b>{summary.name}:</b> <TermText text={summary.summary} />
-        </p>
-      ) : null}
-      <Explanation step={step} />
-      <RepliesList flow={flow} step={step} />
-      {hasExtra ? (
-        <div className={styles.extra}>
-          <PayloadBox step={step} />
-          <PayloadDiffBox flow={flow} step={step} />
-          <SchemaBox step={step} />
-          <StateBox step={step} />
-          <FieldsRow step={step} />
-          <EffectsRow step={step} />
-          <RefsRow step={step} />
-          <UnconfirmedList step={step} />
-          <ThreatList step={step} />
+      <div className={styles.body}>
+        <div className={styles.primary}>
+          <RouteLine flow={flow} step={step} />
+          <StepLabel step={step} />
+          {summary ? (
+            <p className={styles.summary} style={{ '--ch': summary.hue } as CSSProperties} data-testid="chapter-summary">
+              <b>{summary.name}:</b> <TermText text={summary.summary} />
+            </p>
+          ) : null}
+          <Explanation step={step} />
+          <RepliesList flow={flow} step={step} />
         </div>
-      ) : null}
-      <UsesStrip step={step} />
-      <NoteBlock step={step} />
+        <div className={styles.secondary}>
+          {hasExtra ? (
+            <div className={styles.extra}>
+              <PayloadBox step={step} />
+              <PayloadDiffBox flow={flow} step={step} />
+              <SchemaBox step={step} />
+              <StateBox step={step} />
+              <FieldsRow step={step} />
+              <EffectsRow step={step} />
+              <RefsRow step={step} />
+              <UnconfirmedList step={step} />
+              <ThreatList step={step} />
+            </div>
+          ) : null}
+          <UsesStrip step={step} />
+          <NoteBlock step={step} />
+        </div>
+      </div>
     </div>
   );
 }
