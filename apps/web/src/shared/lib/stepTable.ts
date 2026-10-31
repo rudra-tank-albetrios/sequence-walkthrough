@@ -89,7 +89,8 @@ const mdText = (value: string): string =>
 /** A code span, which readers never treat as markup. No backtick inside can end it early. */
 const mdCode = (value: string): string => `\`${value.replace(/`/g, "'")}\``;
 
-const mdCell = (value: string): string => value.replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
+const mdCell = (value: string): string =>
+  value.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
 
 export function markdownText(flow: Flow, options: TableOptions = {}): string {
   const { notes } = options;
