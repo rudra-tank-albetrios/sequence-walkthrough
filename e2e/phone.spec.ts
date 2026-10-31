@@ -12,7 +12,9 @@ function viewport(page: Page): { width: number; height: number } {
 }
 
 test.describe('phone layout', () => {
-  test('O8 the top bar keeps the title and the ⋯ menu, which holds the export items', async ({ page }) => {
+  test('O8 the top bar keeps the title and the ⋯ menu, which holds the export items', async ({
+    page,
+  }) => {
     await open(page);
     await expect(heading(page)).toBeVisible();
     await expect(page.locator('#flowMeta')).toBeHidden();

@@ -1,5 +1,5 @@
 import type { Flow, Step } from '@swv/core';
-import { z } from 'zod';
+import * as z from 'zod/mini';
 
 import type { GlossaryEntry } from '../../shared/state/glossaryStore.ts';
 import { hasClaudeHost, modelFor, type AiSettings } from './aiSettings.ts';
@@ -91,17 +91,18 @@ export function endpointFor(settings: AiSettings): Endpoint {
   return { provider, url, model: modelFor(settings), key: settings.keys[provider.id] ?? '' };
 }
 
-// A reply is untrusted data (plan section 4): only these shapes are read, and only as text.
+// A reply is untrusted data (plan section 4): only these shapes are read, and only as text. The
+// tree-shakeable zod/mini keeps the schemas a few hundred bytes within the first-load budget.
 
 /** The answer every OpenAI-style endpoint returns. */
 const ANSWER = z.object({
-  choices: z.array(z.object({ message: z.object({ content: z.string() }) })).min(1),
+  choices: z.array(z.object({ message: z.object({ content: z.string() }) })).check(z.minLength(1)),
 });
 
 /** The two shapes providers use for an error body. */
 const ERROR_BODY = z.union([
-  z.object({ error: z.object({ message: z.string() }) }).transform((v) => v.error.message),
-  z.object({ message: z.string() }).transform((v) => v.message),
+  z.pipe(z.object({ error: z.object({ message: z.string() }) }), z.transform((v) => v.error.message)),
+  z.pipe(z.object({ message: z.string() }), z.transform((v) => v.message)),
 ]);
 
 /** What the artifact host's sampler resolves with. */

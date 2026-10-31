@@ -62,7 +62,10 @@ test.describe('table view', () => {
     await expect(svg(page).locator('[data-step="30"].swv-cur').first()).toBeAttached();
     await expect
       .poll(async () => {
-        const line = await svg(page).locator('.messageLine0.swv-cur, .messageLine1.swv-cur').first().boundingBox();
+        const line = await svg(page)
+          .locator('.messageLine0.swv-cur, .messageLine1.swv-cur')
+          .first()
+          .boundingBox();
         const canvas = await diagram(page).boundingBox();
         return Boolean(line && canvas && line.y >= canvas.y && line.y <= canvas.y + canvas.height);
       })
@@ -134,7 +137,9 @@ test.describe('table view', () => {
     await page.getByTestId('note-ta').fill('my remark');
     await page.keyboard.press('Escape');
     await page.keyboard.press('t');
-    const csv = await download(page, () => page.getByRole('button', { name: 'Download CSV' }).click());
+    const csv = await download(page, () =>
+      page.getByRole('button', { name: 'Download CSV' }).click(),
+    );
     expect(csv.name).toBe('Place an order.csv');
     expect(csv.text).not.toContain('my remark');
     const include = page.getByLabel('Include my notes');
@@ -187,7 +192,9 @@ test.describe('code panel', () => {
       .toBe(true);
   });
 
-  test('V5 the gutter and highlight follow the step and the caret picks a step', async ({ page }) => {
+  test('V5 the gutter and highlight follow the step and the caret picks a step', async ({
+    page,
+  }) => {
     await openFocused(page);
     await page.keyboard.press('c');
     await expect(page.locator('#codePanel [data-cur]')).toHaveCount(0);
@@ -197,7 +204,10 @@ test.describe('code panel', () => {
     const text = await code(page).inputValue();
     const at = text.indexOf('API->>APP');
     await code(page).evaluate((el, position) => {
-      const area = el as unknown as { setSelectionRange: (a: number, b: number) => void; focus: () => void };
+      const area = el as unknown as {
+        setSelectionRange: (a: number, b: number) => void;
+        focus: () => void;
+      };
       area.focus();
       area.setSelectionRange(position, position);
     }, at);
@@ -206,7 +216,9 @@ test.describe('code panel', () => {
     await expect(page.locator('#codePanel pre .t-al').first()).toBeAttached();
   });
 
-  test('V5 the highlight colours tags, comments, keywords, arrows and aliases', async ({ page }) => {
+  test('V5 the highlight colours tags, comments, keywords, arrows and aliases', async ({
+    page,
+  }) => {
     await openFocused(page, {
       code: 'sequenceDiagram\n  %% @title T\n  %% plain\n  participant A as Alpha\n  A->>B: hi',
     });
@@ -260,7 +272,9 @@ test.describe('code panel', () => {
     await expect(page.getByTestId('code-count')).toBeHidden();
   });
 
-  test('V8 the fix-prompt names the missing steps; other diagrams are refused', async ({ page }) => {
+  test('V8 the fix-prompt names the missing steps; other diagrams are refused', async ({
+    page,
+  }) => {
     await open(page, { clipboard: true, code: fixture('no-annotations') });
     await diagram(page).focus();
     await page.keyboard.press('c');
@@ -288,7 +302,9 @@ test.describe('code panel', () => {
     await page.getByRole('button', { name: 'Load example' }).click();
     await expect(toastBox(page)).toHaveText('Loaded the example flow');
     await expect(heading(page)).toHaveText('Place an order');
-    await expect(svg(page).locator('.messageLine0[data-step="41"], .messageLine1[data-step="41"]')).toBeAttached();
+    await expect(
+      svg(page).locator('.messageLine0[data-step="41"], .messageLine1[data-step="41"]'),
+    ).toBeAttached();
     await expect.poll(async () => (await camera(page)).k).not.toBe(zoomed.k);
   });
 
@@ -398,7 +414,9 @@ test.describe('insight', () => {
     await expect(other).toContainText('No reply with a 4xx or 5xx status in this flow.');
     await expect(other).toContainText('Not confirmed from the code');
     await expect(other).toContainText('Which queue');
-    await expect(other).toContainText('Proposed design: none of these steps exist in the code yet.');
+    await expect(other).toContainText(
+      'Proposed design: none of these steps exist in the code yet.',
+    );
   });
 
   test('V14 Behind groups the side parts and the effects', async ({ page }) => {
@@ -430,7 +448,9 @@ test.describe('insight', () => {
     const added = panel.locator('[data-term="shopper"]');
     await expect(added).toContainText('saved answer');
     await goToStep(page, 1);
-    await expect(page.getByTestId('explain').getByRole('button', { name: 'shopper' })).toBeVisible();
+    await expect(
+      page.getByTestId('explain').getByRole('button', { name: 'shopper' }),
+    ).toBeVisible();
     await added.getByRole('button', { name: 'Edit' }).click();
     await added.getByLabel('Definition of shopper').fill('The one who buys.');
     await added.getByRole('button', { name: 'Save' }).click();

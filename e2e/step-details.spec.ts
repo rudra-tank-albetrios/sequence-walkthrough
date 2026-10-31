@@ -65,7 +65,9 @@ test.describe('step details', () => {
     await expect(stepInput(page)).toHaveValue('4');
   });
 
-  test('S3 S4 a reply shows its status code, its meaning, and following words', async ({ page }) => {
+  test('S3 S4 a reply shows its status code, its meaning, and following words', async ({
+    page,
+  }) => {
     await openFocused(page);
     await goToStep(page, 22);
     const status = page.getByTestId('status');
@@ -216,7 +218,9 @@ test.describe('step details', () => {
       ].join('\n'),
     });
     await page.keyboard.press('ArrowRight');
-    await expect(page.getByTestId('unconfirmed')).toContainText('Not confirmed: Which queue is used');
+    await expect(page.getByTestId('unconfirmed')).toContainText(
+      'Not confirmed: Which queue is used',
+    );
     const uses = page.getByTestId('uses');
     await expect(uses.locator('summary')).toHaveText('Also involved: 1 hook · 1 util');
     await uses.locator('summary').click();
@@ -246,11 +250,7 @@ test.describe('step details', () => {
     await expect(page.getByTestId('follow-strip')).toContainText('widget');
     await expect(pop).toBeHidden();
     await page.keyboard.press('i');
-    await page
-      .getByTestId('insight')
-      .getByRole('button', { name: 'widget' })
-      .first()
-      .click();
+    await page.getByTestId('insight').getByRole('button', { name: 'widget' }).first().click();
     await expect(pop).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(pop).toBeHidden();

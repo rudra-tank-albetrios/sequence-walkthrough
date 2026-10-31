@@ -50,10 +50,14 @@ test.describe('header', () => {
     await page.keyboard.press('i');
     const insight = page.getByTestId('insight');
     await insight.getByRole('tab', { name: /^Errors/ }).click();
-    await expect(insight).toContainText('Proposed design: none of these steps exist in the code yet.');
+    await expect(insight).toContainText(
+      'Proposed design: none of these steps exist in the code yet.',
+    );
     await page.getByRole('button', { name: /^Export/ }).click();
     await page.getByRole('menuitem', { name: 'Copy table as Markdown' }).click();
-    expect(await copied(page)).toContain('**Proposed design:** this flow does not exist in the code yet.');
+    expect(await copied(page)).toContain(
+      '**Proposed design:** this flow does not exist in the code yet.',
+    );
   });
 });
 

@@ -35,7 +35,9 @@ const fullscreen = (page: Page) =>
   );
 
 test.describe('walkthrough', () => {
-  test('W1 the bar shows the cards around the current step, with ends disabled', async ({ page }) => {
+  test('W1 the bar shows the cards around the current step, with ends disabled', async ({
+    page,
+  }) => {
     await openFocused(page);
     await expect(page.getByRole('button', { name: 'Previous step' })).toBeDisabled();
     await expect(page.getByTestId('overview')).toBeVisible();
@@ -114,9 +116,7 @@ test.describe('walkthrough', () => {
 
   test('W4 a first chapter that starts late gets an implicit Start', async ({ page }) => {
     await openFocused(page, { code: fixture('sections-start') });
-    await expect(
-      page.getByTestId('chapters').getByRole('button').first(),
-    ).toHaveText('Start');
+    await expect(page.getByTestId('chapters').getByRole('button').first()).toHaveText('Start');
   });
 
   test('W5 K keeps the arrows inside the chapter and says so', async ({ page }) => {
@@ -167,7 +167,9 @@ test.describe('walkthrough', () => {
     await expect(segments).toHaveAttribute('title', /^Short: /);
   });
 
-  test('W7 Space plays at the chosen speed, Esc stops, the speed is remembered', async ({ page }) => {
+  test('W7 Space plays at the chosen speed, Esc stops, the speed is remembered', async ({
+    page,
+  }) => {
     await openFocused(page);
     await page.getByLabel('Seconds per step').selectOption('1000');
     await diagram(page).focus();
@@ -265,7 +267,9 @@ test.describe('walkthrough', () => {
     await page.keyboard.press('h');
     await expect.poll(() => fullscreen(page)).toBe(true);
     await page.evaluate(() =>
-      (globalThis as unknown as { document: { exitFullscreen: () => Promise<void> } }).document.exitFullscreen(),
+      (
+        globalThis as unknown as { document: { exitFullscreen: () => Promise<void> } }
+      ).document.exitFullscreen(),
     );
     await expect(page.locator('#topbar')).toBeVisible();
   });
@@ -534,7 +538,9 @@ test.describe('walkthrough', () => {
     });
   });
 
-  test('W19 W20 the canvas row has its six buttons and the notice its Show all', async ({ page }) => {
+  test('W19 W20 the canvas row has its six buttons and the notice its Show all', async ({
+    page,
+  }) => {
     await openFocused(page);
     for (const name of [/Code/, /^Play/, 'Dim others', 'Chapter band', 'Insight', 'Hide']) {
       await expect(

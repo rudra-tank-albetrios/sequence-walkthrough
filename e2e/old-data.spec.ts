@@ -30,7 +30,8 @@ const NOTE_ENTRY = {
   label: 'Click "Place order"',
   updated: '2025-03-01T10:00:00.000Z',
 };
-const LINKED = 'sequenceDiagram\n  %% @title From a link\n  A->>B: one\n  B-->>A: two\n  A->>B: three';
+const LINKED =
+  'sequenceDiagram\n  %% @title From a link\n  A->>B: one\n  B-->>A: two\n  A->>B: three';
 
 const zFragment = (code: string) => `#z.${deflateSync(code).toString('base64url')}`;
 const liveState = (code: string, theme = 'forest') =>
@@ -93,7 +94,9 @@ test.describe('old notes and bookmarks', () => {
     await goToStep(page, 3);
     await page.getByTestId('bm-btn').click();
     await bookmarks(page).getByRole('button', { name: 'Move to step 3' }).click();
-    await expect(bookmarks(page).getByRole('heading', { name: 'Notes for changed steps' })).toBeHidden();
+    await expect(
+      bookmarks(page).getByRole('heading', { name: 'Notes for changed steps' }),
+    ).toBeHidden();
     await expect(page.getByTestId('note-view')).toContainText('left behind');
     const clear = bookmarks(page).getByRole('button', { name: 'Delete all' });
     await clear.click();
@@ -152,7 +155,11 @@ test.describe('old notes and bookmarks', () => {
     await openFocused(page, {
       storage: {
         'swv:terms:t:Place an order': JSON.stringify({
-          shopper: { term: 'shopper', def: 'The person buying.', updated: '2025-03-01T10:00:00.000Z' },
+          shopper: {
+            term: 'shopper',
+            def: 'The person buying.',
+            updated: '2025-03-01T10:00:00.000Z',
+          },
         }),
       },
     });
@@ -205,7 +212,10 @@ test.describe('old settings', () => {
       .poll(async () => (await page.getByTestId('card-cur').boundingBox())?.height)
       .toBeCloseTo(260, -1);
     await page.keyboard.press('c');
-    await expect(page.getByRole('button', { name: 'Grid' })).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByRole('button', { name: 'Grid' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
   });
 
   test('P7 a folded header and a partial or broken file are understood', async ({ page }) => {
@@ -324,7 +334,9 @@ test.describe('old settings', () => {
 
 test.describe('old links', () => {
   test('F3 a #z. link opens its flow and step, and beats the saved code', async ({ page }) => {
-    await seed(page, { 'swv:code': JSON.stringify('sequenceDiagram\n  %% @title Saved\n  A->>B: x') });
+    await seed(page, {
+      'swv:code': JSON.stringify('sequenceDiagram\n  %% @title Saved\n  A->>B: x'),
+    });
     await page.goto(`/${zFragment(LINKED)}&step=2`);
     await expect(heading(page)).toHaveText('From a link', { timeout: 30_000 });
     await expect(toastBox(page)).toContainText('Loaded the diagram from the link');
@@ -357,7 +369,9 @@ test.describe('old links', () => {
   });
 
   test('F3 a broken link falls back to the saved code and says so', async ({ page }) => {
-    await seed(page, { 'swv:code': JSON.stringify('sequenceDiagram\n  %% @title Saved\n  A->>B: x') });
+    await seed(page, {
+      'swv:code': JSON.stringify('sequenceDiagram\n  %% @title Saved\n  A->>B: x'),
+    });
     await page.goto('/#z.not-valid-data');
     await expect(toastBox(page)).toContainText(
       'The code in this link could not be read, so the saved code is shown',

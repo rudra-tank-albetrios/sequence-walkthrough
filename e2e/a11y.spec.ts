@@ -6,7 +6,9 @@ import { diagram, expectNoAxeViolations, openFocused } from './helpers.ts';
 // alone is checked in app.spec.ts and the bare step bar in walkthrough.spec.ts.
 
 test.describe('accessibility with things open', () => {
-  test('the step bar with the Behind and bookmark popovers, the note editor and Find', async ({ page }) => {
+  test('the step bar with the Behind and bookmark popovers, the note editor and Find', async ({
+    page,
+  }) => {
     await openFocused(page);
     await page.keyboard.press('ArrowRight');
     await page.getByTestId('behind-btn').click();
@@ -30,7 +32,9 @@ test.describe('accessibility with things open', () => {
     await expectNoAxeViolations(page);
   });
 
-  test('the panels: every Insight tab, the code panel, the table and presenter mode', async ({ page }) => {
+  test('the panels: every Insight tab, the code panel, the table and presenter mode', async ({
+    page,
+  }) => {
     await openFocused(page);
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('i');
