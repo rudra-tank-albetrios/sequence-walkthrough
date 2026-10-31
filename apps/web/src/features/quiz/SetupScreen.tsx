@@ -7,6 +7,7 @@ import { flowId } from '../../shared/storage/notes.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { ChoiceGroup } from './ChoiceGroup.tsx';
 import { CUSTOM_MINUTES, validMinutes } from './clock.ts';
+import { modelHosts } from './hosts.ts';
 import { useQuizStore } from './quizStore.ts';
 import { pickSample, sampleQuestions } from './sample/index.ts';
 import {
@@ -60,12 +61,15 @@ function SourceNote({
   source,
   hasSample,
   ready,
+  hosts,
   pick,
   onPick,
 }: {
   source: QuizSource | null;
   hasSample: boolean;
   ready: boolean;
+  /** Where the text goes, named before anything is sent (plan section 4). */
+  hosts: string[];
   pick: QuizSource;
   onPick: (source: QuizSource) => void;
 }) {
@@ -89,7 +93,7 @@ function SourceNote({
         <p className={styles.note}>
           Your model gets a short summary of this flow (never the diagram code), the questions you
           were asked lately and your weak topics. Written answers go to it for marking, in one batch.
-          Nothing goes anywhere else.
+          All of it goes to <strong>{hosts.join(', ')}</strong> with your key, and nowhere else.
         </p>
       ) : null}
       {source === 'sample' && !ready ? (
@@ -135,6 +139,7 @@ export function SetupScreen({ flow }: { flow: Flow }) {
   const [pick, setPick] = useState<QuizSource>('model');
 
   const ready = hasUsableModel();
+  const hosts = ready ? modelHosts() : [];
   const hasSample = sampleQuestions(flow).length > 0;
   const source: QuizSource | null = ready ? (hasSample ? pick : 'model') : hasSample ? 'sample' : null;
 
@@ -237,7 +242,14 @@ export function SetupScreen({ flow }: { flow: Flow }) {
           </div>
         ) : null}
       </div>
-      <SourceNote source={source} hasSample={hasSample} ready={ready} pick={pick} onPick={setPick} />
+      <SourceNote
+        source={source}
+        hasSample={hasSample}
+        ready={ready}
+        hosts={hosts}
+        pick={pick}
+        onPick={setPick}
+      />
       {source === 'sample' && sampleSize < count ? (
         <p className={sampleSize > 0 ? styles.note : styles.errorText} role="status">
           {sampleSize > 0

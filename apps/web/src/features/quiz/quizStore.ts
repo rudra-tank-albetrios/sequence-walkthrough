@@ -12,6 +12,7 @@ import {
   type QuizRetry,
 } from '../../shared/storage/weakPoints.ts';
 import { generateQuestions, QuizError } from './generate.ts';
+import { announceHosts } from './hosts.ts';
 import { chapterOf, markWritten, marksFor, type Answers, type Marks } from './marking.ts';
 import { loadRecentQuestions, rememberQuestions } from './recent.ts';
 import { pickSample } from './sample/index.ts';
@@ -163,6 +164,8 @@ export const useQuizStore = create<QuizState>((set, get) => {
       set({ ...EMPTY_SESSION, phase: 'loading', config, source, flow });
       const id = flowId(flow);
       try {
+        // The set-up screen named the hosts the text goes to; Start means the notice was read.
+        if (source === 'model') announceHosts();
         const [points, recent] = await Promise.all([loadWeakPoints(), loadRecentQuestions(id)]);
         const weak = weakTopics(points, id);
         const questions =

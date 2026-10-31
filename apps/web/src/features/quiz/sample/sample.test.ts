@@ -1,9 +1,10 @@
 import { parseFlow, type Flow } from '@swv/core';
 import { describe, expect, it } from 'vitest';
 
+import demoOnDisk from '../../../../../../examples/demo-store/flows/place-order.mmd?raw';
 import { DEFAULT_DIAGRAM } from '../../../shared/lib/defaultDiagram.ts';
 import { marksFor } from '../marking.ts';
-import { stepEvidence, isSupported } from '../support.ts';
+import { isSupported, stepEvidence, unsupportedFacts } from '../support.ts';
 import {
   DEFAULT_CONFIG,
   DIFFICULTIES,
@@ -17,7 +18,8 @@ import { HARD } from './hard.ts';
 import { pickSample, sampleQuestions } from './index.ts';
 import { MEDIUM } from './medium.ts';
 
-const flow: Flow = parseFlow(DEFAULT_DIAGRAM).flow;
+// The demo flow as it is on disk, read with the parser the viewer uses.
+const flow: Flow = parseFlow(demoOnDisk).flow;
 const written = [...EASY, ...MEDIUM, ...HARD];
 const questions = sampleQuestions(flow);
 
@@ -32,6 +34,12 @@ const seeded = () => {
 const config = (patch: Partial<QuizConfig>): QuizConfig => ({ ...DEFAULT_CONFIG, ...patch });
 
 describe('the built-in sample quiz, against the demo flow on disk', () => {
+  it('is checked against the flow the page ships', () => {
+    expect(DEFAULT_DIAGRAM).toBe(demoOnDisk);
+    expect(flow.isSequence).toBe(true);
+    expect(flow.steps.length).toBeGreaterThan(0);
+  });
+
   // These two prove the sample stays true. If the demo flow changes, they name the question to fix.
   it.each(written.map((sample) => [sample.question, sample] as const))(
     'names a real step and the flow supports its answer: %s',
@@ -39,7 +47,10 @@ describe('the built-in sample quiz, against the demo flow on disk', () => {
       const step = flow.steps.find((candidate) => candidate.key === sample.step);
       expect(step, `no step with the key ${sample.step}`).toBeDefined();
       if (!step) return;
-      expect(isSupported(sample.answer, stepEvidence(flow, step))).toBe(true);
+      const evidence = stepEvidence(flow, step);
+      expect(isSupported(sample.answer, evidence)).toBe(true);
+      expect(unsupportedFacts(sample.why, evidence)).toEqual([]);
+      if (sample.options) expect(sample.options).toContain(sample.answer);
     },
   );
 

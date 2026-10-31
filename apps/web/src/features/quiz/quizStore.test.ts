@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { DEFAULT_DIAGRAM } from '../../shared/lib/defaultDiagram.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
+import { flowId } from '../../shared/storage/notes.ts';
 import {
   clearWeakPoints,
   loadWeakPoints,
@@ -10,6 +11,7 @@ import {
   requestQuizRetry,
 } from '../../shared/storage/weakPoints.ts';
 import { useQuizStore } from './quizStore.ts';
+import { forgetRecentQuestions } from './recent.ts';
 import { goodItems, quizReply } from './testReplies.ts';
 import { DEFAULT_CONFIG, type QuizConfig } from './types.ts';
 
@@ -28,6 +30,9 @@ beforeEach(async () => {
   sessionStorage.clear();
   await clearWeakPoints();
   useFlowStore.getState().setCode(DEFAULT_DIAGRAM);
+  // Each test is the first quiz on this flow: nothing is "recent" from an earlier one.
+  const { flow } = useFlowStore.getState();
+  if (flow) await forgetRecentQuestions(flowId(flow));
   store().leave();
   store().dropRetry();
   useFlowStore.getState().setUi({ quizOpen: false, aiSettingsOpen: false });

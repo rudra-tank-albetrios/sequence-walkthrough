@@ -138,7 +138,8 @@ describe('bad replies from the model', () => {
   });
 
   it('rejects a question naming a missing step and asks again only for that place', async () => {
-    const fix = goodItems({}, 1).slice(0, 1);
+    // The first reply already holds the sample's first two easy choice questions.
+    const fix = goodItems({}, 2).slice(0, 1);
     const fetched = repliesInOrder(quizReply(firstChanged({ step: 9999 })), quizReply(fix));
     const questions = await generateQuestions(args());
     expect(questions).toHaveLength(5);

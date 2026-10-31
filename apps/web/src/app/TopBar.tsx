@@ -127,6 +127,14 @@ export function TopBar() {
         >
           How it works
         </Button>
+        {/* Temporary, like the item in More: the tool registry of plan 8.5 takes over both. */}
+        <Button
+          className={styles.extra}
+          title="A quiz on the flow on screen"
+          onClick={() => setUi({ quizOpen: true })}
+        >
+          Quiz
+        </Button>
         <span className={styles.extra}>
           <Menu label="Export and share" trigger={<Button>Export ▾</Button>}>
             <ExportMenuItems />

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { dbGet, dbUpdate } from '../../shared/storage/db.ts';
+import { dbDelete, dbGet, dbUpdate } from '../../shared/storage/db.ts';
 
 /** Questions asked lately in a flow, kept so the next quiz can avoid them (plan section 8.9). */
 
@@ -17,6 +17,11 @@ function valid(stored: unknown): string[] {
 /** Newest first. */
 export async function loadRecentQuestions(flowId: string): Promise<string[]> {
   return valid(await dbGet(RECENT_PREFIX + flowId));
+}
+
+/** Forgets a flow's list, for tests that run several quizzes on the same flow. */
+export async function forgetRecentQuestions(flowId: string): Promise<void> {
+  await dbDelete(RECENT_PREFIX + flowId);
 }
 
 export async function rememberQuestions(flowId: string, questions: readonly string[]): Promise<void> {
