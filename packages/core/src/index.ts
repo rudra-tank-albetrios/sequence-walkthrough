@@ -3,6 +3,8 @@ export { findArrow, parseArrowLeft } from './arrows.ts';
 export { bodyText, dataTouched, joinPayloads, payloadDiff, type PayloadDiff } from './data.ts';
 export { buildFlow } from './flow.ts';
 export { parseFlow, type ParsedFlow } from './parse.ts';
+export { REVIEW_AREA_LABEL, REVIEW_RULES, reviewFlow } from './review/index.ts';
+export type * from './review/types.ts';
 export { cutHash, parseSequence } from './sequence.ts';
 export { skipFrontMatter, splitStatements } from './statements.ts';
 export { decodeEntities, isCodeRef, isFollowable, normLabel, splitLabel, tokens } from './text.ts';
