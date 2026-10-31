@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 // What the parity specs share. Page scripts cast `globalThis` by hand: this project has no DOM lib.
 
@@ -173,4 +173,78 @@ export async function expectNoAxeViolations(page: Page): Promise<void> {
   expect(
     results.violations.map((v) => ({ id: v.id, nodes: v.nodes.map((n) => n.target) })),
   ).toEqual([]);
+}
+
+/** The viewport, which Playwright may report as null. */
+export function viewportOf(page: Page): { width: number; height: number } {
+  const size = page.viewportSize();
+  if (!size) throw new Error('No viewport');
+  return size;
+}
+
+/** The element's box, which Playwright reports as null for one that is not drawn. */
+export async function boxOf(
+  locator: Locator,
+): Promise<{ x: number; y: number; width: number; height: number }> {
+  const rect = await locator.boundingBox();
+  if (!rect) throw new Error('Not on the page');
+  return rect;
+}
+
+// The new design (plan 8.5 to 8.7): the tools live in four header groups and open in one overlay.
+
+export const overlay = (page: Page) => page.getByTestId('overlay');
+
+/** Opens a tool from its header group: the group's menu, then the item. */
+export async function openTool(page: Page, group: string, tool: string | RegExp): Promise<void> {
+  await page.getByRole('button', { name: group, exact: true }).click();
+  await page.getByRole('menuitem', { name: tool }).click();
+}
+
+/** Waits for the element's running animations, so a box is measured at rest. */
+export const settled = (locator: Locator): Promise<unknown> =>
+  locator.evaluate((el) =>
+    Promise.all(
+      (el as unknown as { getAnimations: () => { finished: Promise<unknown> }[] })
+        .getAnimations()
+        .map((animation) => animation.finished),
+    ),
+  );
+
+/** Opens a panel of the overlay and waits for it to be in place. */
+export async function openPanel(page: Page, group: string, tool: string | RegExp): Promise<void> {
+  await openTool(page, group, tool);
+  await expect(overlay(page)).toBeVisible();
+  await settled(overlay(page));
+}
+
+/** Closes the overlay with its button and waits until it is gone. */
+export async function closeOverlay(page: Page): Promise<void> {
+  await overlay(page).getByRole('button', { name: 'Close' }).click();
+  await expect(overlay(page)).toBeHidden();
+}
+
+/** The diagram theme select, inside Settings → Theme and display. */
+export const themeSelect = (page: Page) => overlay(page).locator('#themeSel');
+
+/** Picks a diagram theme in the Theme pane and closes it again. */
+/** A layer's box in the top row: Mermaid also draws one at the bottom, usually under the step bar. */
+export async function topActor(page: Page, alias: string): Promise<Locator> {
+  const all = svg(page).locator(`.swv-actor[data-alias="${alias}"]`);
+  let best = all.first();
+  let top = Infinity;
+  for (const actor of await all.all()) {
+    const box = await actor.boundingBox();
+    if (box && box.y < top) {
+      top = box.y;
+      best = actor;
+    }
+  }
+  return best;
+}
+
+export async function setDiagramTheme(page: Page, theme: string): Promise<void> {
+  await openPanel(page, 'Settings', 'Theme and display');
+  await themeSelect(page).selectOption(theme);
+  await closeOverlay(page);
 }

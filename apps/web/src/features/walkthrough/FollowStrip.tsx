@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Fragment } from 'react';
 
 import { cx } from '../../shared/lib/util.ts';
@@ -40,10 +41,10 @@ export function FollowStrip() {
         ))}
       </span>
       <Button variant="ghost" className={styles.small} aria-label="Previous step with this value" onClick={() => step(-1)}>
-        ‹
+        <ChevronLeft size={14} aria-hidden="true" />
       </Button>
       <Button variant="ghost" className={styles.small} aria-label="Next step with this value" onClick={() => step(1)}>
-        ›
+        <ChevronRight size={14} aria-hidden="true" />
       </Button>
       <Button
         variant="ghost"
@@ -56,7 +57,7 @@ export function FollowStrip() {
         Ask
       </Button>
       <Button variant="ghost" className={styles.small} aria-label="Stop following" onClick={() => setFollow(null)}>
-        ×
+        <X size={14} aria-hidden="true" />
       </Button>
     </div>
   );

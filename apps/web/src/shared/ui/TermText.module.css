@@ -11,7 +11,7 @@
 }
 
 .termPop {
-  z-index: 100;
+  z-index: var(--z-popover);
   width: min(360px, calc(100vw - 32px));
   padding: 10px;
   background: var(--surface);

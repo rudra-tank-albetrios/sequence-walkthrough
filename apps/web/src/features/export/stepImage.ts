@@ -1,4 +1,5 @@
 import { clamp } from '../../shared/lib/util.ts';
+import { useDiagramStore } from '../../shared/state/diagramStore.ts';
 import { context2d, makeCanvas, type Raster } from './raster.ts';
 
 /**
@@ -16,7 +17,7 @@ export interface VisibleCrop {
   k: number;
 }
 
-/** The part of the diagram inside the canvas, in diagram units, or null when it cannot be read. */
+/** The part of the diagram the floating header and dock leave visible, in diagram units, or null. */
 export function visibleCrop(svg: SVGSVGElement, width: number, height: number): VisibleCrop | null {
   const canvas = svg.closest('[role="application"]');
   if (!canvas || width <= 0 || height <= 0) return null;
@@ -24,16 +25,17 @@ export function visibleCrop(svg: SVGSVGElement, width: number, height: number): 
   const c = canvas.getBoundingClientRect();
   const k = s.width / width;
   if (!(k > 0)) return null;
+  const insets = useDiagramStore.getState().insets;
   const x0 = clamp((c.left - s.left) / k, 0, width);
   const x1 = clamp((c.right - s.left) / k, 0, width);
-  const y0 = clamp((c.top - s.top) / k, 0, height);
-  const y1 = clamp((c.bottom - s.top) / k, 0, height);
+  const y0 = clamp((c.top + insets.top - s.top) / k, 0, height);
+  const y1 = clamp((c.bottom - insets.bottom - s.top) / k, 0, height);
   if (x1 <= x0 || y1 <= y0) return null;
   return { x0, y0, x1, y1, k };
 }
 
 export interface PinnedHeader {
-  /** Screen offset of the header inside the canvas. */
+  /** Screen offset of the header from the top of the visible part of the canvas. */
   top: number;
   /** Band in diagram units. */
   hdrTop: number;
@@ -47,7 +49,8 @@ export function pinnedHeader(svg: SVGSVGElement): PinnedHeader | null {
   if (!(header instanceof SVGSVGElement) || !canvas || header.closest('[hidden]')) return null;
   const vb = header.viewBox.baseVal;
   if (!(vb.height > 0)) return null;
-  const top = header.getBoundingClientRect().top - canvas.getBoundingClientRect().top;
+  const canvasTop = canvas.getBoundingClientRect().top + useDiagramStore.getState().insets.top;
+  const top = header.getBoundingClientRect().top - canvasTop;
   return { top, hdrTop: vb.y - svg.viewBox.baseVal.y, hdrH: vb.height };
 }
 

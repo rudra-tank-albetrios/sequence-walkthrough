@@ -1,18 +1,21 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
+  camera,
   DEMO_STEPS,
   DEMO_TITLE,
-  camera,
   diagram,
   fixture,
   goToStep,
   heading,
   notice,
   openFocused,
+  openPanel,
   seed,
   stepInput,
   svg,
+  topActor,
+  themeSelect,
 } from './helpers.ts';
 
 const sized = async (page: Page) => {
@@ -169,7 +172,8 @@ test.describe('diagram', () => {
     await expect
       .poll(async () => {
         const { box, canvas } = await sized(page);
-        return Math.abs(box.width - (canvas.width - 48));
+        // 64 px stay free at each side, so the first and last layers clear the canvas tools.
+        return Math.abs(box.width - (canvas.width - 128));
       })
       .toBeLessThan(2);
     await page.keyboard.press('f');
@@ -225,7 +229,8 @@ test.describe('diagram', () => {
 
   test('D10 the theme list has eight names and the choice redraws and stays', async ({ page }) => {
     await openFocused(page);
-    const select = page.locator('#themeSel');
+    await openPanel(page, 'Settings', 'Theme and display');
+    const select = themeSelect(page);
     await expect(select.locator('option')).toHaveText([
       'redux-color',
       'redux',
@@ -252,6 +257,8 @@ test.describe('diagram', () => {
     );
     expect(stored.theme).toBe('dark');
     await page.reload();
+    await expect(svg(page)).toBeVisible({ timeout: 30_000 });
+    await openPanel(page, 'Settings', 'Theme and display');
     await expect(select).toHaveValue('dark');
   });
 
@@ -290,7 +297,7 @@ test.describe('diagram', () => {
 
   test('D13 hovering a participant shows its layer text', async ({ page }) => {
     await openFocused(page);
-    await svg(page).locator('.swv-actor[data-alias="RD"]').first().hover({ force: true });
+    await (await topActor(page, 'RD')).hover();
     const tip = page.getByTestId('arrow-tooltip');
     await expect(tip).toContainText('Redis');
     await expect(tip).toContainText('stock counters and per-order holds');
@@ -301,18 +308,18 @@ test.describe('diagram', () => {
     page,
   }) => {
     await openFocused(page);
-    const actor = svg(page).locator('.swv-actor[data-alias="RD"]').first();
-    await actor.click({ force: true });
+    const actor = await topActor(page, 'RD');
+    await actor.click();
     await expect(notice(page)).toHaveText(/^Showing only the \d+ arrows of Redis\./);
     await expect(svg(page).locator('[data-step].swv-out').first()).toBeAttached();
     await expect(svg(page)).toHaveClass(/swv-spot/);
     await page.getByRole('button', { name: 'Show all' }).click();
     await expect(svg(page).locator('[data-step].swv-out')).toHaveCount(0);
-    await actor.click({ force: true });
+    await actor.click();
     await expect(notice(page)).toBeVisible();
-    await actor.click({ force: true });
+    await actor.click();
     await expect(notice(page)).toBeHidden();
-    await actor.click({ force: true });
+    await actor.click();
     await expect(notice(page)).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(notice(page)).toBeHidden();
@@ -473,11 +480,8 @@ test.describe('diagram', () => {
   });
 
   test('D28 says so when Mermaid cannot be loaded', async ({ page }) => {
-    // Only the page's own entry may load: the drawing library comes in a later chunk.
-    await page.route(/\/assets\/.*\.js$/, async (route) => {
-      if (/\/assets\/index-[^/]*\.js$/.test(route.request().url())) await route.continue();
-      else await route.abort();
-    });
+    // The page itself loads; only the drawing library, a chunk of its own, cannot be fetched.
+    await page.route(/\/assets\/mermaid\.core-[^/]*\.js$/, (route) => route.abort());
     await page.goto('/');
     await expect(page.getByTestId('loading')).toHaveText(
       'Mermaid could not be loaded. Check the connection and reload the page.',

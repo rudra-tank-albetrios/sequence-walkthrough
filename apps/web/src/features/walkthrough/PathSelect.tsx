@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { hasPaths, pathBranches, type BranchChoice, type PathMode } from '../../shared/state/path.ts';
-import styles from './walkbar.module.css';
+import styles from './dock.module.css';
 
 function toPathMode(value: string, branches: BranchChoice[]): PathMode {
   if (value === 'happy' || value === 'errors') return value;
@@ -31,6 +31,7 @@ export function PathSelect({ flow }: { flow: Flow }) {
       title="Walk every step, the happy path only, the errors only, or one branch"
       value={value}
       data-testid="path-select"
+      data-tour="path-filter"
       onChange={(e) => {
         setPath(toPathMode(e.target.value, branches));
       }}

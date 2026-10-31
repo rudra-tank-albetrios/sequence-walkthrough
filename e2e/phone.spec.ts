@@ -1,15 +1,18 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-import { heading, open, openFocused, stepInput } from './helpers.ts';
+import {
+  closeOverlay,
+  heading,
+  open,
+  openFocused,
+  overlay,
+  settled,
+  stepInput,
+  viewportOf,
+} from './helpers.ts';
 
 // Parity rows O7 and O8 on the phone project (Pixel 7): the top bar keeps the title and the ⋯ menu,
 // the step bar drops its side cards, and the table, the code panel and Insight fill the screen.
-
-function viewport(page: Page): { width: number; height: number } {
-  const size = page.viewportSize();
-  if (!size) throw new Error('No viewport');
-  return size;
-}
 
 test.describe('phone layout', () => {
   test('O8 the top bar keeps the title and the ⋯ menu, which holds the export items', async ({
@@ -47,8 +50,8 @@ test.describe('phone layout', () => {
     const table = page.locator('#tableView');
     await expect(table).toBeVisible();
     const box = await table.boundingBox();
-    expect(box?.width).toBe(viewport(page).width);
-    expect(box?.height).toBe(viewport(page).height);
+    expect(box?.width).toBe(viewportOf(page).width);
+    expect(box?.height).toBe(viewportOf(page).height);
     // Rows are stacked cards: the header row is gone and each cell carries its label.
     await expect(table.locator('thead')).toBeHidden();
     await expect(table.locator('td[data-l="Step"]').first()).toBeVisible();
@@ -69,15 +72,19 @@ test.describe('phone layout', () => {
     await page.keyboard.press('c');
     const panel = page.locator('#codePanel');
     await expect(panel).toBeVisible();
-    expect((await panel.boundingBox())?.width).toBe(viewport(page).width);
+    expect((await panel.boundingBox())?.width).toBe(viewportOf(page).width);
     await expect(page.getByRole('textbox', { name: 'Diagram code' })).not.toBeFocused();
     await page.getByRole('button', { name: 'Close the code panel' }).click();
     await expect(panel).toBeHidden();
     await page.keyboard.press('i');
     const insight = page.getByTestId('insight');
     await expect(insight).toBeVisible();
-    expect((await insight.boundingBox())?.width).toBe(viewport(page).width);
-    await insight.getByRole('button', { name: 'Close the Insight panel' }).click();
+    // The overlay is nearly the whole screen on a phone: an 8 px margin on each side (plan 8.6).
+    await settled(overlay(page));
+    const box = await overlay(page).boundingBox();
+    expect(Math.abs((box?.width ?? 0) - (viewportOf(page).width - 16))).toBeLessThanOrEqual(1);
+    expect(Math.abs((box?.height ?? 0) - (viewportOf(page).height - 16))).toBeLessThanOrEqual(1);
+    await closeOverlay(page);
     await expect(insight).toBeHidden();
   });
 });

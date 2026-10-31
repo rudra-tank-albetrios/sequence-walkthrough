@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { openPanel } from './helpers.ts';
 import {
   arm,
   expectNothingRan,
@@ -113,9 +114,8 @@ test.describe('a hostile model reply', () => {
     await dialog.getByRole('button', { name: 'Ask', exact: true }).click();
     await dialog.getByRole('button', { name: 'Add to glossary' }).click();
     await page.keyboard.press('Escape');
-    await page.keyboard.press('i');
+    await openPanel(page, 'Learn', 'Glossary');
     const insight = page.getByTestId('insight');
-    await insight.getByRole('tab', { name: /Glossary/ }).click();
     await expect(insight).toContainText('onerror=');
     await expectNothingRan(armed, 'an answer kept in the glossary');
   });

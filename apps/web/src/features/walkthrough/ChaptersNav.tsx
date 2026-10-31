@@ -1,16 +1,14 @@
 import type { Flow } from '@swv/core';
-import { Fragment, useEffect, useRef, type CSSProperties } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 
 import { cx, plural } from '../../shared/lib/util.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
-import styles from './walkbar.module.css';
+import styles from './dock.module.css';
 
-/** One tab per chapter in its hue; the current one is underlined. Hidden when there are none. */
+/** One label per chapter, each as wide as its stretch of the Flow Rail below. Hidden when there are none. */
 export function ChaptersNav({ flow }: { flow: Flow }) {
   const cur = useFlowStore((s) => s.cur);
   const go = useFlowStore((s) => s.go);
-  const chapterLock = useFlowStore((s) => s.chapterLock);
-  const toggleChapterLock = useFlowStore((s) => s.toggleChapterLock);
   const navRef = useRef<HTMLElement | null>(null);
   const current = flow.steps[cur]?.section ?? -1;
 
@@ -23,35 +21,20 @@ export function ChaptersNav({ flow }: { flow: Flow }) {
   return (
     <nav ref={navRef} className={styles.chapters} aria-label="Chapters" data-chapters data-testid="chapters">
       {flow.sections.map((sec, i) => (
-        <Fragment key={sec.idx}>
-          {i > 0 ? (
-            <span className={styles.sep} aria-hidden="true">
-              ·
-            </span>
-          ) : null}
-          <button
-            type="button"
-            className={cx(styles.chapter, i === current && styles.cur)}
-            style={{ '--ch': sec.hue } as CSSProperties}
-            {...(i === current ? { 'aria-current': 'step' as const } : {})}
-            title={sec.summary || `${plural(sec.count, 'step')}, from step ${sec.firstStep + 1}`}
-            onClick={() => go(sec.firstStep)}
-          >
-            <span className={styles.dot} aria-hidden="true" />
-            {sec.name}
-          </button>
-        </Fragment>
+        <button
+          key={sec.idx}
+          type="button"
+          className={cx(styles.chapter, i === current && styles.cur)}
+          style={{ '--ch': sec.hue, flexGrow: sec.count } as CSSProperties}
+          {...(i === current ? { 'aria-current': 'step' as const } : {})}
+          title={sec.summary || `${plural(sec.count, 'step')}, from step ${String(sec.firstStep + 1)}`}
+          onClick={() => {
+            go(sec.firstStep);
+          }}
+        >
+          <span>{sec.name}</span>
+        </button>
       ))}
-      <button
-        type="button"
-        className={styles.lock}
-        aria-pressed={chapterLock}
-        aria-label="Stay inside the current chapter"
-        title="Stay inside the current chapter (K)"
-        onClick={toggleChapterLock}
-      >
-        <span aria-hidden="true">{chapterLock ? '🔒' : '🔓'}</span>
-      </button>
     </nav>
   );
 }

@@ -54,15 +54,22 @@ export interface HeaderPlacement {
   height: number;
 }
 
-/** Where the pinned header sits for the current camera, or null while the real row is on screen. */
-export function headerPlacement(geo: Geo, camera: { x: number; y: number; k: number }): HeaderPlacement | null {
+/**
+ * Where the pinned header sits for the current camera, or null while the real row is on screen.
+ * It pins under the floating page header, `insetTop` pixels down the canvas.
+ */
+export function headerPlacement(
+  geo: Geo,
+  camera: { x: number; y: number; k: number },
+  insetTop = 0,
+): HeaderPlacement | null {
   const k = camera.k;
   const rowScreen = camera.y + geo.hdrTop * k;
   const hH = geo.hdrH * k;
-  if (rowScreen >= 0) return null;
+  if (rowScreen >= insetTop) return null;
   const endScreen = camera.y + geo.bottomTop * k;
-  const top = Math.min(0, endScreen - hH - 4 * k);
-  if (top + hH <= 0) return null;
+  const top = Math.min(insetTop, endScreen - hH - 4 * k);
+  if (top + hH <= insetTop) return null;
   return { top, height: hH };
 }
 

@@ -76,7 +76,8 @@ describe('WalkBar with the demo flow', () => {
     render(<WalkBar />);
     expect(flow.sections.length).toBeGreaterThan(1);
     expect(screen.getAllByTestId('progress-seg')).toHaveLength(flow.sections.length);
-    expect(within(screen.getByTestId('chapters')).getAllByRole('button')).toHaveLength(flow.sections.length + 1);
+    expect(within(screen.getByTestId('chapters')).getAllByRole('button')).toHaveLength(flow.sections.length);
+    expect(screen.getByRole('button', { name: 'Stay inside the current chapter' })).toBeTruthy();
   });
 
   it('offers the path filter with the branch options', () => {

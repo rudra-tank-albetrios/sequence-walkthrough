@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
+  closeOverlay,
   DEMO_NOTES_KEY,
   DEMO_STEPS,
   diagram,
@@ -10,8 +11,10 @@ import {
   notice,
   open,
   openFocused,
+  overlay,
   stepInput,
   svg,
+  topActor,
   toastBox,
 } from './helpers.ts';
 
@@ -146,17 +149,25 @@ test.describe('walkthrough', () => {
     await expect(stepInput(page)).toHaveValue(String(Number(last) + 1));
   });
 
-  test('W6 the progress bar fills and its segments jump', async ({ page }) => {
+  test('W6 the Flow Rail fills and its chapters jump', async ({ page }) => {
     await openFocused(page);
     const progress = page.getByTestId('progress');
-    await expect(progress).toHaveAttribute('aria-label', `Progress: step 0 of ${DEMO_STEPS}`);
-    await expect(progress.locator('[data-done]')).toHaveCount(0);
+    await expect(progress).toHaveAttribute('aria-valuenow', '0');
+    await expect(progress).toHaveAttribute('aria-valuemax', String(DEMO_STEPS));
+    await expect(progress).toHaveAttribute('aria-valuetext', `Overview, ${DEMO_STEPS} steps`);
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowRight');
-    await expect(progress).toHaveAttribute('aria-label', `Progress: step 2 of ${DEMO_STEPS}`);
-    await expect(progress.locator('[data-done]')).toHaveCount(2);
+    await expect(progress).toHaveAttribute('aria-valuenow', '2');
+    await expect(progress).toHaveAttribute(
+      'aria-valuetext',
+      new RegExp(`^Step 2 of ${DEMO_STEPS}, `),
+    );
     await expect(page.getByTestId('progress-seg')).toHaveCount(5);
-    await page.getByTestId('progress-seg').last().click();
+    // The start of the last chapter: a click lands on the step under the pointer.
+    await page
+      .getByTestId('progress-seg')
+      .last()
+      .click({ position: { x: 1, y: 4 } });
     await expect(page.getByTestId('step-card')).toContainText('Send the email');
   });
 
@@ -214,11 +225,11 @@ test.describe('walkthrough', () => {
     await expect(notice(page)).toContainText('Redis');
     await page.keyboard.press('Escape');
     await overview.getByRole('button', { name: /side parts/ }).click();
-    await expect(page.getByRole('tab', { name: /Behind the scenes/ })).toHaveAttribute(
+    await expect(page.getByRole('tab', { name: /Side parts/ })).toHaveAttribute(
       'aria-selected',
       'true',
     );
-    await page.keyboard.press('Escape');
+    await closeOverlay(page);
     await overview.getByRole('button', { name: /terms/ }).click();
     await expect(page.getByRole('tab', { name: /Glossary/ })).toHaveAttribute(
       'aria-selected',
@@ -352,8 +363,8 @@ test.describe('walkthrough', () => {
     await expect(pop.locator('details[open]')).toContainText('hook');
     // The groups are sorted by kind, as version 2 sorted them.
     await expect(pop.locator('details').first()).toContainText('config');
-    await pop.getByRole('button', { name: 'Open in the Insight panel' }).click();
-    await expect(page.getByRole('tab', { name: /Behind the scenes/ })).toHaveAttribute(
+    await pop.getByRole('button', { name: 'Open the full list' }).click();
+    await expect(page.getByRole('tab', { name: /Side parts/ })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -414,17 +425,23 @@ test.describe('walkthrough', () => {
     await expect(page.locator('#topbar')).toBeHidden();
     const showHeader = page.getByRole('button', { name: 'Show the header' });
     await expect(showHeader).toHaveAttribute('aria-expanded', 'false');
+    // The tab puts the cards away; the dock stays, so Play and the Flow Rail are still there.
+    const deck = page.locator('[data-tour="deck"]');
+    const dock = page.locator('[data-tour="dock"]');
+    await expect(deck).toBeVisible();
     await page.getByRole('button', { name: 'Hide the step bar' }).click();
-    await expect(page.locator('#wbar')).toBeHidden();
+    await expect(deck).toBeHidden();
+    await expect(dock).toBeVisible();
     expect((await settings(page)).fold).toEqual({ top: true, bar: true });
     await page.reload();
     await expect(svg(page)).toBeVisible({ timeout: 30_000 });
     await expect(page.locator('#topbar')).toBeHidden();
-    await expect(page.locator('#wbar')).toBeHidden();
+    await expect(deck).toBeHidden();
+    await expect(dock).toBeVisible();
     await showHeader.click();
     await page.getByRole('button', { name: 'Show the step bar' }).click();
     await expect(page.locator('#topbar')).toBeVisible();
-    await expect(page.locator('#wbar')).toBeVisible();
+    await expect(deck).toBeVisible();
   });
 
   test('W15 the left tab exists only while the code is open, and the tabs re-centre', async ({
@@ -442,8 +459,17 @@ test.describe('walkthrough', () => {
     await expect(page.locator('#codePanel')).toBeHidden();
     await expect.poll(async () => (await top.boundingBox())?.x ?? 0).toBeCloseTo(centred, 0);
     await diagram(page).focus();
+    // The overlay is modal: while it is open the tabs are out of reach, as is all of the page behind
+    // it. It floats and takes no room, so they have not moved, and they come back when it closes.
     await page.keyboard.press('i');
-    await expect.poll(async () => (await top.boundingBox())?.x ?? 0).toBeLessThan(centred - 100);
+    await expect(overlay(page)).toBeVisible();
+    await expect(top).toHaveCount(0);
+    const behind = page.locator('button[aria-label="Hide the header"]');
+    expect((await behind.boundingBox())?.x ?? 0).toBeCloseTo(centred, 0);
+    await page.keyboard.press('Escape');
+    await expect(overlay(page)).toBeHidden();
+    await expect(top).toBeVisible();
+    expect((await top.boundingBox())?.x ?? 0).toBeCloseTo(centred, 0);
   });
 
   test('W16 the step box jumps on Enter, restores on Esc, selects on focus', async ({ page }) => {
@@ -471,10 +497,8 @@ test.describe('walkthrough', () => {
   test('W17 Esc closes one thing at a time, in order', async ({ page }) => {
     await openFocused(page);
     // The spotlight first, while the whole drawing is in view and no panel covers it.
-    await svg(page).locator('.swv-actor[data-alias="RD"]').first().click();
+    await (await topActor(page, 'RD')).click();
     await expect(notice(page)).toContainText('Showing only');
-    await page.keyboard.press('i');
-    await expect(page.getByTestId('insight')).toBeVisible();
     await page.keyboard.press('c');
     await expect(page.locator('#codePanel')).toBeVisible();
     await diagram(page).focus();
@@ -490,14 +514,18 @@ test.describe('walkthrough', () => {
     await expect(page.getByTestId('find')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('find')).toBeHidden();
+    // The overlay is modal, so it closes first and alone, whatever is open behind it.
+    await diagram(page).focus();
+    await page.keyboard.press('i');
+    await expect(overlay(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(overlay(page)).toBeHidden();
     await expect(notice(page)).toContainText('Showing only');
+    await diagram(page).focus();
     await page.keyboard.press('Escape');
     await expect(notice(page)).toContainText('Path:');
     await page.keyboard.press('Escape');
     await expect(notice(page)).toBeHidden();
-    await expect(page.getByTestId('insight')).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(page.getByTestId('insight')).toBeHidden();
     await expect(page.locator('#codePanel')).toBeVisible();
     await diagram(page).focus();
     await page.keyboard.press('Escape');
@@ -508,19 +536,21 @@ test.describe('walkthrough', () => {
     await expect(page.getByTestId('overview')).toBeVisible();
   });
 
-  test('W17 Follow closes before Insight', async ({ page }) => {
+  test('W17 the overlay closes before Follow', async ({ page }) => {
     await openFocused(page);
-    await page.keyboard.press('i');
     await goToStep(page, 4);
     await page.getByTestId('step-card').locator('[data-tok]').first().click();
     const strip = page.getByTestId('follow-strip');
     await expect(strip).toBeVisible();
     await diagram(page).focus();
+    await page.keyboard.press('i');
+    await expect(overlay(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(overlay(page)).toBeHidden();
+    await expect(strip).toBeVisible();
+    await diagram(page).focus();
     await page.keyboard.press('Escape');
     await expect(strip).toBeHidden();
-    await expect(page.getByTestId('insight')).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(page.getByTestId('insight')).toBeHidden();
   });
 
   test('W18 a toast stays about three seconds and the next replaces it', async ({ page }) => {
@@ -538,11 +568,18 @@ test.describe('walkthrough', () => {
     });
   });
 
-  test('W19 W20 the canvas row has its six buttons and the notice its Show all', async ({
+  test('W19 W20 the canvas row, the dock and the header have their controls and the notice its Show all', async ({
     page,
   }) => {
     await openFocused(page);
-    for (const name of [/Code/, /^Play/, 'Dim others', 'Chapter band', 'Insight', 'Hide']) {
+    for (const name of [
+      /Code/,
+      /^Play/,
+      'Dim others',
+      'Chapter band',
+      'Analyze',
+      'Hide controls',
+    ]) {
       await expect(
         page.getByRole('button', { name, exact: typeof name === 'string' }).first(),
       ).toBeVisible();

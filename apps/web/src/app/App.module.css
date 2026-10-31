@@ -1,16 +1,23 @@
-/* One-screen tool: top bar, stage, step bar. Fixed rows, so a folded header or step bar leaves its
-   row empty instead of shifting the stage. */
+/* One screen. The diagram fills it and the header and dock float over it, so a folded part gives
+   its space straight back to the diagram. useChromeInsets publishes how much they cover. */
 .app {
-  height: 100%;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  --chrome-top: 0px;
+  --chrome-bottom: 0px;
+  --chrome-left: 0px;
+  position: relative;
+  height: 100dvh;
+  overflow: hidden;
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
 }
 
+.app[data-code-open] {
+  --chrome-left: min(480px, 92%);
+}
+
 .stage {
-  position: relative;
-  min-height: 0;
+  position: absolute;
+  inset: 0;
   overflow: hidden;
 }
 
@@ -18,27 +25,28 @@
   position: absolute;
   right: max(12px, env(safe-area-inset-right, 0px));
   bottom: max(12px, env(safe-area-inset-bottom, 0px));
-  z-index: 40;
-  box-shadow: var(--shadow-1), var(--shadow-2);
+  z-index: var(--z-chrome);
+  box-shadow: var(--shadow-float);
 }
 
 /* Edge tabs: fold the header, the step bar or the code panel away; the tab stays to bring it back */
 .edge {
   position: absolute;
-  z-index: 35;
+  z-index: var(--z-chrome);
   display: grid;
   place-items: center;
   width: 36px;
   height: 14px;
   padding: 0;
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border: 1px solid var(--glass-edge);
+  background: var(--glass);
+  backdrop-filter: var(--glass-filter);
   color: var(--muted);
-  opacity: 0.75;
+  transition: color var(--t-fast);
 }
 
 .edge:hover {
-  opacity: 1;
+  color: var(--ink);
 }
 
 .edge svg {
@@ -51,10 +59,14 @@
   stroke-linejoin: round;
 }
 
-.top {
-  top: 0;
-  left: 50%;
+.top,
+.bottom {
+  left: calc(var(--chrome-left) + (100% - var(--chrome-left)) / 2);
   transform: translateX(-50%);
+}
+
+.top {
+  top: var(--chrome-top);
   border-top: 0;
   border-radius: 0 0 var(--r-sm) var(--r-sm);
 }
@@ -64,9 +76,7 @@
 }
 
 .bottom {
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: var(--chrome-bottom);
   border-bottom: 0;
   border-radius: var(--r-sm) var(--r-sm) 0 0;
 }
@@ -76,8 +86,8 @@
 }
 
 .left {
-  left: 0;
-  top: 50%;
+  left: var(--chrome-left);
+  top: calc(var(--chrome-top) + (100% - var(--chrome-top)) / 2);
   width: 14px;
   height: 36px;
   transform: translateY(-50%);
@@ -86,41 +96,16 @@
 }
 
 .left svg {
-  transform: rotate(90deg);
-}
-
-.left[aria-expanded='true'] svg {
   transform: rotate(-90deg);
 }
 
-/* The tabs stay centred over the part of the canvas the panels leave free. */
-.stage[data-code-open] {
-  --cp-w: min(480px, 92%);
-}
-
-.stage[data-code-open] .left {
-  left: var(--cp-w);
-}
-
-.stage[data-code-open] .top,
-.stage[data-code-open] .bottom {
-  left: calc(var(--cp-w) + (100% - var(--cp-w)) / 2);
-}
-
-.stage[data-insight-open]:not([data-code-open]) .top,
-.stage[data-insight-open]:not([data-code-open]) .bottom {
-  left: calc((100% - min(520px, 92%)) / 2);
-}
-
 @media (max-width: 720px) {
-  .stage[data-code-open] .left {
+  .left {
     display: none;
   }
 
-  .stage[data-code-open] .top,
-  .stage[data-code-open] .bottom,
-  .stage[data-insight-open]:not([data-code-open]) .top,
-  .stage[data-insight-open]:not([data-code-open]) .bottom {
+  .top,
+  .bottom {
     left: 50%;
   }
 }

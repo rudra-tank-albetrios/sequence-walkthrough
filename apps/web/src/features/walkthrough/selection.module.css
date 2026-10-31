@@ -1,7 +1,7 @@
 /* Right-click menu on a selected word */
 .menu {
   position: fixed;
-  z-index: 100;
+  z-index: var(--z-popover);
   min-width: 160px;
   padding: 4px;
   background: var(--surface);

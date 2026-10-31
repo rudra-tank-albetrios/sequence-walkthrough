@@ -2,15 +2,15 @@
 .panel {
   position: absolute;
   left: 0;
-  top: 0;
+  top: var(--chrome-top, 0px);
   bottom: 0;
   width: min(480px, 92%);
-  z-index: 20;
+  z-index: var(--z-panel);
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto auto;
   background: var(--surface);
   border-right: 1px solid var(--line);
-  box-shadow: var(--shadow-1), var(--shadow-2);
+  box-shadow: var(--shadow-float);
 }
 
 .head {
@@ -264,7 +264,7 @@
     position: fixed;
     inset: 0;
     width: auto;
-    z-index: 80;
+    z-index: calc(var(--z-chrome) + 1);
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
