@@ -421,10 +421,8 @@ test.describe('import', () => {
 
 test.describe('saving and copying', () => {
   test('F16 without a drawing there is nothing to export', async ({ page }) => {
-    await page.route(/\/assets\/.*\.js$/, async (route) => {
-      if (/\/assets\/index-[^/]*\.js$/.test(route.request().url())) await route.continue();
-      else await route.abort();
-    });
+    // The page itself loads; only the drawing library, a chunk of its own, cannot be fetched.
+    await page.route(/\/assets\/mermaid\.core-[^/]*\.js$/, (route) => route.abort());
     await page.goto('/');
     await expect(page.getByTestId('loading')).toContainText('could not be loaded');
     await pick(page, /^SVG/);
