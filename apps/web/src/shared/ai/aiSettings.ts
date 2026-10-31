@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import { Store } from '../../shared/storage/store.ts';
+import { Store } from '../storage/store.ts';
 import { isProviderId, providerFor, type ProviderId } from './providers.ts';
 
 export type AskMode = 'project' | 'general';

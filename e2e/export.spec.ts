@@ -44,7 +44,7 @@ const MENU_ITEMS = [
 ];
 
 const CSV_HEADER =
-  'Step,Chapter,From,To,Kind,Status,Sends,Does,Branch,Payload,Also involved,Effects,Unconfirmed,Ref';
+  'Step,Chapter,From,To,Kind,Status,Sends,Does,Branch,Payload,Also involved,Effects,Unconfirmed,Threats,Ref';
 
 const BOM = String.fromCharCode(0xfeff);
 

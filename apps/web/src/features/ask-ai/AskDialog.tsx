@@ -1,17 +1,17 @@
 import type { Flow, Step } from '@swv/core';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { isReady, useAiSettingsStore, type AskMode } from '../../shared/ai/aiSettings.ts';
+import { providerFor, shortName } from '../../shared/ai/providers.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { allTerms, useGlossaryStore } from '../../shared/state/glossaryStore.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Chip } from '../../shared/ui/Chip.tsx';
 import { Dialog } from '../../shared/ui/Dialog.tsx';
 import { toast } from '../../shared/ui/toast.ts';
-import { isReady, useAiSettingsStore, type AskMode } from './aiSettings.ts';
 import { appendAnswerToNote, askQuestion, termOf } from './ask.ts';
 import { AskAnswer, type Answer } from './AskAnswer.tsx';
 import { suggestedChips } from './chips.ts';
-import { providerFor, shortName } from './providers.ts';
 import styles from './ask.module.css';
 
 /** Short answers about the current step from the model the person chose (`A`, or the card's button). */

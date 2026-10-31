@@ -104,6 +104,7 @@ const TAGS = [
   '@schema',
   '@state',
   '@unconfirmed',
+  '@threat',
 ];
 
 function Keys({ row }: { row: Row }) {

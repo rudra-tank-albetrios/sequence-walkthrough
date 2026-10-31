@@ -90,8 +90,26 @@ export function OverviewCard({ flow }: { flow: Flow }) {
           );
         })}
       </div>
-      {flow.uses.length > 0 || flow.terms.length > 0 || flow.unconfirmed > 0 ? (
-        <div className={styles.ovExtras}>
+      <div className={styles.ovExtras}>
+          <Chip
+            data-open="review"
+            onClick={() => {
+              setUi({ reviewOpen: true });
+            }}
+          >
+            Review this flow
+          </Chip>
+          {flow.threats.length > 0 ? (
+            <Chip
+              tone="error"
+              data-open="threats"
+              onClick={() => {
+                setUi({ threatsOpen: true });
+              }}
+            >
+              {plural(flow.threats.length, 'possible threat')}
+            </Chip>
+          ) : null}
           {flow.uses.length > 0 ? (
             <Chip data-open="behind" onClick={openTool('side-parts')}>
               {plural(flow.uses.length, 'side part')}
@@ -107,8 +125,7 @@ export function OverviewCard({ flow }: { flow: Flow }) {
               {plural(flow.unconfirmed, 'unconfirmed detail')}
             </Chip>
           ) : null}
-        </div>
-      ) : null}
+      </div>
     </div>
   );
 }

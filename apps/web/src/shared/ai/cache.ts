@@ -1,5 +1,5 @@
-import { hashStr } from '../../shared/lib/util.ts';
-import { Store } from '../../shared/storage/store.ts';
+import { hashStr } from '../lib/util.ts';
+import { Store } from '../storage/store.ts';
 
 /** `swv:ai:cache`: answers by `hashStr(provider + '|' + user message)`, the 200 newest kept. */
 export const AI_CACHE_KEY = 'swv:ai:cache';

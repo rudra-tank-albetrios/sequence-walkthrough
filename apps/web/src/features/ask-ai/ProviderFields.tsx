@@ -1,9 +1,9 @@
 import { Eye, EyeOff } from 'lucide-react';
 import { useId, useState } from 'react';
 
+import type { AiSettings } from '../../shared/ai/aiSettings.ts';
+import { providerFor } from '../../shared/ai/providers.ts';
 import { Button } from '../../shared/ui/Button.tsx';
-import type { AiSettings } from './aiSettings.ts';
-import { providerFor } from './providers.ts';
 import styles from './settings.module.css';
 
 export interface ProviderFieldsProps {

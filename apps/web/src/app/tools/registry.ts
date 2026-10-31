@@ -27,6 +27,7 @@ import {
   ScanSearch,
   Shapes,
   Share2,
+  ShieldCheck,
   SlidersHorizontal,
   Table,
   TriangleAlert,
@@ -118,6 +119,7 @@ export const TOOLS: readonly Tool[] = [
   { id: 'guide', group: 'learn', label: 'How it works', icon: Compass, tour: 'tool-guide', run: setUi({ guideOpen: true }) },
   { id: 'shortcuts', group: 'learn', label: 'Shortcuts and help', icon: Keyboard, tour: 'tool-shortcuts', hint: '?', run: setUi({ shortcutsOpen: true }) },
 
+  { id: 'review', group: 'analyze', label: 'Review this flow', icon: ShieldCheck, tour: 'tool-review', host: onDemand(() => import('../../features/review/index.ts'), (m) => m.ReviewHost), run: setUi({ reviewOpen: true }) },
   { id: 'layers', group: 'analyze', label: 'Layers', icon: Layers, tour: 'tool-layers', count: (f) => insightCount(f, 'layers'), panel: onDemand(insight, (m) => m.LayersPane) },
   { id: 'endpoints', group: 'analyze', label: 'Endpoints', icon: Route, tour: 'tool-endpoints', count: (f) => insightCount(f, 'endpoints'), panel: onDemand(insight, (m) => m.EndpointsPane) },
   { id: 'errors', group: 'analyze', label: 'Errors', icon: TriangleAlert, tour: 'tool-errors', count: (f) => insightCount(f, 'errors'), panel: onDemand(insight, (m) => m.ErrorsPane) },

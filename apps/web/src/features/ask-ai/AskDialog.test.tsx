@@ -3,12 +3,12 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { DEFAULT_AI_SETTINGS, useAiSettingsStore } from '../../shared/ai/aiSettings.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { useGlossaryStore } from '../../shared/state/glossaryStore.ts';
 import { useNotesStore } from '../../shared/state/notesStore.ts';
 import { flowId } from '../../shared/storage/notes.ts';
 import { Store } from '../../shared/storage/store.ts';
-import { DEFAULT_AI_SETTINGS, useAiSettingsStore } from './aiSettings.ts';
 import { AskDialog } from './AskDialog.tsx';
 
 const CODE = `sequenceDiagram

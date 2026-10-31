@@ -1,5 +1,5 @@
 import * as RadixDialog from '@radix-ui/react-dialog';
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 
 import { Button } from './Button.tsx';
 import styles from './Dialog.module.css';
@@ -29,11 +29,29 @@ export function Dialog({
   children,
   actions,
 }: DialogProps) {
+  // These dialogs open from a store flag, not a Radix trigger, so Radix cannot give the keyboard
+  // back by itself. The element that had it when the dialog opened gets it back when it closes.
+  // A layout effect runs before Radix moves the focus into the dialog.
+  const opener = useRef<Element | null>(null);
+  useLayoutEffect(() => {
+    if (open) opener.current = document.activeElement;
+  }, [open]);
+  const returnFocus = (event: Event) => {
+    const el = opener.current;
+    if (el instanceof HTMLElement && el !== document.body && el.isConnected) {
+      event.preventDefault();
+      el.focus();
+    }
+  };
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay className={styles.overlay} />
-        <RadixDialog.Content className={`${styles.content} ${styles[size]}`} data-modal>
+        <RadixDialog.Content
+          className={`${styles.content} ${styles[size]}`}
+          data-modal
+          onCloseAutoFocus={returnFocus}
+        >
           <div className={styles.head}>
             <RadixDialog.Title className={styles.title}>{title}</RadixDialog.Title>
             <RadixDialog.Close asChild>
