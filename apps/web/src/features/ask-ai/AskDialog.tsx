@@ -8,7 +8,7 @@ import { Chip } from '../../shared/ui/Chip.tsx';
 import { Dialog } from '../../shared/ui/Dialog.tsx';
 import { toast } from '../../shared/ui/toast.ts';
 import { isReady, useAiSettingsStore, type AskMode } from './aiSettings.ts';
-import { appendAnswerToNote, askQuestion, takePrefill, termOf } from './ask.ts';
+import { appendAnswerToNote, askQuestion, termOf } from './ask.ts';
 import { AskAnswer, type Answer } from './AskAnswer.tsx';
 import { suggestedChips } from './chips.ts';
 import { providerFor, shortName } from './providers.ts';
@@ -50,7 +50,11 @@ function AskBody({ flow, step }: { flow: Flow; step: Step }) {
   const saved = useGlossaryStore((s) => s.saved);
   const terms = useMemo(() => allTerms(flow, saved), [flow, saved]);
   const chips = useMemo(() => suggestedChips(step, terms), [step, terms]);
-  const [prefill] = useState(takePrefill);
+  const [prefill] = useState(() => {
+    const prepared = useFlowStore.getState().ui.askQuestion ?? '';
+    if (prepared) useFlowStore.getState().setUi({ askQuestion: null });
+    return prepared;
+  });
   const [question, setQuestion] = useState(prefill);
   const [answer, setAnswer] = useState<Answer | null>(null);
   const abortRef = useRef<AbortController | null>(null);

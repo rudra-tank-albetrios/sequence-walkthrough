@@ -1,8 +1,9 @@
 import { STATUS_TEXT } from '@swv/core';
 
+import { cx } from '../../shared/lib/util.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Chip } from '../../shared/ui/Chip.tsx';
-import { cx, statusTone } from './derive.ts';
+import { statusTone } from './derive.ts';
 import styles from './insight.module.css';
 
 /** "step N" (or just the number as a chip) that jumps to the step; the current step is marked. */

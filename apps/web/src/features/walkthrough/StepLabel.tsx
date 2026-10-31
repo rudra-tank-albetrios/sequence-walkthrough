@@ -1,10 +1,10 @@
 import { STATUS_RE, STATUS_TEXT, type Flow, type Step } from '@swv/core';
 import { Fragment } from 'react';
 
+import { cx } from '../../shared/lib/util.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Chip } from '../../shared/ui/Chip.tsx';
 import styles from './card.module.css';
-import { cx } from './cx.ts';
 import { TokenText } from './RichText.tsx';
 import { statusFamily } from './steps.ts';
 

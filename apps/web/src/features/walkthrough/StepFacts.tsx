@@ -1,12 +1,11 @@
 import type { Step } from '@swv/core';
 
-import { copyText } from '../../shared/lib/util.ts';
+import { copyText, cx, isUrl } from '../../shared/lib/util.ts';
 import { Chip } from '../../shared/ui/Chip.tsx';
 import { toast } from '../../shared/ui/toast.ts';
+import { TermText } from '../../shared/ui/TermText.tsx';
 import styles from './card.module.css';
-import { cx } from './cx.ts';
-import { StepLinks, TermText } from './RichText.tsx';
-import { isUrl } from './steps.ts';
+import { StepLinks } from './RichText.tsx';
 
 /** "Fields:" with each `@field` name and its text; "step 6" in the text is a link. */
 export function FieldsRow({ step }: { step: Step }) {

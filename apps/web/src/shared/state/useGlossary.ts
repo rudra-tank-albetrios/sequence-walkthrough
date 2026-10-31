@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
-import { useFlowStore } from '../../shared/state/flowStore.ts';
-import { allTerms, termRegex, useGlossaryStore, type GlossaryEntry } from '../../shared/state/glossaryStore.ts';
+import { useFlowStore } from './flowStore.ts';
+import { allTerms, termRegex, useGlossaryStore, type GlossaryEntry } from './glossaryStore.ts';
 
 export interface Glossary {
   regex: RegExp | null;

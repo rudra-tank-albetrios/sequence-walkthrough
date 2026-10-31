@@ -1,15 +1,10 @@
+import { union, type Box } from '../../shared/lib/box.ts';
+
 /**
  * What the PDF and the step image need to know about the drawn diagram, read from the live SVG:
  * the participant row (repeated on every PDF page) and each arrow's box (pages are cut between
  * arrows). Measured in diagram units with the viewBox origin removed.
  */
-
-export interface Box {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
 
 export interface LiveGeometry {
   /** Top of the participant row band and its height, as the pinned header shows it. */
@@ -18,15 +13,6 @@ export interface LiveGeometry {
   /** One box per step, in step order, 8 units around line, label and number. */
   boxes: Box[];
 }
-
-const union = (boxes: Box[]): Box | null => {
-  if (boxes.length === 0) return null;
-  const x0 = Math.min(...boxes.map((b) => b.x));
-  const y0 = Math.min(...boxes.map((b) => b.y));
-  const x1 = Math.max(...boxes.map((b) => b.x + b.w));
-  const y1 = Math.max(...boxes.map((b) => b.y + b.h));
-  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
-};
 
 export function measureLive(svg: SVGSVGElement): LiveGeometry | null {
   const inverse = svg.getScreenCTM()?.inverse();

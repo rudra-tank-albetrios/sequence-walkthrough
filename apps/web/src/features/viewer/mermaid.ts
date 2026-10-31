@@ -2,15 +2,19 @@ import DOMPurify from 'dompurify';
 import type mermaidDefault from 'mermaid';
 import type { MermaidConfig } from 'mermaid';
 
-export const MERMAID_VERSION = '12.2.0';
-
 type Mermaid = typeof mermaidDefault;
 
 let loading: Promise<Mermaid> | null = null;
 
 /** Mermaid is large, so it is a separate chunk loaded the first time a diagram is drawn. */
 function loadMermaid(): Promise<Mermaid> {
-  loading ??= import('mermaid').then((m) => m.default);
+  loading ??= import('mermaid').then(
+    (m) => m.default,
+    () => {
+      loading = null;
+      throw new MermaidLoadError('Mermaid could not be loaded. Check the connection and reload the page.');
+    },
+  );
   return loading;
 }
 
@@ -24,6 +28,10 @@ export interface RenderedDiagram {
 
 export class DiagramSyntaxError extends Error {
   override readonly name = 'DiagramSyntaxError';
+}
+
+export class MermaidLoadError extends Error {
+  override readonly name = 'MermaidLoadError';
 }
 
 /** Perceived brightness 0..1 of a CSS colour that Mermaid gives as a hex string. */

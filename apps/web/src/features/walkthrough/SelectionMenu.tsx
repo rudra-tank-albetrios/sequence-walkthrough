@@ -2,7 +2,7 @@ import { isFollowable, tokens } from '@swv/core';
 import { useEffect, useRef, useState } from 'react';
 
 import { clamp } from '../../shared/lib/util.ts';
-import { askAbout, startFollow } from './follow.ts';
+import { askAboutWord, startFollow } from '../../shared/state/follow.ts';
 import styles from './selection.module.css';
 
 interface MenuState {
@@ -90,7 +90,7 @@ export function SelectionMenu() {
         className={styles.item}
         onClick={() => {
           setMenu(null);
-          askAbout(`What is “${menu.word}”?`);
+          askAboutWord(menu.word);
         }}
       >
         Ask AI: what is “{menu.word}”?
