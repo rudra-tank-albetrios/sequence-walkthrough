@@ -54,9 +54,9 @@ export default defineConfig(
     'test-results/**',
     // The version 2 app and skill, replaced phase by phase (plan section 6)
     'src/**',
-    'skill/**',
-    'skill-kit/**',
     'build.py',
+    // Sample projects the skills are tested against, written like the frameworks they imitate
+    'skills/fixtures/**',
     '**/*.d.ts',
   ]),
   js.configs.recommended,

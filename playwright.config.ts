@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 4173;
+// Worktrees that run at the same time need their own port: an existing server is reused locally.
+const PORT = Number(process.env.SWV_E2E_PORT ?? 4173);
 const CI = Boolean(process.env.CI);
 
 // Every project runs in CI. Locally, SWV_E2E_PROJECTS=chromium,webkit,phone limits the run when a

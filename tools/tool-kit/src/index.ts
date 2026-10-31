@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+export { listFiles } from './files.ts';
+
 /** The repository root, found from this file's location. */
 export const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 

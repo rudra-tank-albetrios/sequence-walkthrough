@@ -1,4 +1,4 @@
-import type { BlockKind, PayloadPart, Zone } from './types.ts';
+import type { BlockKind, PayloadPart, ThreatLevel, Zone } from './types.ts';
 
 export const DEFAULT_TITLE = 'Sequence diagram';
 
@@ -17,6 +17,7 @@ export const STEP_TAGS = [
   'timeout',
   'idempotent',
   'unconfirmed',
+  'threat',
 ] as const;
 export const KNOWN_TAGS: readonly string[] = [...FLOW_TAGS, 'section', 'summary', ...STEP_TAGS];
 
@@ -91,6 +92,12 @@ export const USES_KINDS: readonly string[] = [
 ];
 
 export const FLAG_TAGS = ['async', 'retry', 'timeout', 'idempotent'] as const;
+
+/** The levels a `@threat` line can name, most serious first. */
+export const THREAT_LEVELS: readonly ThreatLevel[] = ['high', 'medium', 'low'];
+
+/** A `@threat` line is one short sentence; longer text gets a lint warning. */
+export const THREAT_MAX_CHARS = 160;
 
 /** Pastel hues, one per chapter, reused in order when a flow has more chapters than hues. */
 export const CHAPTER_HUES: readonly number[] = [210, 150, 30, 280, 0, 180, 60, 330];
