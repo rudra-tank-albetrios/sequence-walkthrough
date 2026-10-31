@@ -1,5 +1,7 @@
 /** Small helpers with no feature logic. */
 
+export { hashStr } from '@swv/core';
+
 /** The bundled Mermaid, named in the status line, the help and the loading message. */
 export const MERMAID_VERSION = '12.2.0';
 
@@ -14,16 +16,6 @@ export const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
 
 export const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`;
-
-/** A short, stable hash of a string (FNV-1a), base 36. */
-export function hashStr(text: string): string {
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return (h >>> 0).toString(36);
-}
 
 export interface Debounced<A extends unknown[]> {
   (...args: A): void;

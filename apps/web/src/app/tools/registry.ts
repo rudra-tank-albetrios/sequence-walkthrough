@@ -19,6 +19,7 @@ import {
   Layers,
   Link,
   Link2,
+  ListChecks,
   Palette,
   Puzzle,
   Route,
@@ -111,6 +112,7 @@ export const GROUPS: readonly ToolGroup[] = [
 
 export const TOOLS: readonly Tool[] = [
   { id: 'glossary', group: 'learn', label: 'Glossary', icon: BookOpen, tour: 'tool-glossary', count: (f) => insightCount(f, 'glossary'), panel: onDemand(insight, (m) => m.GlossaryPane) },
+  { id: 'quiz', group: 'learn', label: 'Quiz', icon: ListChecks, tour: 'tool-quiz', host: onDemand(() => import('../../features/quiz/index.ts'), (m) => m.QuizMount), run: setUi({ quizOpen: true }) },
   { id: 'guide', group: 'learn', label: 'How it works', icon: Compass, tour: 'tool-guide', run: setUi({ guideOpen: true }) },
   { id: 'shortcuts', group: 'learn', label: 'Shortcuts and help', icon: Keyboard, tour: 'tool-shortcuts', hint: '?', run: setUi({ shortcutsOpen: true }) },
 

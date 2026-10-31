@@ -8,10 +8,10 @@ import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { diagramTheme, pageIsDark } from '../../shared/storage/settings.ts';
 import { toast } from '../../shared/ui/toast.ts';
 import { makePdf, type PdfOptions } from './pdf.ts';
-import { canvasBlob, rasterize } from './raster.ts';
+import { canvasBlob, rasterize } from '../../shared/lib/raster.ts';
 import { liveLinkText, openInNewTab, viewerLink } from './share.ts';
 import { cropRaster, pinnedHeader, visibleCrop } from './stepImage.ts';
-import { diagramSvgString } from './svgExport.ts';
+import { diagramSvgString } from '../../shared/lib/svgExport.ts';
 
 /** What each item of the Export menu does. Every action reads the stores when it runs. */
 

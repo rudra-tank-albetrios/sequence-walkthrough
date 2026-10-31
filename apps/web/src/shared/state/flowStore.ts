@@ -53,6 +53,8 @@ export interface FlowState {
     guideOpen: boolean;
     shortcutsOpen: boolean;
     importOpen: boolean;
+    quizOpen: boolean;
+    weakPointsOpen: boolean;
     /** The table's "Include my notes" box; it also feeds the Export menu's table items. */
     tableNotes: boolean;
     /** Text the clipboard refused, shown in a "Copy this" dialog; null when closed. */
@@ -130,6 +132,8 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     guideOpen: false,
     shortcutsOpen: false,
     importOpen: false,
+    quizOpen: false,
+    weakPointsOpen: false,
     tableNotes: false,
     copyFallback: null,
     askQuestion: null,

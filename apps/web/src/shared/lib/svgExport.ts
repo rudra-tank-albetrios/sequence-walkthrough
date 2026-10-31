@@ -1,5 +1,5 @@
-import { useDiagramStore } from '../../shared/state/diagramStore.ts';
-import { toast } from '../../shared/ui/toast.ts';
+import { useDiagramStore } from '../state/diagramStore.ts';
+import { toast } from '../ui/toast.ts';
 import { embedFontCss, FONT_FAMILIES } from './fonts.ts';
 
 /** A stand-alone SVG document from the rendered diagram, with the fonts embedded. */

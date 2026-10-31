@@ -52,6 +52,7 @@
     "prettier": "^3.9.10",
     "typescript": "^5.9.0",
     "typescript-eslint": "^8.72.1",
+    "unpdf": "^2.1.0",
     "vitest": "^5.0.5"
   }
 }

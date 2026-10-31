@@ -1,8 +1,8 @@
-import { toBase64 } from '../../shared/lib/codec.ts';
-import cyrillicExt from '../../shared/fonts/recursive-cyrillic-ext.woff2?url';
-import latinExt from '../../shared/fonts/recursive-latin-ext.woff2?url';
-import latin from '../../shared/fonts/recursive-latin.woff2?url';
-import vietnamese from '../../shared/fonts/recursive-vietnamese.woff2?url';
+import { toBase64 } from './codec.ts';
+import cyrillicExt from '../fonts/recursive-cyrillic-ext.woff2?url';
+import latinExt from '../fonts/recursive-latin-ext.woff2?url';
+import latin from '../fonts/recursive-latin.woff2?url';
+import vietnamese from '../fonts/recursive-vietnamese.woff2?url';
 
 /**
  * `@font-face` rules with the font files inlined, so an exported SVG or PNG shows the same face as
