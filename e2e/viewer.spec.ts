@@ -172,7 +172,8 @@ test.describe('diagram', () => {
     await expect
       .poll(async () => {
         const { box, canvas } = await sized(page);
-        return Math.abs(box.width - (canvas.width - 48));
+        // 64 px stay free at each side, so the first and last layers clear the canvas tools.
+        return Math.abs(box.width - (canvas.width - 128));
       })
       .toBeLessThan(2);
     await page.keyboard.press('f');
@@ -479,11 +480,8 @@ test.describe('diagram', () => {
   });
 
   test('D28 says so when Mermaid cannot be loaded', async ({ page }) => {
-    // Only the page's own entry may load: the drawing library comes in a later chunk.
-    await page.route(/\/assets\/.*\.js$/, async (route) => {
-      if (/\/assets\/index-[^/]*\.js$/.test(route.request().url())) await route.continue();
-      else await route.abort();
-    });
+    // The page itself loads; only the drawing library, a chunk of its own, cannot be fetched.
+    await page.route(/\/assets\/mermaid\.core-[^/]*\.js$/, (route) => route.abort());
     await page.goto('/');
     await expect(page.getByTestId('loading')).toHaveText(
       'Mermaid could not be loaded. Check the connection and reload the page.',

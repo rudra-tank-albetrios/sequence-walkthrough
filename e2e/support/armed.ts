@@ -339,11 +339,20 @@ export async function walkEveryScreen(page: Page, steps: number): Promise<void> 
   await expect(page.getByTestId('note-view')).toContainText('onerror=');
 
   await key('i');
-  const insight = page.getByTestId('insight');
-  await expect(insight).toBeVisible();
-  const tabs = insight.getByRole('tab');
+  const tools = page.getByTestId('overlay');
+  await expect(tools).toBeVisible();
+  const tabs = tools.getByRole('tab');
+  await expect(tabs).not.toHaveCount(0);
   for (let i = 0; i < (await tabs.count()); i++) await tabs.nth(i).click();
-  await insight.getByRole('button', { name: 'Close the Insight panel' }).click();
+  await tools.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(tools).toBeHidden();
+  // The glossary was an Insight tab; it now sits in the Learn group.
+  await page.getByRole('button', { name: 'Learn', exact: true }).click();
+  await page.getByRole('menuitem', { name: /Glossary/ }).click();
+  await expect(tools).toBeVisible();
+  await tools.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(tools).toBeHidden();
+  await page.getByTestId('diagram').focus();
 
   await key('t');
   await expect(page.locator('#tableView table')).toBeVisible();
