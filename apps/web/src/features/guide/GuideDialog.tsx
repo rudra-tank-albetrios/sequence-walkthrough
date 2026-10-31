@@ -1,12 +1,11 @@
 import { useState } from 'react';
 
+import { downloadSkillKit } from '../../shared/lib/files.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Dialog } from '../../shared/ui/Dialog.tsx';
 import { Kbd } from '../../shared/ui/Kbd.tsx';
-import { toast } from '../../shared/ui/toast.ts';
 import styles from './guide.module.css';
-import { downloadSkillKit } from './skillKit.ts';
 
 const Mono = ({ children }: { children: string }) => <code className="mono">{children}</code>;
 
@@ -19,14 +18,9 @@ export function GuideDialog() {
 
   const download = async () => {
     setBusy(true);
-    try {
-      await downloadSkillKit();
-      close();
-    } catch (err) {
-      toast(`Download failed: ${err instanceof Error ? err.message : String(err)}`);
-    } finally {
-      setBusy(false);
-    }
+    await downloadSkillKit();
+    setBusy(false);
+    close();
   };
 
   return (

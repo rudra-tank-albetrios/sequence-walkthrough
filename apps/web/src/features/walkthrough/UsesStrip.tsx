@@ -1,8 +1,8 @@
 import type { Step } from '@swv/core';
 
 import { Chip } from '../../shared/ui/Chip.tsx';
+import { TermText } from '../../shared/ui/TermText.tsx';
 import styles from './card.module.css';
-import { TermText } from './RichText.tsx';
 import { RefChip } from './StepFacts.tsx';
 import { usesSummary } from './steps.ts';
 

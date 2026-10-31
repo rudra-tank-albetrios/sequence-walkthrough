@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { CodePanel } from './CodePanel.tsx';
@@ -15,22 +15,7 @@ const CODE = [
   '  B-->>A: 201 Created',
 ].join('\n');
 
-const mediaQueryList = (query: string): MediaQueryList => ({
-  matches: false,
-  media: query,
-  onchange: null,
-  addEventListener: () => undefined,
-  removeEventListener: () => undefined,
-  addListener: () => undefined,
-  removeListener: () => undefined,
-  dispatchEvent: () => false,
-});
-
 describe('code panel', () => {
-  beforeAll(() => {
-    vi.stubGlobal('matchMedia', mediaQueryList);
-  });
-
   beforeEach(() => {
     useFlowStore.setState({ cur: -1, path: 'all', spot: null, lastGo: { index: -1, camera: true, seq: 0 } });
     useFlowStore.getState().setCode(CODE);
@@ -51,9 +36,9 @@ describe('code panel', () => {
     expect(keywords).toContain('participant');
     const arrows = [...document.querySelectorAll('.t-ar')].map((el) => el.textContent);
     expect(arrows).toEqual(['->>', '-->>']);
-    const aliases = [...document.querySelectorAll('.t-al')].map((el) => el.textContent?.trim());
-    expect(aliases).toContain('A');
-    expect(aliases).toContain('Alpha');
+    // Version 2 colours the alias of `participant A as Alpha` and the two ends of an arrow, not the display name.
+    const aliases = [...document.querySelectorAll('.t-al')].map((el) => el.textContent.trim());
+    expect(aliases).toEqual(['A', 'B', 'A', 'B', 'B', 'A']);
   });
 
   it('shows the arrow lines with their step number in the gutter', () => {

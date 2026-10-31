@@ -2,12 +2,13 @@ import type { Flow } from '@swv/core';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { useIsNarrow, useReducedMotion } from '../../shared/hooks/useMediaQuery.ts';
-import { clamp } from '../../shared/lib/util.ts';
+import { errorLine } from '../../shared/lib/mermaidLines.ts';
+import { clamp, MERMAID_VERSION } from '../../shared/lib/util.ts';
 import { useDiagramStore } from '../../shared/state/diagramStore.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { noteMark, useNotesStore } from '../../shared/state/notesStore.ts';
 import { hasPaths, pathLabel, pathVisible } from '../../shared/state/path.ts';
-import { followHits } from '../../shared/state/search.ts';
+import { startFollow } from '../../shared/state/follow.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { toast } from '../../shared/ui/toast.ts';
 import { Camera, type CameraState } from './camera.ts';
@@ -15,7 +16,7 @@ import { CanvasControls } from './CanvasControls.tsx';
 import { DiagramSvg } from './DiagramSvg.tsx';
 import { addHits, measure, normalizeSvg, tagSteps, type Geo, type StepDom, type ViewBox } from './geometry.ts';
 import { buildHeader, headerPlacement, setActiveActors } from './header.ts';
-import { MERMAID_VERSION, renderDiagram, type RenderedDiagram } from './mermaid.ts';
+import { MermaidLoadError, renderDiagram, type RenderedDiagram } from './mermaid.ts';
 import { applyHighlight, decorate, drawChapterBand, type DrawContext } from './overlays.ts';
 import { LayerTooltip, StepTooltip } from './StepTooltip.tsx';
 import { useCanvasPointer } from './useCanvasPointer.ts';
@@ -26,6 +27,11 @@ type Tip =
   | { kind: 'step'; index: number; left: number; top: number }
   | { kind: 'actor'; alias: string; left: number; top: number };
 
+/** The drawing and the flow it was drawn from: they only ever change together. */
+interface Drawing extends RenderedDiagram {
+  flow: Flow;
+}
+
 interface Mounted {
   svg: SVGSVGElement;
   header: SVGSVGElement | null;
@@ -33,6 +39,19 @@ interface Mounted {
   dom: StepDom[];
   geo: Geo;
   flow: Flow;
+}
+
+/** "Syntax error on line N. Showing the last good diagram." with the first line of Mermaid's message. */
+function SyntaxNotice({ code, error, kept }: { code: string; error: string; kept: boolean }) {
+  const line = errorLine(code, error);
+  const short = (error.split('\n')[0] ?? '').replace(/^Error:\s*/, '').slice(0, 140);
+  return (
+    <>
+      <b>Syntax error{line === null ? '' : ` on line ${line + 1}`}.</b>
+      {kept ? ' Showing the last good diagram. ' : ' '}
+      <span className="mono">{short}</span>
+    </>
+  );
 }
 
 /** The diagram canvas: Mermaid's SVG with the walkthrough's overlays, pan, zoom and hover. */
@@ -50,7 +69,6 @@ export function Viewer() {
   const go = useFlowStore((s) => s.go);
   const setSpot = useFlowStore((s) => s.setSpot);
   const setPath = useFlowStore((s) => s.setPath);
-  const setFollow = useFlowStore((s) => s.setFollow);
   const notesData = useNotesStore((s) => s.data);
   const noteEntry = useNotesStore((s) => s.entry);
   const setRendered = useDiagramStore((s) => s.setRendered);
@@ -71,8 +89,10 @@ export function Viewer() {
     reducedRef.current = reduced;
   }, [reduced]);
 
-  const [rendered, setRenderedState] = useState<RenderedDiagram | null>(null);
+  const [rendered, setRenderedState] = useState<Drawing | null>(null);
+  const drawnFlow = useRef<Flow | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [tip, setTip] = useState<Tip | null>(null);
   const [mountVersion, setMountVersion] = useState(0);
 
@@ -124,25 +144,35 @@ export function Viewer() {
     const seq = ++renderSeq.current;
     const t0 = performance.now();
     setRendered({ rendering: true });
+    const drawing = useFlowStore.getState().flow;
     renderDiagram(code, settings.theme, `swv${seq}`)
       .then((result) => {
-        if (seq !== renderSeq.current) return;
-        setRenderedState(result);
+        if (seq !== renderSeq.current || !drawing) return;
+        drawnFlow.current = drawing;
+        setRenderedState({ ...result, flow: drawing });
         setError(null);
+        setLoadFailed(false);
         setRendered({ error: null, rendering: false, lastRenderMs: performance.now() - t0 });
       })
       .catch((err: unknown) => {
         if (seq !== renderSeq.current) return;
+        if (err instanceof MermaidLoadError) {
+          setLoadFailed(true);
+          setRendered({ rendering: false });
+          return;
+        }
         const message = err instanceof Error ? err.message : String(err);
         setError(message);
         setRendered({ error: message, rendering: false });
+        useFlowStore.getState().restoreFlow(drawnFlow.current);
       });
   }, [code, settings.theme, setRendered]);
 
   // The SVG just reached the page: measure it, map arrows to steps, build the pinned header.
   useLayoutEffect(() => {
     const svg = layerRef.current?.querySelector('svg');
-    if (!svg || !rendered || !flow) return;
+    if (!svg || !rendered) return;
+    const flow = rendered.flow;
     const vb = normalizeSvg(svg);
     const cleanSvg = svg.outerHTML;
     let mounted: Mounted = { svg, header: null, vb, dom: [], geo: { actors: {}, rowTop: 0, rowBottom: 0, bottomTop: vb.h, hdrTop: -6, hdrH: 12 }, flow };
@@ -168,7 +198,7 @@ export function Viewer() {
     } else camera.refresh();
     setRendered({ cleanSvg, themeBg: rendered.themeBg, themeDark: rendered.dark, width: vb.w, height: vb.h });
     setMountVersion((v) => v + 1);
-  }, [rendered, flow, camera, setRendered]);
+  }, [rendered, camera, setRendered]);
 
   const drawContext = useCallback((): DrawContext | null => {
     const m = mountedRef.current;
@@ -210,6 +240,17 @@ export function Viewer() {
     if (d) camera.followStep(d.box, d.labelBox, m.flow.isSequence ? m.geo.hdrH : 0, insetLeft());
   }, [lastGo, view, camera, insetLeft, mountVersion]);
 
+  // Back from the table, the diagram shows the step that was picked there.
+  const lastView = useRef(view);
+  useEffect(() => {
+    const was = lastView.current;
+    lastView.current = view;
+    if (was === view || view !== 'diagram') return;
+    const m = mountedRef.current;
+    const d = m?.dom[useFlowStore.getState().cur];
+    if (m && d) camera.followStep(d.box, d.labelBox, m.geo.hdrH, insetLeft());
+  }, [view, camera, insetLeft]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -247,19 +288,6 @@ export function Viewer() {
   }, [camera, insetLeft, setCommands]);
 
   const handlers = useMemo(() => {
-    function startFollow(token: string) {
-      const current = useFlowStore.getState();
-      const hits = followHits(current.flow, token);
-      if (hits === null) {
-        toast(`"${token}" is too short or too common to follow`);
-        return;
-      }
-      if (hits.length === 0) {
-        toast(`"${token}" does not appear in any step`);
-        return;
-      }
-      setFollow({ token, hits });
-    }
     return {
       onClick(target: Element) {
         const m = mountedRef.current;
@@ -323,7 +351,7 @@ export function Viewer() {
       },
       wheelMode: () => useFlowStore.getState().settings.wheel,
     };
-  }, [go, setSpot, setFollow]);
+  }, [go, setSpot]);
   useCanvasPointer(canvasRef, camera, handlers);
 
 
@@ -352,14 +380,21 @@ export function Viewer() {
         {rendered ? <DiagramSvg svg={rendered.svg} className="" /> : null}
       </div>
       <div ref={hdrBandRef} className={styles.hdrBand} hidden />
-      <div ref={hdrLayerRef} className={styles.hdrLayer} hidden />
-      {!rendered && !error ? <div className={styles.loading}>Loading Mermaid {MERMAID_VERSION}…</div> : null}
-      {error ? (
-        <div className={`${styles.message} ${styles.error}`} role="alert" data-canvas-ui>
-          Mermaid could not draw this code. {error.split('\n')[0]}
+      <div ref={hdrLayerRef} className={styles.hdrLayer} hidden data-testid="pinned-header" />
+      {!rendered && !error ? (
+        <div className={styles.loading} data-testid="loading">
+          {loadFailed
+            ? 'Mermaid could not be loaded. Check the connection and reload the page.'
+            : `Loading Mermaid ${MERMAID_VERSION}…`}
         </div>
-      ) : spot && flow ? (
-        <div className={styles.message} role="status" data-canvas-ui>
+      ) : null}
+      {error ? (
+        <div className={`${styles.message} ${styles.error}`} role="alert" data-canvas-ui data-testid="err-badge">
+          <SyntaxNotice code={code} error={error} kept={rendered !== null} />
+        </div>
+      ) : null}
+      {spot && flow ? (
+        <div className={styles.message} role="status" data-canvas-ui data-testid="notice">
           Showing only the {spotCount} arrows of <b>{flow.layers[spot]?.name ?? spot}</b>.
           <Button
             className={styles.small}
@@ -371,7 +406,7 @@ export function Viewer() {
           </Button>
         </div>
       ) : path !== 'all' && flow && hasPaths(flow) ? (
-        <div className={styles.message} role="status" data-canvas-ui>
+        <div className={styles.message} role="status" data-canvas-ui data-testid="notice">
           Path: <b>{pathLabel(path, flow)}</b>, {pathCount} of {flow.steps.length} steps.
           <Button
             className={styles.small}
@@ -383,8 +418,9 @@ export function Viewer() {
           </Button>
         </div>
       ) : flow && !flow.isSequence && rendered ? (
-        <div className={styles.message} role="status" data-canvas-ui>
-          This is a {flow.diagramType} diagram, so the walkthrough is off. Pan and zoom still work.
+        <div className={styles.message} role="status" data-canvas-ui data-testid="notice">
+          This is a <b>{flow.diagramType}</b> diagram. The walkthrough, pinned header and table work with sequence
+          diagrams, so only pan and zoom are on.
         </div>
       ) : null}
       <CanvasControls />

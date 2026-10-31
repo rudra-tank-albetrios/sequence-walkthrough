@@ -1,13 +1,8 @@
 import type { Flow } from '@swv/core';
 
-/** Boxes are in viewBox units with the viewBox origin removed (0,0 is the diagram's top left). */
-export interface Box {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
+import { union, type Box } from '../../shared/lib/box.ts';
 
+/** Boxes are in viewBox units with the viewBox origin removed (0,0 is the diagram's top left). */
 export type ViewBox = Box;
 
 /** The SVG elements of one drawn arrow: arrow N in the code is drawn arrow N. */
@@ -109,16 +104,6 @@ export function tagSteps(svg: SVGSVGElement, flow: Flow): { dom: Omit<StepDom, '
     }
   }
   return { dom, mismatch };
-}
-
-function union(boxes: (Box | null)[]): Box | null {
-  const list = boxes.filter((b): b is Box => b !== null);
-  if (list.length === 0) return null;
-  const x0 = Math.min(...list.map((b) => b.x));
-  const y0 = Math.min(...list.map((b) => b.y));
-  const x1 = Math.max(...list.map((b) => b.x + b.w));
-  const y1 = Math.max(...list.map((b) => b.y + b.h));
-  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 }
 
 /** Measures every arrow and participant in diagram units. The SVG must be in the document. */

@@ -1,8 +1,8 @@
 import type { Step } from '@swv/core';
 
+import { cx } from '../../shared/lib/util.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { pathVisible } from '../../shared/state/path.ts';
-import { cx } from './cx.ts';
 import { shortRoute } from './steps.ts';
 import styles from './walkbar.module.css';
 

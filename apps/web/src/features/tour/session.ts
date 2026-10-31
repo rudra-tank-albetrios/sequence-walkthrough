@@ -10,11 +10,8 @@ export type SavedView = Pick<FlowState, 'code' | 'cur' | 'view' | 'path' | 'spot
   fold: FlowState['settings']['fold'];
 };
 
-/** Every panel and dialog closed, whatever flags the store has by then. The tour stays open. */
-function closedUi(ui: Ui): Ui {
-  const closed = Object.fromEntries(Object.keys(ui).map((flag) => [flag, false] as const));
-  return { ...(closed as Ui), tourOpen: true };
-}
+/** Every panel and dialog closed, as the page first opens, with the tour itself open. */
+const closedUi = (): Ui => ({ ...useFlowStore.getInitialState().ui, tourOpen: true });
 
 /**
  * Puts the demo flow on a clean screen and returns what was there. The code stays out of the
@@ -49,7 +46,7 @@ export function openDemo(): SavedView {
 export function showStop(stop: TourStop): void {
   const s = useFlowStore.getState();
   if (stop.step !== undefined && s.cur !== stop.step) s.go(stop.step, { camera: false });
-  s.setUi({ ...closedUi(s.ui), ...stop.open });
+  s.setUi({ ...closedUi(), ...stop.open });
 }
 
 /** Ends the tour with everything back as it was. The tour's own flag goes last (see `openDemo`). */

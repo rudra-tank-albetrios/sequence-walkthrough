@@ -3,9 +3,15 @@ import { create } from 'zustand';
 
 import { clamp } from '../lib/util.ts';
 import { loadSettings, saveSettings, type Settings } from '../storage/settings.ts';
+import { announce } from '../ui/announce.ts';
+import { toast } from '../ui/toast.ts';
 import { pathVisible, type PathMode } from './path.ts';
+import { followHits } from './search.ts';
 
 export type View = 'diagram' | 'table';
+
+/** The sections of the Insight panel. */
+export type InsightTab = 'layers' | 'endpoints' | 'errors' | 'behind' | 'glossary' | 'data';
 
 /** A word the user is following through the flow (double-click), with the steps that mention it. */
 export interface FollowState {
@@ -33,10 +39,9 @@ export interface FlowState {
   ui: {
     codeOpen: boolean;
     insightOpen: boolean;
+    insightTab: InsightTab;
     controlsHidden: boolean;
     presenter: boolean;
-    headerFolded: boolean;
-    barFolded: boolean;
     askOpen: boolean;
     findOpen: boolean;
     noteOpen: boolean;
@@ -44,10 +49,18 @@ export interface FlowState {
     guideOpen: boolean;
     shortcutsOpen: boolean;
     importOpen: boolean;
+    /** The table's "Include my notes" box; it also feeds the Export menu's table items. */
+    tableNotes: boolean;
+    /** Text the clipboard refused, shown in a "Copy this" dialog; null when closed. */
+    copyFallback: string | null;
+    /** A question another feature prepared for the Ask panel, sent as it opens. */
+    askQuestion: string | null;
     tourOpen: boolean;
   };
 
   setCode: (code: string) => void;
+  /** Mermaid refused the code: the walkthrough goes back to the flow of the last good drawing. */
+  restoreFlow: (flow: Flow | null) => void;
   /** Moves to a step. `camera: false` leaves the diagram where it is. */
   go: (index: number, options?: { camera?: boolean; from?: 'editor' }) => void;
   next: () => string | null;
@@ -63,6 +76,13 @@ export interface FlowState {
   setUi: (patch: Partial<FlowState['ui']>) => void;
   /** Set by the viewer when a step is shown so the camera can follow; read by features. */
   lastGo: { index: number; camera: boolean; from?: 'editor'; seq: number };
+}
+
+/** The same followed value in a new flow, or nothing when no step mentions it any more. */
+function refollow(flow: Flow | null, follow: FollowState | null): FollowState | null {
+  if (!follow) return null;
+  const hits = followHits(flow, follow.token) ?? [];
+  return hits.length > 0 ? { token: follow.token, hits } : null;
 }
 
 /** Next step that the path filter and the chapter lock allow: an index, -1 at the edge, -2 locked. */
@@ -95,10 +115,9 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   ui: {
     codeOpen: false,
     insightOpen: false,
+    insightTab: 'layers',
     controlsHidden: false,
     presenter: false,
-    headerFolded: false,
-    barFolded: false,
     askOpen: false,
     findOpen: false,
     noteOpen: false,
@@ -106,6 +125,9 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     guideOpen: false,
     shortcutsOpen: false,
     importOpen: false,
+    tableNotes: false,
+    copyFallback: null,
+    askQuestion: null,
     tourOpen: false,
   },
   lastGo: { index: -1, camera: true, seq: 0 },
@@ -119,9 +141,15 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       parsed,
       flow,
       cur: clamp(s.cur, -1, steps - 1),
+      view: flow.isSequence ? s.view : 'diagram',
       spot: s.spot && flow.participants.some((p) => p.alias === s.spot) ? s.spot : null,
-      follow: null,
+      follow: refollow(flow, s.follow),
     }));
+  },
+
+  restoreFlow(flow) {
+    const steps = flow?.isSequence ? flow.steps.length : 0;
+    set((s) => ({ flow, cur: clamp(s.cur, -1, steps - 1), follow: refollow(flow, s.follow) }));
   },
 
   go(index, options = {}) {
@@ -158,6 +186,10 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   },
 
   setView(view) {
+    if (view === 'table' && !get().flow?.isSequence) {
+      toast('The table works with sequence diagrams');
+      return;
+    }
     set({ view });
   },
   setPath(path) {
@@ -170,7 +202,9 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     set({ follow });
   },
   toggleChapterLock() {
-    set((s) => ({ chapterLock: !s.chapterLock }));
+    const chapterLock = !get().chapterLock;
+    set({ chapterLock });
+    announce(chapterLock ? 'Chapter locked: the arrow keys stay inside this chapter' : 'Chapter unlocked');
   },
   setPlaying(playing) {
     set({ playing });
