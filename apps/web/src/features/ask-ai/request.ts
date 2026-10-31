@@ -135,6 +135,10 @@ async function completeHttp(endpoint: Endpoint, user: string, options: CompleteO
         max_tokens: 220,
       }),
       signal: controller.signal,
+      // A redirect would carry the question, and perhaps the key, to an address nobody chose.
+      redirect: 'error',
+      credentials: 'omit',
+      cache: 'no-store',
     });
     if (!res.ok) {
       const detail = await errorDetail(res);
@@ -174,16 +178,19 @@ export const NETWORK_FAILURE = /failed to fetch|networkerror|load failed/i;
 export const unreachable = (provider: Provider): string =>
   `Could not reach ${shortName(provider)} from this page. The provider may block browser requests; try another provider, or a proxy URL as a custom endpoint.`;
 
+/** A provider's words can repeat the key. They reach the screen, the note and the saved answers. */
+const hideKey = (text: string, key: string): string => (key ? text.split(key).join('[key hidden]') : text);
+
 /** Asks the chosen provider and returns the answer text. Errors carry a sentence for the panel. */
 export async function complete(settings: AiSettings, user: string, options: CompleteOptions = {}): Promise<string> {
   const provider = providerFor(settings.provider);
   if (provider.artifact) return completeClaude(user);
   const endpoint = endpointFor(settings);
   try {
-    return await completeHttp(endpoint, user, options);
+    return hideKey(await completeHttp(endpoint, user, options), endpoint.key);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(NETWORK_FAILURE.test(message) ? unreachable(provider) : message, { cause: err });
+    const message = hideKey(err instanceof Error ? err.message : String(err), endpoint.key);
+    throw new Error(NETWORK_FAILURE.test(message) ? unreachable(provider) : message);
   }
 }
 

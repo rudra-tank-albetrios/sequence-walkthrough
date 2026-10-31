@@ -84,10 +84,29 @@ const keysInBrowser = (page: Page, keys: readonly string[] = ALL_SENTINELS) =>
       if (holds(location.href)) found.push('address');
       if (holds(document.documentElement.outerHTML)) found.push('page markup');
       if (holds(document.title)) found.push('title');
+      const asked = (request) =>
+        new Promise((resolve, reject) => {
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
       if (self.indexedDB && indexedDB.databases) {
-        for (const db of await indexedDB.databases()) found.push('indexedDB:' + db.name);
+        for (const { name } of await indexedDB.databases()) {
+          const db = await asked(indexedDB.open(name));
+          for (const storeName of db.objectStoreNames) {
+            const store = db.transaction(storeName).objectStore(storeName);
+            const held = [await asked(store.getAll()), await asked(store.getAllKeys())];
+            if (holds(JSON.stringify(held))) found.push('indexedDB:' + name + ':' + storeName);
+          }
+          db.close();
+        }
       }
-      if (self.caches) for (const name of await caches.keys()) found.push('cache:' + name);
+      if (self.caches) {
+        for (const name of await caches.keys()) {
+          for (const request of await (await caches.open(name)).keys()) {
+            if (holds(request.url)) found.push('cache:' + request.url);
+          }
+        }
+      }
       return found;
     })()`,
   );

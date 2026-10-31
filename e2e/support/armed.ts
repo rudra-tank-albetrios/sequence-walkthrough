@@ -266,15 +266,15 @@ export async function walkEveryScreen(page: Page, steps: number): Promise<void> 
   const key = (name: string) => page.keyboard.press(name);
   const tooltip = page.getByTestId('arrow-tooltip');
 
-  // The overview fits everything on the screen, so the pointer can reach an arrow and a layer.
-  await pointAt(page, page.locator('.swv-hit[data-step="0"]').first());
-  await expect(tooltip).toBeVisible();
+  // The overview fits every layer on the screen, and a step brings its own arrow into view.
   await pointAt(page, page.locator('.swv-actor').first());
   await expect(tooltip).toBeVisible();
   await page.mouse.move(0, 0);
-
   await page.getByTestId('diagram').focus();
-  for (let i = 0; i < steps; i++) await key('ArrowRight');
+  await key('ArrowRight');
+  await pointAt(page, page.locator('.swv-hit[data-step="0"]').first());
+  await expect(tooltip).toBeVisible();
+  for (let i = 1; i < steps; i++) await key('ArrowRight');
 
   await key('b');
   await key('n');

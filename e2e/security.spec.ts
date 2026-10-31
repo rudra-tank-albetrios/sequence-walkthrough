@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import {
   arm,
@@ -31,6 +31,22 @@ import {
 /** The markup of each form of attack, written straight into the page. */
 const injectRawMarkup = (html: string): string =>
   `document.body.append(document.createRange().createContextualFragment(${JSON.stringify(html)}))`;
+
+/** The id of the current drawing. Each new drawing has its own. */
+const drawingId = (page: Page) =>
+  page.evaluate<string>(
+    `document.querySelector('[data-testid="diagram"] svg')?.id ?? ''`,
+  );
+
+/** 'drawn' or 'refused' once the code dropped after this drawing has been dealt with, else ''. */
+const drawingEnded = (page: Page, before: string) =>
+  page.evaluate<string>(
+    `(() => {
+      if (document.querySelector('[data-testid="err-badge"]')) return 'refused';
+      const id = document.querySelector('[data-testid="diagram"] svg')?.id ?? '';
+      return id && id !== ${JSON.stringify(before)} ? 'drawn' : '';
+    })()`,
+  );
 
 test.describe('the detectors work', () => {
   const RUNS_FROM_MARKUP = [
@@ -153,20 +169,31 @@ test.describe('hostile diagram text, sanitiser alone', () => {
     test.slow();
     const armed = await arm(page, baseURL);
     await openSafeFlow(page);
+    const address = page.url();
+    const drawn: string[] = [];
     for (const [name, code] of Object.entries(OTHER_DIAGRAMS)) {
+      const before = await drawingId(page);
       await dispatchDrop(page, `${name}.mmd`, code);
-      await expect(flowTitle(page)).not.toHaveText('Safe');
-      await page.waitForTimeout(800);
-      const clickable = page.getByTestId('diagram').locator('svg .node, svg .clickable, svg a, svg rect');
-      if ((await clickable.count()) > 0) await clickable.first().click({ force: true });
+      await expect.poll(() => drawingEnded(page, before)).not.toBe('');
+      if ((await drawingEnded(page, before)) === 'drawn') drawn.push(name);
+      // Mermaid's own handlers would answer these clicks. The page never binds them.
+      await page.evaluate(
+        `document.querySelectorAll('[data-testid="diagram"] svg :is(.node, .clickable, .actor, .task, a, [class*="click"])')
+          .forEach((el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true })))`,
+      );
       await expectNothingRan(armed, name);
+      expect(page.url()).toBe(address);
     }
+    // The attacks only mean something for the kinds Mermaid really drew.
+    expect(drawn).toEqual(
+      expect.arrayContaining(['flowchart', 'classDiagram', 'stateDiagram', 'erDiagram', 'gantt']),
+    );
   });
 
   test('code Mermaid refuses shows its error as plain text', async ({ page, baseURL }) => {
     const armed = await arm(page, baseURL);
     await page.goto(shareLink.z(REFUSED_CODE));
-    await expect(page.getByRole('alert')).toContainText('Mermaid could not draw this code');
+    await expect(page.getByTestId('err-badge')).toBeVisible({ timeout: 30_000 });
     await page.keyboard.press('c');
     await expect(page.getByRole('textbox', { name: 'Diagram code' })).toBeVisible();
     await expectNothingRan(armed, 'refused code');
@@ -209,7 +236,7 @@ test.describe('hostile diagram text, sanitiser alone', () => {
 });
 
 test.describe('words that name members of Object', () => {
-  const OBJECT_WORDS = `sequenceDiagram
+  const ANNOTATIONS = `sequenceDiagram
   %% @title Words
   %% @layer A kind=__proto__ one
   %% @layer B kind=constructor two
@@ -220,20 +247,31 @@ test.describe('words that name members of Object', () => {
   %% @uses constructor __proto__ text
   A->>B: __proto__ constructor #constructor;
   B-->>A: toString
-  __proto__ one
-  constructor two
   A->>__proto__: three
   __proto__-->>A: 200 ok
 `;
 
-  test('do not crash the page on any screen', async ({ page, baseURL }) => {
+  test('in annotations and names do not crash any screen', async ({ page, baseURL }) => {
     test.slow();
     const armed = await arm(page, baseURL);
-    await openDrawn(page, shareLink.z(OBJECT_WORDS));
+    await openDrawn(page, shareLink.z(ANNOTATIONS));
     await expect(flowTitle(page)).toHaveText('Words');
     await walkEveryScreen(page, 4);
     await expect(flowTitle(page)).toHaveText('Words');
     await expectNothingRan(armed, 'object words');
+  });
+
+  test('as statements, which Mermaid refuses, leave the page working', async ({
+    page,
+    baseURL,
+  }) => {
+    const armed = await arm(page, baseURL);
+    await page.goto(shareLink.z(`${ANNOTATIONS}__proto__ one\nconstructor two\ntoString three\n`));
+    await expect(page.getByTestId('err-badge')).toBeVisible({ timeout: 30_000 });
+    await expect(flowTitle(page)).toBeVisible();
+    await page.keyboard.press('c');
+    await expect(page.getByRole('textbox', { name: 'Diagram code' })).toBeVisible();
+    await expectNothingRan(armed, 'object words as statements');
   });
 });
 
@@ -357,6 +395,22 @@ test.describe('malicious values left in browser storage', () => {
       await page.keyboard.press('Escape');
       await page.keyboard.press('i');
       await page.getByTestId('insight').getByRole('tab', { name: /Glossary/ }).click();
+      await expectNothingRan(armed, name);
+    });
+  }
+
+  for (const [name, stored] of Object.entries({
+    'an object': '{"a":1}',
+    'a number': '123',
+    'null': 'null',
+    'a list': '[1]',
+    'broken JSON': '{nope',
+  })) {
+    test(`saved code that is ${name} leaves the page on its demo`, async ({ page, baseURL }) => {
+      const armed = await arm(page, baseURL);
+      await seedStorage(page, { 'swv:code': stored });
+      await openDrawn(page, '/');
+      await expect(flowTitle(page)).toBeVisible();
       await expectNothingRan(armed, name);
     });
   }
