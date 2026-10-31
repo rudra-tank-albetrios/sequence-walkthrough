@@ -42,7 +42,7 @@ describe('parseTranscript', () => {
 describe('filesRead', () => {
   it("takes the Read tool's file", () => {
     expect(filesRead({ at: '', name: 'Read', input: { file_path: '/p/src/a.ts' } })).toEqual([
-      '/p/src/a.ts',
+      resolve('/p/src/a.ts'),
     ]);
   });
 
@@ -59,6 +59,25 @@ describe('filesRead', () => {
     ]);
   });
 
+  it('reads relative paths from the run root when the command has no cd', () => {
+    expect(filesRead(bash('cat src/app.ts'), '/p/root')).toEqual([resolve('/p/root/src/app.ts')]);
+    expect(filesRead(bash('cd src && cat app.ts'), '/p/root')).toEqual([
+      resolve('/p/root/src/app.ts'),
+    ]);
+    expect(filesRead({ at: '', name: 'Read', input: { file_path: 'src/a.ts' } }, '/p/root')).toEqual([
+      resolve('/p/root/src/a.ts'),
+    ]);
+  });
+
+  it('counts a file only when the reader itself names it', () => {
+    expect(filesRead(bash('grep -n x file.ts | head'), '/p')).toEqual([]);
+    expect(filesRead(bash('grep -rn x src/ ; cat README.md'), '/p')).toEqual([resolve('/p/README.md')]);
+    expect(filesRead(bash('cat a.ts | head -20'), '/p')).toEqual([resolve('/p/a.ts')]);
+    const loop = 'for f in a.ts b.ts; do echo "== $f"; cat -n "$f"; done; grep -n x c.ts';
+    expect(filesRead(bash(loop), '/p')).toEqual([resolve('/p/a.ts'), resolve('/p/b.ts')]);
+    expect(filesRead(bash('for f in a.ts b.ts; do echo "$f"; done'), '/p')).toEqual([]);
+  });
+
   it('ignores searches and listings, which open nothing', () => {
     expect(filesRead(bash('grep -n "route" src/a.ts'))).toEqual([]);
     expect(filesRead(bash("find . -type f -not -path '*/node_modules/*' | head -80"))).toEqual([]);
@@ -72,7 +91,7 @@ describe('evidenceFrom', () => {
     const jsonl = [
       call(at(0), 'Bash', { command: `cd "${root}" && cat README.md` }),
       call(at(10), 'Read', { file_path: join(root, 'src/a.ts') }),
-      call(at(20), 'Bash', { command: `cd "${root}" && sed -n '1,20p' src/a.ts` }),
+      call(at(20), 'Bash', { command: "sed -n '1,20p' src/a.ts" }),
       call(at(30), 'Read', { file_path: join(root, '..', 'elsewhere.ts') }),
     ].join('\n');
     expect(evidenceFrom(parseTranscript(jsonl), root)).toEqual({

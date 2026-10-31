@@ -31,6 +31,7 @@ function problemWith(link: CodeLink, root: string, read: (path: string) => strin
   const rel = relative(root, target);
   if (rel === '' || rel.startsWith('..') || isAbsolute(rel)) return 'points outside the project';
   if (!isFile(target)) return 'no such file in the project';
+  if (link.from > link.to) return `the range ${link.from}-${link.to} runs backwards`;
   const total = read(target).length;
   return link.from < 1 || link.to > total ? `the file has ${total} lines` : null;
 }

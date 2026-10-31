@@ -40,7 +40,6 @@ async function bundleScript(entry: string): Promise<string> {
 }
 
 function checkExamples(skill: SkillConfig, dir: string): void {
-  if (!existsSync(dir)) return;
   for (const file of listFiles(dir)) {
     const code = readFileSync(resolve(dir, file), 'utf8');
     const result = validateDiagram(code, { strict: skill.strictExamples });
@@ -52,10 +51,10 @@ function checkExamples(skill: SkillConfig, dir: string): void {
   }
 }
 
-/** Writes one self-contained skill folder and returns the size of its `SKILL.md`. */
-function buildSkill(skill: SkillConfig, out: string, validator: string): void {
-  const source = resolve(SOURCES, skill.name);
-  const shared = resolve(SOURCES, 'shared');
+/** Writes one self-contained skill folder from its sources. */
+function buildSkill(skill: SkillConfig, out: string, validator: string, sources: string): void {
+  const source = resolve(sources, skill.name);
+  const shared = resolve(sources, 'shared');
   const text = joinShared(readFileSync(resolve(source, 'SKILL.src.md'), 'utf8'), (file) =>
     readFileSync(resolve(shared, file), 'utf8'),
   );
@@ -70,8 +69,14 @@ function buildSkill(skill: SkillConfig, out: string, validator: string): void {
     cpSync(resolve(shared, 'references', file), resolve(target, 'references', file));
   }
   const examples = resolve(source, 'examples');
-  checkExamples(skill, examples);
-  if (existsSync(examples)) cpSync(examples, resolve(target, 'examples'), { recursive: true });
+  const hasExamples = existsSync(examples) && listFiles(examples).length > 0;
+  if (skill.examples) {
+    if (!hasExamples) throw new Error(`${skill.name}: examples/ is missing or empty`);
+    checkExamples(skill, examples);
+    cpSync(examples, resolve(target, 'examples'), { recursive: true });
+  } else if (hasExamples) {
+    throw new Error(`${skill.name} ships no examples, but ${skill.name}/examples has files`);
+  }
 
   for (const path of bundledPaths(text)) {
     if (!existsSync(resolve(target, path))) {
@@ -84,13 +89,13 @@ function buildSkill(skill: SkillConfig, out: string, validator: string): void {
  * Builds every skill from `skills/`: one folder and one zip per skill, the installer and the kit.
  * The output folder has the kit's layout, so its `install.mjs` works from there too.
  */
-export async function buildSkills(out: string = DEFAULT_OUT): Promise<void> {
+export async function buildSkills(out: string = DEFAULT_OUT, sources: string = SOURCES): Promise<void> {
   rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
   const validator = await bundleScript('validate-cli.ts');
-  for (const skill of SKILLS) buildSkill(skill, out, validator);
+  for (const skill of SKILLS) buildSkill(skill, out, validator, sources);
   writeFileSync(resolve(out, 'install.mjs'), await bundleScript('install-cli.ts'));
-  cpSync(resolve(SOURCES, 'shared/kit'), out, { recursive: true });
+  cpSync(resolve(sources, 'shared/kit'), out, { recursive: true });
 
   for (const { name } of SKILLS) {
     const dir = resolve(out, name);

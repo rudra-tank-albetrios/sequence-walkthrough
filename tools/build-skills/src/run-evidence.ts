@@ -76,24 +76,48 @@ const CD = /(?:^|[\s;&|(])cd\s+(?:"([^"]+)"|'([^']+)'|(\S+))/;
 const DOC = /\.(md|mmd|markdown|txt)$/i;
 const isReadme = (file: string): boolean => /^readme(\.|$)/i.test(basename(file));
 
-/** The files one tool call opened: the Read tool's file, or the files a shell reader printed. */
-export function filesRead(call: ToolCall): string[] {
+/** Where a shell command splits into simple commands: a pipe, `;`, `&&`, `||` or a line break. */
+const SEGMENT = /\s*(?:\|\||&&|[|;\n])\s*/;
+
+/**
+ * The files one tool call opened, as absolute paths: the Read tool's file, or the files a shell
+ * reader names. Only the simple command that runs the reader counts (`grep x a.ts | head` opens
+ * nothing), plus the list of a `for … in` loop whose body runs one. Relative paths are read from
+ * the command's `cd`, or else from `root`, the folder the run was started in.
+ */
+export function filesRead(call: ToolCall, root: string = process.cwd()): string[] {
   if (call.name === 'Read') {
-    return typeof call.input.file_path === 'string' ? [call.input.file_path] : [];
+    return typeof call.input.file_path === 'string' ? [resolve(root, call.input.file_path)] : [];
   }
   if (call.name !== 'Bash' && call.name !== 'PowerShell') return [];
   const command = typeof call.input.command === 'string' ? call.input.command : '';
-  if (!READER.test(command)) return [];
   const cd = CD.exec(command);
-  const dir = cd?.[1] ?? cd?.[2] ?? cd?.[3] ?? '';
+  const dir = resolve(root, cd?.[1] ?? cd?.[2] ?? cd?.[3] ?? '');
   const files: string[] = [];
-  for (const match of command.matchAll(FILE_TOKEN)) {
-    const file = match[1] ?? match[2] ?? match[3] ?? '';
-    if (file && !files.includes(file)) files.push(file);
+  const add = (text: string) => {
+    for (const match of text.matchAll(FILE_TOKEN)) {
+      const file = match[1] ?? match[2] ?? match[3] ?? '';
+      if (file && !files.includes(file)) files.push(file);
+    }
+  };
+  let loopList: string | null = null;
+  for (const segment of command.split(SEGMENT)) {
+    if (/^for\s+\w+\s+in\s/.test(segment)) {
+      loopList = segment;
+      continue;
+    }
+    if (/^done\b/.test(segment)) {
+      loopList = null;
+      continue;
+    }
+    if (!READER.test(segment)) continue;
+    add(segment);
+    if (loopList !== null) {
+      add(loopList);
+      loopList = null;
+    }
   }
-  return files.map((file) =>
-    isAbsolute(file) || /^[A-Za-z]:/.test(file) ? file : resolve(dir, file),
-  );
+  return files.map((file) => resolve(dir, file));
 }
 
 /** What a transcript shows about the reading of one project. */
@@ -102,8 +126,8 @@ export function evidenceFrom(transcript: Transcript, root: string): RunEvidence 
   const reads: string[] = [];
   const outsideProject: string[] = [];
   for (const call of transcript.calls) {
-    for (const file of filesRead(call)) {
-      const rel = relative(base, resolve(file)).replaceAll('\\', '/');
+    for (const file of filesRead(call, base)) {
+      const rel = relative(base, file).replaceAll('\\', '/');
       if (rel === '' || rel.startsWith('..') || isAbsolute(rel)) outsideProject.push(file);
       else reads.push(rel);
     }

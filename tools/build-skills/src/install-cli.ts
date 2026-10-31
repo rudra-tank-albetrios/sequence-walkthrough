@@ -1,10 +1,12 @@
 // Installs the skills for Claude Code, from the folder this script is in (the built output or the
 // unzipped kit). Repeatable: an up-to-date skill is left alone, anything else it replaces, and the
 // old skill names, move to a backup folder that Claude Code does not load skills from.
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { basename, dirname, join, relative, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { listFiles } from '@swv/tool-kit/files';
 
 const USAGE = `Install the sequence diagram skills for Claude Code.
 
@@ -17,13 +19,6 @@ and detailed-seqflow. Start a new Claude Code session afterwards.`;
 
 const SKILLS = ['seq-diagram', 'detailed-seq-diagram'];
 const OLD_NAMES = ['sequence-walkthrough', 'detailed-seqflow'];
-
-function listFiles(dir: string): string[] {
-  return readdirSync(dir, { recursive: true, withFileTypes: true })
-    .filter((entry) => !entry.isDirectory())
-    .map((entry) => relative(dir, resolve(entry.parentPath, entry.name)).replaceAll('\\', '/'))
-    .sort();
-}
 
 function sameFiles(a: string, b: string): boolean {
   const files = listFiles(a);

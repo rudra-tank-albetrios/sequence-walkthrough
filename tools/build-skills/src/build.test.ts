@@ -1,7 +1,17 @@
 // Runs the real build into a temporary folder, then uses what came out the way a skill does.
-import { copyFileSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import {
+  copyFileSync,
+  cpSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { join, resolve } from 'node:path';
 
+import { repoRoot } from '@swv/tool-kit';
 import { unzipSync } from 'fflate';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -82,6 +92,50 @@ describe('the built skills', () => {
   it('gives both skills the same validator', () => {
     const [a, b] = SKILLS.map(({ name }) => readFileSync(join(out, name, 'scripts/validate.mjs')));
     expect(a?.equals(b as Buffer)).toBe(true);
+  });
+
+  it('writes an installer that imports nothing but Node, and no path of this repository', () => {
+    const installer = readFileSync(join(out, 'install.mjs'), 'utf8');
+    expect(installer).toMatch(/\bfunction listFiles\b/);
+    expect(installer).not.toMatch(/^import .* from ["'](?!node:)/m);
+    expect(installer).not.toContain("'../../..'");
+  });
+});
+
+describe('the examples flag', () => {
+  /** The real sources, copied without the sample projects, so a test can change them. */
+  function copiedSources(): string {
+    const sources = tempFolder('sources');
+    cpSync(resolve(repoRoot, 'skills'), sources, {
+      recursive: true,
+      filter: (path) => !/[\\/]fixtures([\\/]|$)/.test(path),
+    });
+    return sources;
+  }
+
+  it('refuses example files in a skill that ships none', async () => {
+    const sources = copiedSources();
+    mkdirSync(join(sources, 'seq-diagram/examples'));
+    writeFileSync(join(sources, 'seq-diagram/examples/x.mmd'), CLEAN);
+    await expect(buildSkills(tempFolder('flag'), sources)).rejects.toThrow('ships no examples');
+  });
+
+  it('ignores an empty examples folder in a skill that ships none', async () => {
+    const sources = copiedSources();
+    mkdirSync(join(sources, 'seq-diagram/examples'));
+    const built = tempFolder('flag');
+    await buildSkills(built, sources);
+    expect(filesUnder(join(built, 'seq-diagram')).some((f) => f.startsWith('examples/'))).toBe(
+      false,
+    );
+  });
+
+  it('requires examples in a skill that ships them', async () => {
+    const sources = copiedSources();
+    rmSync(join(sources, 'detailed-seq-diagram/examples'), { recursive: true });
+    await expect(buildSkills(tempFolder('flag'), sources)).rejects.toThrow(
+      'examples/ is missing or empty',
+    );
   });
 
   it('puts the guide, the installer, the folders and the zips in the kit', () => {
@@ -205,6 +259,8 @@ describe('the validator script', () => {
   });
   it.each([
     ['src/a.ts:3', 'the file has 2 lines'],
+    ['src/a.ts:2-1', 'the range 2-1 runs backwards'],
+    ['src/a.ts:0-1', 'the file has 2 lines'],
     ['src/none.ts:1', 'no such file'],
     ['../outside.ts:1', 'points outside the project'],
     ['src:1', 'no such file'],
