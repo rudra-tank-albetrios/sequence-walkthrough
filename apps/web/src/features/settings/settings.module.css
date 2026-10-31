@@ -1,0 +1,149 @@
+.pane {
+  display: grid;
+  gap: var(--space-5);
+  max-width: 680px;
+  font-size: var(--text-md);
+}
+
+.intro {
+  margin: 0;
+  color: var(--muted);
+}
+
+.warn {
+  margin: 0;
+  color: var(--s-4xx);
+  font-weight: 600;
+}
+
+.block {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.heading,
+.choice legend {
+  margin: 0;
+  padding: 0;
+  color: var(--faint);
+  font-size: var(--text-sm);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.choice {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  width: fit-content;
+  margin-top: var(--space-2);
+  padding: 3px;
+  border-radius: var(--r);
+  background: var(--surface-2);
+}
+
+.seg input {
+  position: absolute;
+  opacity: 0;
+}
+
+.seg span {
+  display: block;
+  padding: 5px 12px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.seg input:checked + span {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-1);
+}
+
+.seg input:focus-visible + span {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.toggle input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--marker-strong);
+}
+
+.toggle b {
+  display: block;
+  font-weight: 600;
+}
+
+.toggle small {
+  display: block;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.rows {
+  display: grid;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+}
+
+.rows li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px var(--space-3);
+  padding: 8px 8px 8px 12px;
+}
+
+.rows li + li {
+  border-top: 1px solid var(--line);
+}
+
+.rowName {
+  flex: 1 1 200px;
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.rowSize {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  color: var(--muted);
+}

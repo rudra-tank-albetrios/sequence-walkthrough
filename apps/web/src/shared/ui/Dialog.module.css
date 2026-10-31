@@ -18,7 +18,7 @@
   color: var(--ink);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
-  box-shadow: var(--shadow-1), var(--shadow-2);
+  box-shadow: var(--shadow-float);
   z-index: var(--z-dialog);
   outline: none;
 }

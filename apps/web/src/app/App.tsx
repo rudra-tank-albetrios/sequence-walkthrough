@@ -1,11 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { AiSettingsDialog, AskDialog } from '../features/ask-ai/index.ts';
 import { CodePanel } from '../features/code-panel/index.ts';
 import { ImportDialog, useDropImport } from '../features/export/index.ts';
 import { FindPopover } from '../features/find/index.ts';
 import { GuideDialog, ShortcutsDialog } from '../features/guide/index.ts';
-import { InsightPanel } from '../features/insight/index.ts';
 import { TableView } from '../features/table/index.ts';
 import { Viewer } from '../features/viewer/index.ts';
 import { PresenterCard, SelectionMenu, WalkBar, WalkthroughRuntime } from '../features/walkthrough/index.ts';
@@ -15,7 +14,7 @@ import { useFlowStore } from '../shared/state/flowStore.ts';
 import { useGlossaryStore } from '../shared/state/glossaryStore.ts';
 import { useNotesStore } from '../shared/state/notesStore.ts';
 import { flowId } from '../shared/storage/notes.ts';
-import { saveCode } from '../shared/storage/settings.ts';
+import { applyPageTheme, saveCode } from '../shared/storage/settings.ts';
 import { Button } from '../shared/ui/Button.tsx';
 import { Kbd } from '../shared/ui/Kbd.tsx';
 import { ToastHost } from '../shared/ui/Toast.tsx';
@@ -23,8 +22,11 @@ import { toast } from '../shared/ui/toast.ts';
 import { TooltipProvider } from '../shared/ui/Tooltip.tsx';
 import styles from './App.module.css';
 import { useDocumentTitle } from './title.ts';
+import { ToolOverlay } from './tools/ToolOverlay.tsx';
+import { ToolHosts } from './tools/ToolHosts.tsx';
 import { TopBar } from './TopBar.tsx';
 import { loadInitialCode } from './boot.ts';
+import { useChromeInsets } from './useChromeInsets.ts';
 import { useGlobalKeys } from './useGlobalKeys.ts';
 import { useHideMode } from './useHideMode.ts';
 
@@ -72,6 +74,11 @@ export function App() {
   useDocumentTitle(flow);
   useHideMode();
 
+  const pageTheme = settings.pageTheme;
+  useEffect(() => {
+    applyPageTheme(pageTheme);
+  }, [pageTheme]);
+
   // First load: the link, then the autosaved code, then the demo flow.
   useEffect(() => {
     let cancelled = false;
@@ -113,23 +120,18 @@ export function App() {
   const topFolded = Boolean(settings.fold?.top);
   const barFolded = Boolean(settings.fold?.bar);
   const showTop = !hidden && !topFolded;
-  const showBar = !hidden && !barFolded;
   const codeShown = ui.codeOpen && !hidden;
+  const pageRef = useRef<HTMLDivElement | null>(null);
+  useChromeInsets(pageRef, `${String(showTop)} ${String(hidden)}`);
 
   return (
     <TooltipProvider>
-      <div className={styles.app} data-hidden={hidden || undefined}>
-        {showTop ? <TopBar /> : <div />}
-        <main
-          className={styles.stage}
-          id="stage"
-          data-code-open={codeShown || undefined}
-          data-insight-open={ui.insightOpen || undefined}
-        >
+      <div ref={pageRef} className={styles.app} data-hidden={hidden || undefined} data-code-open={codeShown || undefined}>
+        {showTop ? <TopBar /> : null}
+        <main className={styles.stage} id="stage">
           <Viewer />
           {hidden ? null : <FindPopover />}
           <PresenterCard />
-          <InsightPanel />
           {hidden && !ui.presenter ? (
             <Button
               className={styles.showControls}
@@ -138,31 +140,33 @@ export function App() {
               Show controls · <Kbd>Esc</Kbd>
             </Button>
           ) : null}
-          {!hidden ? (
-            <>
-              <EdgeTab
-                side="top"
-                expanded={!topFolded}
-                label={topFolded ? 'Show the header' : 'Hide the header'}
-                onClick={() => updateSettings({ fold: { ...settings.fold, top: !topFolded } })}
-              />
-              <EdgeTab
-                side="bottom"
-                expanded={!barFolded}
-                label={barFolded ? 'Show the step bar' : 'Hide the step bar'}
-                onClick={() => updateSettings({ fold: { ...settings.fold, bar: !barFolded } })}
-              />
-              {ui.codeOpen ? (
-                <EdgeTab side="left" expanded label="Hide the code" onClick={() => setUi({ codeOpen: false })} />
-              ) : null}
-            </>
-          ) : null}
           {hidden ? null : <CodePanel />}
           <TableView />
         </main>
-        {showBar ? <WalkBar /> : <div />}
+        {hidden ? null : (
+          <>
+            <EdgeTab
+              side="top"
+              expanded={!topFolded}
+              label={topFolded ? 'Show the header' : 'Hide the header'}
+              onClick={() => updateSettings({ fold: { ...settings.fold, top: !topFolded } })}
+            />
+            <EdgeTab
+              side="bottom"
+              expanded={!barFolded}
+              label={barFolded ? 'Show the step bar' : 'Hide the step bar'}
+              onClick={() => updateSettings({ fold: { ...settings.fold, bar: !barFolded } })}
+            />
+            {ui.codeOpen ? (
+              <EdgeTab side="left" expanded label="Hide the code" onClick={() => setUi({ codeOpen: false })} />
+            ) : null}
+            <WalkBar deckFolded={barFolded} />
+          </>
+        )}
         <WalkthroughRuntime />
         <SelectionMenu />
+        <ToolOverlay />
+        <ToolHosts />
         <AskDialog />
         <AiSettingsDialog />
         <GuideDialog />
@@ -173,4 +177,3 @@ export function App() {
     </TooltipProvider>
   );
 }
-

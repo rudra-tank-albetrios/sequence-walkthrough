@@ -14,7 +14,7 @@ export function applyImport(result: ImportResult): boolean {
   }
   const store = useFlowStore.getState();
   if (result.theme !== null && isTheme(result.theme) && result.theme !== store.settings.theme) {
-    store.updateSettings({ theme: result.theme });
+    store.updateSettings({ theme: result.theme, themeAuto: false });
   }
   store.setCode(result.code);
   if (result.message) toast(result.message);

@@ -1,40 +1,54 @@
-import { Button } from '../../shared/ui/Button.tsx';
-import { Select } from '../../shared/ui/Select.tsx';
+import { CodeXml, Contrast, EyeOff, Maximize, Minus, Mouse, Plus, Rows3 } from 'lucide-react';
+
+import { cx } from '../../shared/lib/util.ts';
 import { useDiagramStore } from '../../shared/state/diagramStore.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
+import { Button } from '../../shared/ui/Button.tsx';
 import styles from './viewer.module.css';
 
-const SPEEDS = [1000, 2000, 3000, 4000, 5000];
+const ICON = { size: 16, 'aria-hidden': true } as const;
 
-/** The buttons at the bottom of the canvas: Code, Play, speed, Dim others, Chapter band, Insight, Hide. */
+/** The percent between the zoom buttons: its own part, so only it follows every zoom change. */
+function ZoomLevel() {
+  const zoom = useDiagramStore((s) => s.zoom);
+  const commands = useDiagramStore((s) => s.commands);
+  return (
+    <button type="button" className={styles.zoomValue} title="Set zoom to 100%" onClick={() => commands.zoomTo(1)}>
+      {Math.round(zoom * 100)}%
+    </button>
+  );
+}
+
+/** Code at the top left of the canvas; zoom, fit and view switches in a column at the top right. */
 export function CanvasControls() {
-  const flow = useFlowStore((s) => s.flow);
-  const playing = useFlowStore((s) => s.playing);
+  const codeOpen = useFlowStore((s) => s.ui.codeOpen);
+  const hidden = useFlowStore((s) => s.ui.controlsHidden);
   const settings = useFlowStore((s) => s.settings);
-  const ui = useFlowStore((s) => s.ui);
   const setUi = useFlowStore((s) => s.setUi);
-  const setPlaying = useFlowStore((s) => s.setPlaying);
   const updateSettings = useFlowStore((s) => s.updateSettings);
+  const commands = useDiagramStore((s) => s.commands);
   const syntaxError = useDiagramStore((s) => s.error);
-  const unexplained = flow?.lint.filter((l) => l.code === 'no-step').length ?? 0;
-  const isSequence = flow?.isSequence ?? false;
+  const unexplained = useFlowStore((s) => s.flow?.lint.filter((l) => l.code === 'no-step').length ?? 0);
+  const wheelZoom = settings.wheel === 'zoom';
 
-  if (ui.controlsHidden) return null;
+  if (hidden) return null;
 
   return (
-    <div className={styles.controls} data-canvas-ui>
+    <>
       <Button
         className={styles.codeBtn}
-        aria-expanded={ui.codeOpen}
+        aria-expanded={codeOpen}
         aria-controls="codePanel"
         title="Code (C)"
+        data-canvas-ui
+        data-tour="code"
         onClick={() => {
-          setUi({ codeOpen: !ui.codeOpen });
+          setUi({ codeOpen: !codeOpen });
         }}
       >
-        <span aria-hidden="true">&lt;/&gt;</span> Code
+        <CodeXml {...ICON} /> Code
         {syntaxError !== null ? (
-          <span className={`${styles.count} ${styles.countErr}`} data-testid="code-count">
+          <span className={cx(styles.count, styles.countErr)} data-testid="code-count">
             error
           </span>
         ) : unexplained > 0 ? (
@@ -43,68 +57,81 @@ export function CanvasControls() {
           </span>
         ) : null}
       </Button>
-      <div className={styles.controlsRight}>
-        <Button
-          pressed={playing}
-          disabled={!isSequence}
-          title="Play / pause (Space)"
-          onClick={() => {
-            setPlaying(!playing);
-          }}
-        >
-          <span aria-hidden="true">{playing ? '❚❚' : '▶'}</span>{' '}
-          <span className={styles.lbl}>{playing ? 'Pause' : 'Play'}</span>
+      <div className={styles.tools} role="group" aria-label="Diagram view" data-canvas-ui data-tour="canvas-tools">
+        <Button variant="ghost" icon aria-label="Zoom in" title="Zoom in (+)" onClick={commands.zoomIn}>
+          <Plus {...ICON} />
         </Button>
-        <Select
-          aria-label="Seconds per step"
-          title="Seconds per step"
-          value={settings.speed}
-          onChange={(e) => {
-            updateSettings({ speed: Number(e.target.value) });
-          }}
-        >
-          {SPEEDS.map((ms) => (
-            <option key={ms} value={ms}>
-              {ms / 1000} s
-            </option>
-          ))}
-        </Select>
+        <ZoomLevel />
+        <Button variant="ghost" icon aria-label="Zoom out" title="Zoom out (-)" onClick={commands.zoomOut}>
+          <Minus {...ICON} />
+        </Button>
         <Button
+          variant="ghost"
+          icon
+          aria-label="Fit"
+          title="Fit width (0). Fit all (F)"
+          onClick={commands.fitWidth}
+        >
+          <Maximize {...ICON} />
+        </Button>
+        <span className={styles.toolsRule} aria-hidden="true" />
+        <Button
+          variant="ghost"
+          icon
+          className={styles.toolExtra}
           pressed={settings.dim}
+          aria-label="Dim others"
           title="Fade the other arrows"
           onClick={() => {
             updateSettings({ dim: !settings.dim });
           }}
         >
-          <span aria-hidden="true">◐</span> <span className={styles.lbl}>Dim others</span>
+          <Contrast {...ICON} />
         </Button>
         <Button
+          variant="ghost"
+          icon
+          className={styles.toolExtra}
           pressed={settings.bands}
+          aria-label="Chapter band"
           title="Colour band behind the current chapter"
           onClick={() => {
             updateSettings({ bands: !settings.bands });
           }}
         >
-          <span aria-hidden="true">▭</span> <span className={styles.lbl}>Chapter band</span>
+          <Rows3 {...ICON} />
         </Button>
         <Button
-          pressed={ui.insightOpen}
-          title="Insight panel: layers, endpoints, errors, side parts, glossary, data (I)"
+          variant="ghost"
+          icon
+          className={styles.toolExtra}
+          id="wheelBtn"
+          pressed={wheelZoom}
+          title={
+            wheelZoom
+              ? 'The wheel zooms like mermaid.live. Click to scroll instead.'
+              : 'The wheel scrolls; Ctrl + wheel zooms. Click to zoom with the wheel.'
+          }
           onClick={() => {
-            setUi({ insightOpen: !ui.insightOpen });
+            updateSettings({ wheel: wheelZoom ? 'scroll' : 'zoom' });
           }}
         >
-          <span aria-hidden="true">☰</span> <span className={styles.lbl}>Insight</span>
+          <Mouse {...ICON} />
+          <span className="sr-only">Wheel: {wheelZoom ? 'Zoom' : 'Scroll'}</span>
         </Button>
         <Button
+          variant="ghost"
+          icon
+          className={styles.toolExtra}
+          aria-label="Hide controls"
           title="Hide controls (H)"
           onClick={() => {
             setUi({ controlsHidden: true });
           }}
         >
-          <span aria-hidden="true">⛶</span> <span className={styles.lbl}>Hide</span>
+          <EyeOff {...ICON} />
         </Button>
       </div>
-    </div>
+    </>
   );
 }

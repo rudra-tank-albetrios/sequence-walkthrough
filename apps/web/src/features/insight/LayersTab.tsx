@@ -12,6 +12,7 @@ import { StepLink } from './StepLink.tsx';
 export function LayersTab({ flow, steps }: { flow: Flow; steps: Step[] }) {
   const spot = useFlowStore((s) => s.spot);
   const setSpot = useFlowStore((s) => s.setSpot);
+  const setUi = useFlowStore((s) => s.setUi);
   return (
     <>
       <ul className={styles.il}>
@@ -38,7 +39,13 @@ export function LayersTab({ flow, steps }: { flow: Flow; steps: Step[] }) {
                 {layer?.kind ? <Chip tone="follow">{layer.kind}</Chip> : null}
                 <span className={styles.muted}>{p.alias}</span>
                 {zone ? <span className={styles.muted}>· {zone}</span> : null}
-                <Button className={styles.ilBtn} onClick={() => setSpot(on ? null : p.alias)}>
+                <Button
+                  className={styles.ilBtn}
+                  onClick={() => {
+                    setSpot(on ? null : p.alias);
+                    if (!on) setUi({ overlayTool: null });
+                  }}
+                >
                   {on ? 'Show all' : 'Only this layer'}
                 </Button>
               </div>
