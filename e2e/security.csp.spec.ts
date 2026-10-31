@@ -270,7 +270,7 @@ test.describe('the built page', () => {
         .split(';')
         .map((part) => part.trim().split(/\s+/))
         .filter((parts) => parts[0])
-        .map(([name, ...sources]) => [name, sources]),
+        .map(([name = '', ...sources]): [string, string[]] => [name, sources]),
     );
     expect(directives).toEqual(POLICY);
 

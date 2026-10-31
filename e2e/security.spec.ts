@@ -433,7 +433,7 @@ test.describe('a malicious notes file', () => {
   const FLOW = 'sequenceDiagram\n  %% @title Noted\n  A->>B: hello\n  B-->>A: 200 ok';
   const html = `<img src=x onerror="__pwned('notes-file')" data-pwn>`;
 
-  async function importNotes(page: import('@playwright/test').Page, content: string) {
+  async function importNotes(page: Page, content: string) {
     await page.getByTestId('bm-btn').click();
     await page.getByRole('heading', { name: 'Bookmarks and notes' }).waitFor();
     await page.getByLabel('Notes file').setInputFiles({
