@@ -47,7 +47,10 @@ describe('ReviewDialog', () => {
     expect(screen.getByRole('dialog', { name: 'Structure review' })).toBeInTheDocument();
     expect(screen.getByTestId('review-scope')).toHaveTextContent('This flow: Save a thing');
     expect(screen.getByTestId('review-score').textContent).toMatch(/^\d+ \/ 100$/);
-    expect(screen.getByRole('meter', { name: 'Structure rating' })).toHaveAttribute('aria-valuemax', '100');
+    expect(screen.getByRole('meter', { name: 'Structure rating' })).toHaveAttribute(
+      'aria-valuemax',
+      '100',
+    );
     expect(screen.getByTestId('review-confidence').textContent).toMatch(/^(Low|Medium|High)$/);
 
     const limits = screen.getByTestId('review-limits');
@@ -74,11 +77,12 @@ describe('ReviewDialog', () => {
     load(PROBLEM, { reviewOpen: true });
     render(<ReviewDialog />);
 
-    fireEvent.click(
-      within(screen.getByTestId('review-findings')).getAllByRole('button', {
-        name: 'Close the review and go to step 1',
-      })[0] as HTMLElement,
-    );
+    const [link] = within(screen.getByTestId('review-findings')).getAllByRole('button', {
+      name: 'Close the review and go to step 1',
+    });
+    expect(link).toBeDefined();
+    if (!link) return;
+    fireEvent.click(link);
 
     const { cur, ui } = useFlowStore.getState();
     expect(cur).toBe(0);
@@ -100,7 +104,10 @@ describe('ReviewDialog', () => {
     load(PROBLEM, { threatsOpen: true });
     render(<ReviewDialog />);
 
-    expect(screen.getByRole('tab', { name: 'Threats (2)' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Threats (2)' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
     const threats = screen.getByTestId('review-threats');
     expect(threats).toHaveTextContent('possible problem to check');
     const items = within(threats).getAllByRole('listitem');
@@ -113,7 +120,10 @@ describe('ReviewDialog', () => {
     load(NO_THREATS, { threatsOpen: true });
     render(<ReviewDialog />);
 
-    expect(screen.getByRole('tab', { name: 'Threats (0)' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Threats (0)' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
     expect(screen.getByTestId('review-threats')).toHaveTextContent('does not mean it is safe');
   });
 

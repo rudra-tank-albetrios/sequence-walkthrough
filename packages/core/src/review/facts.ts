@@ -43,8 +43,8 @@ export interface Facts {
 export function factsOf(flow: Flow): Facts {
   const kinds: Record<string, string> = {};
   for (const participant of flow.participants) {
-    const annotated = flow.layers[participant.alias]?.kind;
-    kinds[participant.alias] = annotated ? annotated : kindFromName(participant.name);
+    const annotated = flow.layers[participant.alias]?.kind ?? '';
+    kinds[participant.alias] = annotated === '' ? kindFromName(participant.name) : annotated;
   }
   return { flow, kinds, present: new Set(Object.values(kinds).filter(Boolean)) };
 }

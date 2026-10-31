@@ -56,7 +56,9 @@ export function ExplainPanel({ findings }: { findings: readonly ReviewFinding[] 
             ))}
           </ol>
           <p className={styles.note}>
-            {answer.cached ? `Saved answer from ${answer.by}, no tokens used.` : `From ${answer.by}.`}
+            {answer.cached
+              ? `Saved answer from ${answer.by}, no tokens used.`
+              : `From ${answer.by}.`}
           </p>
         </>
       ) : null}

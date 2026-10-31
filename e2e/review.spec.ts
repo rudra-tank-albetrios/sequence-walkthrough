@@ -80,7 +80,9 @@ test.describe('structure review', () => {
     await expect(page.getByTestId('progress').locator('[data-threat]')).toHaveCount(1);
     await page.keyboard.press('ArrowRight');
 
-    await expect(page.getByTestId('threats')).toContainText('The table name comes from the request');
+    await expect(page.getByTestId('threats')).toContainText(
+      'The table name comes from the request',
+    );
     await page.getByTestId('threat-chip').first().click();
 
     const dialog = review(page);
@@ -135,8 +137,14 @@ test.describe('structure review', () => {
     await openWith(page, FLOW);
     await openReview(page);
 
-    const overflow = await review(page).evaluate((box) => box.scrollWidth - box.clientWidth);
-    expect(overflow).toBeLessThanOrEqual(0);
+    const box = await review(page).boundingBox();
+    expect(box).not.toBeNull();
+    expect((box?.x ?? -1) + (box?.width ?? 999)).toBeLessThanOrEqual(360);
+    const sideways = await review(page).evaluate(
+      (dialog: { scrollWidth: number; clientWidth: number }) =>
+        dialog.scrollWidth - dialog.clientWidth,
+    );
+    expect(sideways).toBeLessThanOrEqual(0);
   });
 
   for (const colorScheme of ['light', 'dark'] as const) {
