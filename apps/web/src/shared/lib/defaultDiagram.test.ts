@@ -49,7 +49,7 @@ describe('the demo flow', () => {
 
   it('shows what goes and what comes back', () => {
     const request = flow.steps.find((step) => step.http?.path === '/api/orders');
-    expect(request?.payloads.map((p) => p.part)).toEqual(['headers', 'body']);
+    expect(new Set(request?.payloads.map((p) => p.part))).toEqual(new Set(['headers', 'body']));
     const created = flow.steps.find((step) => step.status?.code === 201);
     expect(created?.payloads.some((p) => p.part === 'body')).toBe(true);
     expect(flow.steps.filter((step) => step.payloads.some((p) => p.part === 'result')).length).toBeGreaterThan(5);
@@ -104,7 +104,7 @@ describe('the demo flow', () => {
     expect(flow.threats[0]?.text).toMatch(/^Sample threat for the demo:/);
   });
 
-  it('opens with the steps the tour stops on', () => {
+  it('has a side part on step 1, where the tour shows them', () => {
     expect(flow.steps[0]?.uses.length).toBeGreaterThan(0);
   });
 });

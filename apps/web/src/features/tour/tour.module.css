@@ -20,6 +20,9 @@
 
 .card {
   position: fixed;
+  /* On screen from its first moment, as the focus lands on it before it is placed */
+  left: 8px;
+  top: 8px;
   z-index: 61;
   width: min(380px, calc(100vw - 16px));
   max-height: calc(100dvh - 16px);

@@ -74,9 +74,13 @@ describe('Tour', () => {
   it('starts by itself on a first visit to the demo flow, and remembers it', async () => {
     loadCode(DEFAULT_DIAGRAM);
     renderTour();
-    expect(await currentStop()).toHaveAccessibleName(/First stop/);
+    const card = await currentStop();
+    expect(card).toHaveAccessibleName(/First stop/);
     expect(screen.getByTestId('tour-spotlight')).toBeInTheDocument();
     expect(localStorage.getItem(TOUR_SEEN_KEY)).toBe('true');
+    // The portal mounts the card late, and it still has to be placed.
+    expect(card.style.left).not.toBe('');
+    expect(card.style.top).not.toBe('');
   });
 
   it('does not start by itself for a returning visitor, but opens from the store flag', async () => {

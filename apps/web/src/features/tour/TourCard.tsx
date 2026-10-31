@@ -1,5 +1,5 @@
 import * as RadixDialog from '@radix-ui/react-dialog';
-import { useLayoutEffect, useRef, type KeyboardEvent } from 'react';
+import { useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 
 import { Button } from '../../shared/ui/Button.tsx';
 import { Chip } from '../../shared/ui/Chip.tsx';
@@ -61,14 +61,14 @@ export interface TourCardProps {
  * opened last is the one on top, so the card keeps the focus even over a feature's own dialog.
  */
 export function TourCard({ stop, index, total, box, onBack, onNext, onEnd }: TourCardProps) {
-  const cardRef = useRef<HTMLDivElement | null>(null);
+  // The portal mounts the card just after this component, so its element arrives through state.
+  const [card, setCard] = useState<HTMLDivElement | null>(null);
   const nextRef = useRef<HTMLButtonElement | null>(null);
   const last = index === total - 1;
 
   useLayoutEffect(() => {
+    if (!card) return;
     const place = () => {
-      const card = cardRef.current;
-      if (!card) return;
       const size = { width: card.offsetWidth, height: card.offsetHeight };
       const { left, top } = placeCard(box, size, {
         width: window.innerWidth,
@@ -82,7 +82,7 @@ export function TourCard({ stop, index, total, box, onBack, onNext, onEnd }: Tou
     return () => {
       window.removeEventListener('resize', place);
     };
-  }, [box]);
+  }, [box, card]);
 
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key === 'ArrowRight' && !last) onNext();
@@ -98,7 +98,7 @@ export function TourCard({ stop, index, total, box, onBack, onNext, onEnd }: Tou
     >
       <RadixDialog.Portal>
         <RadixDialog.Content
-          ref={cardRef}
+          ref={setCard}
           className={styles.card}
           data-testid="tour-card"
           data-stop={stop.id}

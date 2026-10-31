@@ -34,7 +34,7 @@ Settings read from the environment: `PORT` (8787), `RESERVATION_TTL_SECONDS` (90
 | Service     | `src/backend/services/`                                           | `OrdersService.placeOrder`, `OutOfStockError`                           |
 | Repository  | `src/backend/repositories/`                                       | `OrdersRepository`, `ProductsRepository`                                |
 | Database    | `src/backend/infra/memoryDb.ts`                                   | tables `products`, `orders`, `order_items`, `sessions`; `transaction`   |
-| Redis       | `src/backend/infra/memoryRedis.ts`                                | `reserve`, `release`, `expired`                                         |
+| Redis       | `src/backend/infra/memoryRedis.ts`                                | `reserve`, `del`, `release`, `expired`                                  |
 | Event Bus   | `src/backend/infra/eventBus.ts`                                   | `publish`, `subscribe`                                                  |
 | Mail Queue  | `src/backend/infra/memoryQueue.ts`                                | `enqueue`, `dequeue`                                                    |
 | Mail Worker | `src/backend/workers/`                                            | `OrderConfirmationWorker.runOnce`                                       |

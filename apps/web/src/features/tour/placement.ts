@@ -26,12 +26,12 @@ export function placeCard(target: Box | null, card: Size, view: Size): Pick<Box,
   const midX = inX(target.left + (target.width - card.width) / 2);
   const midY = inY(target.top + (target.height - card.height) / 2);
   const below = target.top + target.height + GAP;
-  if (below + card.height <= view.height - EDGE) return { left: midX, top: below };
+  if (below + card.height <= view.height - EDGE) return { left: midX, top: inY(below) };
   const above = target.top - GAP - card.height;
-  if (above >= EDGE) return { left: midX, top: above };
+  if (above >= EDGE) return { left: midX, top: inY(above) };
   const right = target.left + target.width + GAP;
-  if (right + card.width <= view.width - EDGE) return { left: right, top: midY };
+  if (right + card.width <= view.width - EDGE) return { left: inX(right), top: midY };
   const left = target.left - GAP - card.width;
-  if (left >= EDGE) return { left, top: midY };
+  if (left >= EDGE) return { left: inX(left), top: midY };
   return { left: midX, top: inY(view.height - card.height - EDGE) };
 }

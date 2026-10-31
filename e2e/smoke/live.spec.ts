@@ -26,7 +26,8 @@ test.describe('a first-time visitor on the live site', () => {
     await expect(page.getByTestId('tour-card')).toHaveAttribute('data-stop', 'layers', {
       timeout: 60_000,
     });
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Place an order');
+    // The page behind the card is hidden from the accessibility tree, so this looks for the tag.
+    await expect(page.locator('h1')).toHaveText('Place an order');
     await expect(page.getByTestId('diagram').locator('svg').first()).toBeVisible();
 
     expect(pageErrors).toEqual([]);
