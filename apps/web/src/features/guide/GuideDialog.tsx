@@ -93,15 +93,14 @@ export function GuideDialog() {
       <h3 className={styles.h3}>Set up the Claude skill (once)</h3>
       <ul className={styles.points}>
         <li>
-          <b>Download the skill</b> below: the skill, a setup guide and install scripts in one zip.
+          <b>Download the skill</b> below: both skills, a setup guide and an installer in one zip.
         </li>
         <li>
-          <b>Claude Code:</b> run <Mono>install-claude-code.ps1</Mono> (Windows) or <Mono>install-claude-code.sh</Mono>{' '}
-          (macOS, Linux), then start a new session.
+          <b>Claude Code:</b> run <Mono>node install.mjs</Mono> in the unzipped folder, then start a new session.
         </li>
         <li>
           <b>Claude app:</b> Settings → Capabilities → turn on code execution, then Customize → Skills → + → Upload a
-          skill → <Mono>sequence-walkthrough.zip</Mono>.
+          skill → <Mono>seq-diagram.zip</Mono> and <Mono>detailed-seq-diagram.zip</Mono>.
         </li>
         <li>
           <b>Agent SDK or API:</b> follow <Mono>SKILL-SETUP-GUIDE.md</Mono> in the zip.

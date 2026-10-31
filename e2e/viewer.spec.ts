@@ -406,7 +406,10 @@ test.describe('diagram', () => {
     const text = svg(page).locator('.messageText[data-step="0"]').first();
     // From the page, because Playwright's boundingBox is off for SVG text on WebKit.
     const box = await text.evaluate((el) => {
-      const { x, y, height } = el.getBoundingClientRect();
+      const label = el as unknown as {
+        getBoundingClientRect: () => Record<'x' | 'y' | 'height', number>;
+      };
+      const { x, y, height } = label.getBoundingClientRect();
       return { x, y, height };
     });
     await page.mouse.dblclick(box.x + 5, box.y + box.height / 2);

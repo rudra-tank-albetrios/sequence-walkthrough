@@ -108,15 +108,15 @@ test.describe('export menu', () => {
     await expect(dialog.getByLabel('Paper').locator('option')).toHaveText(['A4', 'US Letter']);
     await expect(dialog).toContainText(/\d+ diagram pages?\./);
     // The toast lasts 3.2 s and reading a large file back can take longer, so keep what it said.
-    await toastBox(page).evaluate((box) => {
-      const said: string[] = [];
-      Reflect.set(globalThis, '__toasts', said);
-      new MutationObserver(() => said.push(box.textContent)).observe(box, {
+    await page.evaluate(`
+      globalThis.__toasts = [];
+      const box = document.querySelector('[data-testid="toast"]');
+      new MutationObserver(() => __toasts.push(box.textContent)).observe(box, {
         childList: true,
         subtree: true,
         characterData: true,
       });
-    });
+    `);
     const file = await download(page, () =>
       dialog.getByRole('button', { name: 'Download Place an order.pdf' }).click(),
     );
@@ -124,9 +124,7 @@ test.describe('export menu', () => {
     expect(file.bytes.subarray(0, 5).toString('latin1')).toBe('%PDF-');
     const pages = file.bytes.toString('latin1').match(/\/Type\s*\/Page[^s]/g) ?? [];
     expect(pages.length).toBeGreaterThanOrEqual(2);
-    expect(await page.evaluate(() => Reflect.get(globalThis, '__toasts'))).toContain(
-      'Downloaded Place an order.pdf',
-    );
+    expect(await page.evaluate<string[]>('__toasts')).toContain('Downloaded Place an order.pdf');
   });
 
   test('F9 PNG at 1× and 2× has the size of the drawing', async ({ page }) => {
@@ -473,6 +471,17 @@ test.describe('saving and copying', () => {
     const fromMenu = await exported(page, /^Download the skill/);
     expect(fromMenu.name).toBe('sequence-walkthrough-skill-kit.zip');
     expect(fromMenu.bytes.subarray(0, 2).toString('latin1')).toBe('PK');
+    const names = fromMenu.bytes.toString('latin1');
+    for (const inside of [
+      'SKILL-SETUP-GUIDE.md',
+      'install.mjs',
+      'seq-diagram/SKILL.md',
+      'detailed-seq-diagram/SKILL.md',
+      'seq-diagram.zip',
+      'detailed-seq-diagram.zip',
+    ]) {
+      expect(names).toContain(`sequence-walkthrough-skill-kit/${inside}`);
+    }
     await expect(toastBox(page)).toContainText('Downloaded sequence-walkthrough-skill-kit.zip');
     await page.getByRole('button', { name: 'How it works' }).click();
     const fromGuide = await download(page, () =>

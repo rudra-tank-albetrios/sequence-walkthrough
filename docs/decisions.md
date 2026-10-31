@@ -43,3 +43,10 @@ Decisions the plan (`docs/IMPLEMENTATION-PLAN.md`) does not already make, one or
 - **`seq-diagram` ships no examples.** Its text tells the model to read nothing in the skill's folders, so an example would never be opened; `detailed-seq-diagram` ships two, checked by the validator at the strict bar on every build.
 - **knip on the build machine runs with `KNIP_DISABLE_RAW_TRANSFER=1`.** knip parses with oxc-parser's raw transfer, which allocates one large `ArrayBuffer` per parse; with under 1 GB of memory free that allocation failed (`RangeError: Array buffer allocation failed`) on every run, including the gate's. The variable is knip's own switch to its ordinary parser and changes nothing in what it reports; CI on Ubuntu runs plain `knip`. It was set only on the local gate command, not in `package.json`.
 - **`playwright.config.ts` reads `SWV_E2E_PORT`**, the same two lines every other phase branch has. `main` still hardcodes 4173 and reuses any server already on it, so the first gate on this branch tested another worktree's preview server (its page showed the Phase 3 viewer, not this branch's app). With the variable the gate serves this worktree on its own port.
+
+## PR 8
+
+- Code over 50,000 characters is refused before anything reads it. `setCode` keeps the last good flow and only stores the text; the drawing step shows Mermaid's message. Reading and showing 40,000 steps first stopped the page for 7 to 11 seconds.
+- The skill kit is read from `tools/build-skills/dist`, and built on demand when missing. The kit's name is unchanged, so links keep working.
+- On WebKit the eval and Function constructor attacks stay blocked even with the policy lifted by the test tool, so "with the policy off" there only proves they stay stopped. Chromium and Firefox run the real control.
+- `Viewer.tsx` finds the word under a double-click from the label's on-screen box. On WebKit this gives the same point as `getScreenCTM`; the D22 failure was Playwright's `boundingBox`, which is off for SVG text there, so the test now reads the box from the page.

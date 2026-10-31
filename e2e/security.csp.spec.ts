@@ -8,7 +8,10 @@ import { arm, openSafeFlow, readReport, SETTLE_MS } from './support/armed.ts';
 
 interface Attack {
   name: string;
-  /** Page code that tries it. */
+  /**
+   * Page code that tries it. Whatever turns text into code waits for a later task, because Chromium
+   * lets eval run in the code a test tool sends directly.
+   */
   run: string;
   /** Whether it calls `__pwned` when nothing stops it. */
   fires: boolean;
@@ -18,26 +21,23 @@ interface Attack {
   directive?: string;
 }
 
-const add = (tag: string, props: Record<string, string>): string =>
-  `document.body.append(Object.assign(document.createElement('${tag}'), ${JSON.stringify(props)}));`;
-
 const ATTACKS: Attack[] = [
   {
     name: 'an inline script',
-    run: add('script', { textContent: `__pwned('inline')` }),
+    run: `document.body.append(Object.assign(document.createElement('script'), { textContent: "__pwned('inline')" }));`,
     fires: true,
     directive: 'script-src',
   },
   {
     name: 'a script from another site',
-    run: add('script', { src: 'https://evil.example/x.js' }),
+    run: `document.body.append(Object.assign(document.createElement('script'), { src: 'https://evil.example/x.js' }));`,
     fires: false,
     asks: 'https://evil.example/x.js',
     directive: 'script-src',
   },
   {
     name: 'a script in a data address',
-    run: add('script', { src: `data:text/javascript,__pwned('data')` }),
+    run: `document.body.append(Object.assign(document.createElement('script'), { src: "data:text/javascript,__pwned('data')" }));`,
     fires: true,
     directive: 'script-src',
   },
@@ -67,19 +67,19 @@ const ATTACKS: Attack[] = [
   },
   {
     name: 'eval',
-    run: `try { eval("__pwned('eval')"); } catch { /* blocked */ }`,
+    run: `setTimeout(() => { try { eval("__pwned('eval')"); } catch { /* blocked */ } }, 0);`,
     fires: true,
     directive: 'script-src',
   },
   {
     name: 'the Function constructor',
-    run: `try { new Function("__pwned('function')")(); } catch { /* blocked */ }`,
+    run: `setTimeout(() => { try { new Function("__pwned('function')")(); } catch { /* blocked */ } }, 0);`,
     fires: true,
     directive: 'script-src',
   },
   {
     name: 'a timer with text',
-    run: `setTimeout("__pwned('timer')", 0);`,
+    run: `setTimeout(() => { setTimeout("__pwned('timer')", 0); }, 0);`,
     fires: true,
     directive: 'script-src',
   },
@@ -117,28 +117,28 @@ const ATTACKS: Attack[] = [
   },
   {
     name: 'a frame from another site',
-    run: add('iframe', { src: 'https://evil.example/frame.html' }),
+    run: `document.body.append(Object.assign(document.createElement('iframe'), { src: 'https://evil.example/frame.html' }));`,
     fires: false,
     asks: 'https://evil.example/frame.html',
     directive: 'frame-src',
   },
   {
     name: 'an object from another site',
-    run: add('object', { data: 'https://evil.example/o.html' }),
+    run: `document.body.append(Object.assign(document.createElement('object'), { data: 'https://evil.example/o.html' }));`,
     fires: false,
     asks: 'https://evil.example/o.html',
     directive: 'object-src',
   },
   {
     name: 'an embed from another site',
-    run: add('embed', { src: 'https://evil.example/e.html' }),
+    run: `document.body.append(Object.assign(document.createElement('embed'), { src: 'https://evil.example/e.html' }));`,
     fires: false,
     asks: 'https://evil.example/e.html',
     directive: 'object-src',
   },
   {
     name: 'an image from another site',
-    run: add('img', { src: 'https://evil.example/i.png' }),
+    run: `document.body.append(Object.assign(document.createElement('img'), { src: 'https://evil.example/i.png' }));`,
     fires: false,
     asks: 'https://evil.example/i.png',
     directive: 'img-src',
@@ -178,9 +178,6 @@ const ATTACKS: Attack[] = [
   },
 ];
 
-// A later task, because Chromium lets eval run in the code a test tool sends directly.
-const inLaterTask = (code: string): string => `setTimeout(() => { ${code} }, 0); undefined`;
-
 for (const attack of ATTACKS) {
   test.describe(attack.name, () => {
     if (attack.fires || attack.asks) {
@@ -188,14 +185,15 @@ for (const attack of ATTACKS) {
         test.use({ bypassCSP: true });
 
         test('does what it was written to do', async ({ page, baseURL, browserName }) => {
-          test.skip(
-            browserName === 'webkit' && /eval|Function constructor/.test(attack.name),
-            'WebKit keeps eval blocked even when the test tool lifts the policy.',
-          );
           const armed = await arm(page, baseURL);
           await openSafeFlow(page);
-          await page.evaluate(inLaterTask(attack.run));
-          if (attack.fires) {
+          await page.evaluate(attack.run);
+          // WebKit keeps eval blocked even when the test tool lifts the policy, so there the
+          // proof is only that it stays stopped: see docs/decisions.md.
+          if (browserName === 'webkit' && /eval|Function constructor/.test(attack.name)) {
+            await page.waitForTimeout(SETTLE_MS);
+            expect((await readReport(page)).fired).toEqual([]);
+          } else if (attack.fires) {
             await expect.poll(async () => (await readReport(page)).fired.length).toBeGreaterThan(0);
           }
           if (attack.asks) await expect.poll(() => armed.outside).toContain(attack.asks);
@@ -206,7 +204,7 @@ for (const attack of ATTACKS) {
     test('with the policy on, is stopped', async ({ page, baseURL, browserName }, testInfo) => {
       const armed = await arm(page, baseURL);
       await openSafeFlow(page);
-      await page.evaluate(inLaterTask(attack.run));
+      await page.evaluate(attack.run);
       await page.waitForTimeout(SETTLE_MS);
       const report = await readReport(page);
       expect(report.fired).toEqual([]);
@@ -223,7 +221,9 @@ test('with the policy on, a base element cannot move the page', async ({ page, b
   const armed = await arm(page, baseURL);
   await openSafeFlow(page);
   const before = await page.evaluate<string>('document.baseURI');
-  await page.evaluate(add('base', { href: 'https://evil.example/' }).replace('body', 'head'));
+  await page.evaluate(
+    `document.head.append(Object.assign(document.createElement('base'), { href: 'https://evil.example/' }));`,
+  );
   expect(await page.evaluate<string>('document.baseURI')).toBe(before);
   expect(armed.outside).toEqual([]);
 });

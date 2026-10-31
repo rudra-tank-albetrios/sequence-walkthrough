@@ -24,6 +24,7 @@ import {
   STEP_TAGS,
   THREAT_LEVELS,
   THREAT_MAX_CHARS,
+  wordTable,
 } from './vocabulary.ts';
 
 /** Step-level tags collected while waiting for the next arrow. */

@@ -2,6 +2,8 @@ import DOMPurify from 'dompurify';
 import type mermaidDefault from 'mermaid';
 import type { MermaidConfig } from 'mermaid';
 
+import { MAX_CODE_SIZE } from '../../shared/state/flowStore.ts';
+
 type Mermaid = typeof mermaidDefault;
 
 let loading: Promise<Mermaid> | null = null;
@@ -82,9 +84,6 @@ function sanitize(svg: string): string {
 const inertConfig = (code: string): string =>
   code.replace(/%%\{[\s\S]*?\}%%/g, inertCss).replace(/^---\r?\n[\s\S]*?\r?\n---/, inertCss);
 
-/** Mermaid's own default limit, checked here before Mermaid parses, so huge code is refused at once. */
-const MAX_TEXT_SIZE = 50_000;
-
 /** Draws the code with the given theme. Throws DiagramSyntaxError when Mermaid refuses it. */
 export async function renderDiagram(code: string, theme: string, id: string): Promise<RenderedDiagram> {
   const mermaid = await loadMermaid();
@@ -92,7 +91,7 @@ export async function renderDiagram(code: string, theme: string, id: string): Pr
     startOnLoad: false,
     theme: theme as NonNullable<MermaidConfig['theme']>,
     securityLevel: 'strict',
-    maxTextSize: MAX_TEXT_SIZE,
+    maxTextSize: MAX_CODE_SIZE,
   });
   let themeBg = theme.includes('dark') ? '#1e1e1e' : '#ffffff';
   try {
@@ -106,9 +105,9 @@ export async function renderDiagram(code: string, theme: string, id: string): Pr
   } catch {
     /* keep the fallback */
   }
-  if (code.length > MAX_TEXT_SIZE) {
+  if (code.length > MAX_CODE_SIZE) {
     throw new DiagramSyntaxError(
-      `Maximum text size in diagram exceeded: ${code.length} characters, the limit is ${MAX_TEXT_SIZE}`,
+      `Maximum text size in diagram exceeded: ${code.length} characters, the limit is ${MAX_CODE_SIZE}`,
     );
   }
   const safeCode = inertConfig(code);
