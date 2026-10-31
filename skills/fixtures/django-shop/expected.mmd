@@ -1,0 +1,105 @@
+sequenceDiagram
+    %% @spec walkthrough/2
+    %% @title Place an order
+    %% @trigger The client posts a new order to the shop API.
+    %% @layer FE kind=client The caller of the API, outside this project.
+    %% @layer MW kind=middleware orders/middleware.py SessionTokenMiddleware, listed in shop/settings.py.
+    %% @layer RT kind=router orders/urls.py under the api/ prefix of shop/urls.py.
+    %% @layer VAL kind=validator orders/serializers.py NewOrderSerializer checks the body.
+    %% @layer CTRL kind=controller orders/views.py the view function.
+    %% @layer SVC kind=service orders/services.py business rules.
+    %% @layer DB kind=db Postgres, through the models in orders/models.py.
+    %% @layer SER kind=serializer orders/serializers.py OrderSerializer shapes the reply.
+    autonumber
+    participant FE as Client
+    participant MW as Middleware
+    participant RT as Routes
+    participant VAL as Validator
+    participant CTRL as Controller
+    participant SVC as Service
+    participant DB as Database
+    participant SER as Serializer
+
+    %% @section Check the request
+    %% @summary Django runs the middleware before it matches the URL.
+    %% @step The client sends the new order with its session header.
+    %% @payload.headers X-Session: <token>
+    %% @payload.body { item_code, amount }
+    %% @ref orders/middleware.py:10
+    FE->>MW: POST /api/orders/
+    %% @step Every /api/ request needs a known session token.
+    %% @ref orders/middleware.py:12
+    MW->>MW: SessionTokenMiddleware checks X-Session
+    alt the token is not a known session
+        %% @step The middleware answers 401 itself, before any view runs.
+        %% @payload.body { detail }
+        %% @ref orders/middleware.py:13
+        MW-->>FE: 401 Unauthorized<br/>"Session required"
+    end
+    %% @step The middleware sets customer_id and lets the request through.
+    %% @ref orders/middleware.py:15
+    MW->>RT: get_response(request)
+    %% @step The project includes the orders urls under api/, and the app maps orders/ to the view.
+    %% @ref shop/urls.py:4
+    %% @ref orders/urls.py:6
+    RT->>CTRL: path("orders/", views.create_order)
+    %% @step The view checks the body with the input serializer.
+    %% @ref orders/views.py:11
+    CTRL->>VAL: NewOrderSerializer(data=request.data).is_valid()
+    %% @step Valid, or the errors per field.
+    VAL-->>CTRL: True or errors
+    alt the body is not valid
+        %% @step The view answers with the field errors.
+        %% @ref orders/views.py:12
+        CTRL-->>MW: Response({ errors }, status=400)
+        %% @step The client gets 400 with one entry per bad field.
+        %% @ref orders/views.py:12
+        MW-->>FE: 400 Bad Request<br/>field errors
+    end
+
+    %% @section Place the order
+    %% @summary The service checks stock, then saves the order.
+    %% @step The view passes the customer and the validated fields to the service.
+    %% @ref orders/views.py:14
+    CTRL->>SVC: place_order(request.customer_id, item_code, amount)
+    %% @step The service locks and reads the item row.
+    %% @ref orders/services.py:12
+    SVC->>DB: Item.objects.select_for_update().filter(code=item_code).first()
+    %% @step The item comes back, or None for an unknown code.
+    DB-->>SVC: item or None
+    alt no item, or on_hand below amount
+        %% @step The service raises, and the view turns it into a conflict.
+        %% @ref orders/services.py:14
+        SVC-->>CTRL: raise OutOfStock
+        %% @step The view answers with a fixed message.
+        %% @ref orders/views.py:16
+        CTRL-->>MW: Response({ detail }, status=409)
+        %% @step The client gets 409 with the message.
+        %% @ref orders/views.py:16
+        MW-->>FE: 409 Conflict<br/>"No stock left"
+    end
+    %% @step The stock is reduced and saved.
+    %% @ref orders/services.py:16
+    SVC->>DB: item.save()
+    %% @step The order is created with state received and grand_total price × amount.
+    %% @ref orders/services.py:17
+    SVC->>DB: Order.objects.create(customer_id, item, amount, grand_total)
+    %% @step The saved order comes back.
+    DB-->>SVC: order
+    %% @step The view gets the order to send.
+    SVC-->>CTRL: order
+
+    %% @section Reply
+    %% @summary Only the public fields leave.
+    %% @step The output serializer picks the fields the client may see.
+    %% @ref orders/views.py:17
+    CTRL->>SER: OrderSerializer(order).data
+    %% @step Three fields, nothing internal.
+    SER-->>CTRL: { reference, state, grand_total }
+    %% @step The view sends the reply with status 201.
+    %% @ref orders/views.py:17
+    CTRL-->>MW: Response(data, status=201)
+    %% @step The client gets 201 Created with the new order.
+    %% @payload.body { reference, state, grand_total }
+    %% @ref orders/views.py:17
+    MW-->>FE: 201 Created

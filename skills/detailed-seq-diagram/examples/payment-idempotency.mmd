@@ -1,0 +1,275 @@
+sequenceDiagram
+    %% @spec walkthrough/2
+    %% @title Payment idempotency
+    %% @trigger The user taps Pay on the checkout page. A double tap, a reload or a retry after a lost response re-enters the same flow with the same key.
+    %% @term idempotency key: a unique id the client sends with a request so the server can recognise a repeat of that exact request and give the same answer without doing the work twice.
+    %% @term idempotent: safe to repeat; doing it twice has the same result as doing it once.
+    %% @term JWT: JSON Web Token, a signed string that says who the user is; the server checks the signature instead of looking the user up on every request.
+    %% @term SET NX: a Redis write that only succeeds when the key does not exist yet, so exactly one request can claim it.
+    %% @term body hash: a short fingerprint (SHA-256) of the request body, used to notice when the same key is reused with different data.
+    %% @term replay: sending the saved answer of an earlier request again instead of running the request a second time.
+    %% @term event bus: an in-process notice board; one part of the code announces "payment paid" and every listener reacts, without the payment code knowing them.
+    %% @term job queue: a waiting line in Redis for work that can happen later; a worker process takes jobs from it one by one and retries failed ones.
+    %% @layer U kind=person The person paying. Taps Pay, and sometimes taps it twice.
+    %% @layer FE kind=client Checkout page in the browser. Creates the Idempotency-Key and keeps it until the payment settles.
+    %% @layer APP kind=app Express app in src/app.ts. Mounts the payment router under /api/v1 and sends every response, including errors from its error handler.
+    %% @layer RT kind=router src/routes/payment.routes.ts. Maps POST /payments to its middleware chain and to PaymentController.create.
+    %% @layer MW kind=middleware src/middleware. Runs authenticate, validate and idempotency in that order; the idempotency middleware makes one key mean one charge.
+    %% @layer VAL kind=validator src/validators/payment.validator.ts. The Zod schema that decides whether the body is acceptable.
+    %% @layer CTRL kind=controller src/controllers/payment.controller.ts. Turns the HTTP request into a service call and the result into a 201.
+    %% @layer SVC kind=service src/services/payment.service.ts. Creates the payment, charges the card and announces the result.
+    %% @layer REPO kind=repository src/repositories/payment.repository.ts. The only code that writes SQL for payments.
+    %% @layer DB kind=db Postgres. Holds the payments table.
+    %% @layer SER kind=serializer src/serializers/payment.serializer.ts. Picks the fields the client may see.
+    %% @layer RDS kind=cache Redis. Holds one idem:<key> entry per idempotency key for 24 hours.
+    %% @layer EB kind=eventbus src/events/payment.events.ts. Node EventEmitter; its payment.paid listener queues the receipt email.
+    %% @layer MQ kind=queue BullMQ queue "mail" in Redis. Keeps email jobs until the mail worker takes them.
+    %% @layer MWK kind=worker src/workers/mail.worker.ts. Separate process that sends one email per job and retries on failure.
+    %% @layer PSP kind=external External payment provider. Also deduplicates on the key we forward.
+    %% @layer MAIL kind=external Transactional email provider.
+    autonumber
+    actor U as User
+    participant FE as Web App
+    participant APP as App
+    participant RT as Routes
+    participant MW as Middleware
+    participant VAL as Validator
+    participant CTRL as Controller
+    participant SVC as Service
+    participant REPO as Repository
+    participant DB as Database
+    participant SER as Serializer
+    participant RDS as Redis
+    participant EB as Event Bus
+    participant MQ as Mail Queue
+    participant MWK as Mail Worker
+    participant PSP as Payment Provider
+    participant MAIL as Email Provider
+
+    %% @step The user presses Pay. Nothing has been sent yet, so this is the moment to decide which key this attempt uses.
+    U->>FE: Click "Pay ₹1,499"
+    %% @step The page looks for a key saved for this cart. Reusing it means a reload or double tap is treated as the same attempt, not a new charge.
+    %% @payload.result sessionStorage["pay:cart_77"] = "4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10"
+    %% @uses hook useIdempotencyKey src/checkout/useIdempotencyKey.ts:8 Reads the key for this cart from sessionStorage, or creates a new UUID and saves it.
+    %% @ref src/checkout/pay.ts:31
+    FE->>FE: Reuse key from sessionStorage<br/>or create a new UUID
+    %% @step The key travels in a header so the server can recognise repeats of this exact request.
+    %% @payload.headers Authorization: Bearer eyJhbGciOi…
+    %% @payload.headers Idempotency-Key: 4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10
+    %% @payload.body { "cartId": "cart_77", "amount": 149900, "currency": "INR" }
+    %% @schema cartId string, required → 422 "cartId is required"
+    %% @schema amount integer in minor units, greater than 0 → 422 "amount must be positive"
+    %% @schema currency one of INR, USD, EUR → 422 "currency must be INR, USD or EUR"
+    %% @idempotent Repeats with the same key get the first answer back.
+    %% @timeout 10 s on the browser side, then the user may tap again with the same key.
+    %% @ref src/checkout/pay.ts:42
+    FE->>APP: POST /api/v1/payments<br/>Idempotency-Key: 4f9c…
+    %% @step The app matches the /api/v1/payments prefix and hands the request to the payment router.
+    %% @ref src/app.ts:24
+    APP->>RT: /api/v1/payments → paymentRoutes
+    %% @step The route lists three middlewares before the controller. They run in this order, and any of them can stop the request.
+    %% @ref src/routes/payment.routes.ts:9
+    RT->>MW: router.post("/", authenticate,<br/>validate(createPaymentSchema), idempotency)
+
+    %% @section Middleware checks
+    %% @summary Who is paying, and is the body valid? Each failure stops the request before any money moves.
+    %% @step authenticate() checks the JWT signature and expiry, then puts the user on the request for the next layers.
+    %% @payload.input Authorization: Bearer eyJhbGciOi…
+    %% @payload.result req.user = { "id": "u_9", "email": "ana@example.com" }
+    %% @uses env JWT_SECRET src/config/index.ts:8 The key the token signature is checked with.
+    %% @ref src/middleware/auth.middleware.ts:12
+    MW->>MW: authenticate()<br/>verify JWT → req.user = u_9
+    break Token missing or invalid
+        %% @step The token is missing, expired or forged, so the middleware stops and hands an error to the app's error handler.
+        %% @ref src/middleware/auth.middleware.ts:18
+        MW-->>APP: next(new UnauthorizedError())
+        %% @step The browser gets a 401 and the user is asked to sign in again. Nothing was charged.
+        %% @payload.body { "error": "unauthorized", "message": "Invalid or expired token" }
+        %% @ref src/app.ts:41
+        APP-->>FE: 401 Unauthorized<br/>"Invalid or expired token"
+    end
+    %% @step validate() hands the body to the payment schema before any business code sees it.
+    %% @payload.input { "cartId": "cart_77", "amount": 149900, "currency": "INR" }
+    %% @ref src/middleware/validate.middleware.ts:7
+    MW->>VAL: createPaymentSchema.safeParse(req.body)
+    %% @step The schema returns the cleaned body, which replaces req.body from here on.
+    %% @payload.result { "success": true, "data": { "cartId": "cart_77", "amount": 149900, "currency": "INR" } }
+    %% @ref src/validators/payment.validator.ts:4
+    VAL-->>MW: success: cartId, amount, currency
+    break Body invalid
+        %% @step A field broke a schema rule, so the request stops here with the list of problems.
+        %% @ref src/middleware/validate.middleware.ts:10
+        MW-->>APP: next(new ValidationError(issues))
+        %% @step The browser gets a 422 naming each wrong field. Nothing was claimed or charged.
+        %% @payload.body { "error": "validation_failed", "details": [{ "field": "amount", "message": "amount must be positive" }] }
+        %% @ref src/app.ts:41
+        APP-->>FE: 422 Unprocessable Entity<br/>"amount must be positive"
+    end
+
+    %% @section Claim the key
+    %% @summary Redis, not the server, decides which request owns the key.
+    %% @step idempotency() hashes the body and tries to claim the key. SET NX lets exactly one request write it; every other request gets nil.
+    %% @payload.input SET idem:4f9c… '{"status":"running","bodyHash":"sha256:5f…"}' NX EX 86400
+    %% @state before no idem:4f9c… entry, or one from an earlier attempt
+    %% @state after one entry with status running owned by this request, or nothing changed
+    %% @uses util hashBody src/utils/hash.ts:5 SHA-256 of the raw request body, so a reused key with a different body can be noticed.
+    %% @uses env IDEMPOTENCY_TTL_SECONDS src/config/index.ts:14 How long a key is kept (86400 by default).
+    %% @ref src/middleware/idempotency.middleware.ts:21
+    MW->>RDS: SET idem:4f9c… NX EX 86400
+    %% @step OK means this request owns the key. nil means the key was used before.
+    RDS-->>MW: OK (claimed) or nil (exists)
+    Note over MW,RDS: SET NX is the lock
+    break Key already used (nil)
+        %% @section Repeats
+        %% @summary A repeat never reaches the controller: it gets the saved answer, a wait, or a refusal.
+        %% @step The key exists, so the middleware reads what happened to the first request with it.
+        %% @ref src/middleware/idempotency.middleware.ts:27
+        MW->>RDS: GET idem:4f9c…
+        %% @step The saved entry for this key comes back.
+        %% @payload.result { "status": "done", "bodyHash": "sha256:5f…", "code": 201, "body": { "id": "pay_456", "status": "paid" } }
+        RDS-->>MW: status, bodyHash, code, body
+        alt Done, same body (the response was lost)
+            %% @step The saved answer is sent again, marked as a replay. The controller is not called.
+            %% @ref src/middleware/idempotency.middleware.ts:33
+            MW-->>APP: res.status(201).json(saved body)<br/>Idempotent-Replayed: true
+            %% @step The browser receives the original answer again. No second charge happened.
+            %% @payload.headers Idempotent-Replayed: true
+            %% @payload.body { "id": "pay_456", "status": "paid", "amount": 149900, "currency": "INR" }
+            %% @ref src/middleware/idempotency.middleware.ts:33
+            APP-->>FE: 201 Created<br/>Idempotent-Replayed: true
+        else Still running
+            %% @step The first request is still being processed, so this one is refused instead of charging again.
+            %% @ref src/middleware/idempotency.middleware.ts:37
+            MW-->>APP: next(new ConflictError("request_in_progress"))
+            %% @step The browser is told to wait a second and try again with the same key.
+            %% @payload.headers Retry-After: 1
+            %% @payload.body { "error": "request_in_progress", "message": "A payment with this key is already being processed." }
+            %% @ref src/app.ts:41
+            APP-->>FE: 409 Conflict<br/>Retry-After: 1
+        else Different body
+            %% @step The key was reused for a different amount or cart. That is a client bug, so it is refused rather than guessed at.
+            %% @ref src/middleware/idempotency.middleware.ts:41
+            MW-->>APP: next(new UnprocessableError("idempotency_key_mismatch"))
+            %% @step The browser gets a 422 explaining the key does not match the body.
+            %% @payload.body { "error": "idempotency_key_mismatch", "message": "This key was used with a different request body." }
+            %% @ref src/app.ts:41
+            APP-->>FE: 422 Unprocessable Entity<br/>"This key was used with a different request body."
+        end
+    end
+
+    %% @section Charge once
+    %% @summary The owner of the key goes through Controller, Service and Repository and charges the card exactly once.
+    %% @step This request owns the key, so the middleware chain ends and the controller takes over.
+    %% @ref src/middleware/idempotency.middleware.ts:45
+    MW->>CTRL: next() → PaymentController.create()
+    %% @step The controller passes the user and the validated body to the service. It holds no business rules itself.
+    %% @payload.input { "userId": "u_9", "cartId": "cart_77", "amount": 149900, "currency": "INR", "idempotencyKey": "4f9c…" }
+    %% @ref src/controllers/payment.controller.ts:14
+    CTRL->>SVC: PaymentService.createPayment(u_9, dto)
+    %% @step The payment is saved as pending first, so there is a record even if the provider call fails.
+    %% @payload.input { "userId": "u_9", "cartId": "cart_77", "amount": 149900, "currency": "INR", "status": "pending" }
+    %% @ref src/services/payment.service.ts:22
+    SVC->>REPO: PaymentRepository.create({ status: "pending" })
+    %% @step The repository writes the row and asks Postgres for the new id.
+    %% @payload.sql INSERT INTO payments (user_id, cart_id, amount, currency, status) VALUES ('u_9', 'cart_77', 149900, 'INR', 'pending') RETURNING id
+    %% @state before no payment for cart_77
+    %% @state after payment pay_456 with status pending
+    %% @ref src/repositories/payment.repository.ts:11
+    REPO->>DB: INSERT INTO payments … RETURNING id
+    %% @step Postgres returns the id of the new row.
+    DB-->>REPO: 1 row: pay_456
+    %% @step The service gets the new payment back, still pending.
+    %% @payload.result { "id": "pay_456", "status": "pending", "amount": 149900 }
+    %% @ref src/repositories/payment.repository.ts:15
+    REPO-->>SVC: payment pay_456 (pending)
+    %% @step The key is forwarded to the provider too, so even a retry between us and the provider cannot charge twice.
+    %% @payload.headers Idempotency-Key: 4f9c2e1a-7b7d-4c55-9a51-3e0d6b2f8c10
+    %% @payload.body { "amount": 149900, "currency": "inr", "source": "tok_visa", "metadata": { "payment_id": "pay_456" } }
+    %% @retry 2 retries on a network error, same key each time, so a retry can never double charge.
+    %% @uses lib psp-sdk src/lib/psp.ts:4 The provider's client library; it adds the auth header and retries on network errors.
+    %% @ref src/services/payment.service.ts:30
+    SVC->>PSP: POST https://api.psp.example/v1/charges<br/>Idempotency-Key: 4f9c…
+    %% @step The provider confirms the charge and returns its id.
+    %% @payload.body { "id": "ch_789", "status": "succeeded", "amount": 149900 }
+    PSP-->>SVC: 200 OK<br/>ch_789, status: succeeded
+    %% @step The service records the charge id and marks the payment as paid.
+    %% @payload.input { "id": "pay_456", "chargeId": "ch_789" }
+    %% @ref src/services/payment.service.ts:38
+    SVC->>REPO: PaymentRepository.markPaid(pay_456, ch_789)
+    %% @step Only a pending payment can become paid, so a stray second update changes nothing.
+    %% @payload.sql UPDATE payments SET status = 'paid', charge_id = 'ch_789' WHERE id = 'pay_456' AND status = 'pending'
+    %% @state before pay_456 pending, no charge_id
+    %% @state after pay_456 paid with charge_id ch_789
+    %% @ref src/repositories/payment.repository.ts:24
+    REPO->>DB: UPDATE payments SET status = 'paid'<br/>WHERE id = 'pay_456' AND status = 'pending'
+    %% @step One row changed: the payment is paid.
+    DB-->>REPO: 1 row updated
+    %% @step The service gets the paid payment back.
+    %% @payload.result { "id": "pay_456", "status": "paid", "chargeId": "ch_789" }
+    %% @ref src/repositories/payment.repository.ts:28
+    REPO-->>SVC: payment pay_456 (paid)
+    %% @step The service announces the payment and moves on. It does not wait for, or know about, the receipt email.
+    %% @payload.event { "type": "payment.paid", "paymentId": "pay_456", "userId": "u_9", "email": "ana@example.com", "amount": 149900 }
+    %% @async fire-and-forget; the listener runs after the current call stack.
+    %% @ref src/services/payment.service.ts:41
+    SVC-)EB: emit("payment.paid")
+    %% @step The controller gets the paid payment back from the service.
+    %% @payload.result { "id": "pay_456", "status": "paid", "amount": 149900, "currency": "INR", "chargeId": "ch_789", "userId": "u_9" }
+    %% @ref src/services/payment.service.ts:43
+    SVC-->>CTRL: payment pay_456 (paid)
+    %% @step The serializer keeps only the fields the client may see; the charge id and user id stay on the server.
+    %% @ref src/controllers/payment.controller.ts:15
+    CTRL->>SER: PaymentSerializer.toJSON(payment)
+    %% @step The response body comes back to the controller.
+    %% @payload.result { "id": "pay_456", "status": "paid", "amount": 149900, "currency": "INR" }
+    %% @field id pay_456, created by the INSERT into payments in this request
+    %% @ref src/serializers/payment.serializer.ts:6
+    SER-->>CTRL: { id, status, amount, currency }
+    %% @step The controller sends 201. The idempotency middleware wrapped res.json earlier, so the call lands in its wrapper first.
+    %% @payload.body { "id": "pay_456", "status": "paid", "amount": 149900, "currency": "INR" }
+    %% @ref src/controllers/payment.controller.ts:16
+    CTRL-->>MW: res.status(201).json(body)
+    %% @step The response is saved against the key, so any later repeat gets the same answer without charging again.
+    %% @payload.input SET idem:4f9c… '{"status":"done","code":201,"body":{"id":"pay_456",…}}' XX KEEPTTL
+    %% @ref src/middleware/idempotency.middleware.ts:52
+    MW->>RDS: SET idem:4f9c… status done, code 201, body<br/>XX KEEPTTL
+    %% @step Redis confirms the saved answer.
+    RDS-->>MW: OK
+    %% @step The wrapper hands the body to the real res.json, which the app sends.
+    %% @effect Log line "payment created" with payment_id and key, for support searches
+    %% @ref src/middleware/idempotency.middleware.ts:55
+    MW-->>APP: res.json(body)
+    %% @step The browser gets the result of the one and only charge.
+    %% @payload.body { "id": "pay_456", "status": "paid", "amount": 149900, "currency": "INR" }
+    %% @ref src/controllers/payment.controller.ts:16
+    APP-->>FE: 201 Created<br/>pay_456, status: paid
+
+    %% @section Finish
+    %% @summary The key is thrown away once the money has moved, so the next purchase starts fresh.
+    %% @step The payment is settled, so the key is removed. The next checkout starts with a fresh key.
+    %% @uses hook useIdempotencyKey src/checkout/useIdempotencyKey.ts:21 Its clear() removes the key for this cart from sessionStorage.
+    %% @ref src/checkout/pay.ts:57
+    FE->>FE: Clear key from sessionStorage
+    %% @step The user sees one receipt for one charge, however many times they tapped.
+    %% @ref src/checkout/pay.ts:59
+    FE-->>U: Receipt for ₹1,499
+
+    %% @section Receipt email
+    %% @summary After the reply, the event bus, the mail queue and the mail worker send the receipt without slowing the payment down.
+    %% @step The payment.paid listener puts a receipt job on the mail queue and returns at once.
+    %% @payload.event { "name": "payment-receipt", "data": { "paymentId": "pay_456", "email": "ana@example.com", "amount": 149900 } }
+    %% @retry the job is tried 3 times with exponential backoff from 5 s
+    %% @async runs after the response has been sent
+    %% @ref src/events/payment.events.ts:9
+    EB->>MQ: mailQueue.add("payment-receipt")
+    %% @step The mail worker process takes the next job from the queue.
+    %% @payload.event { "id": "71", "name": "payment-receipt", "data": { "paymentId": "pay_456", "email": "ana@example.com", "amount": 149900 } }
+    MQ->>MWK: job payment-receipt (pay_456)
+    %% @step The worker renders the receipt and hands it to the email provider.
+    %% @payload.body { "to": "ana@example.com", "template": "receipt", "data": { "payment_id": "pay_456", "amount": "₹1,499" } }
+    %% @uses util renderTemplate src/utils/template.ts:3 Fills the receipt template with the payment data.
+    %% @ref src/workers/mail.worker.ts:18
+    MWK->>MAIL: POST https://api.mail.example/v3/send
+    %% @step The provider accepts the email and returns its id; the job is marked done, so it is not retried.
+    %% @payload.body { "id": "msg_1", "status": "queued" }
+    MAIL-->>MWK: 202 Accepted<br/>msg_1
