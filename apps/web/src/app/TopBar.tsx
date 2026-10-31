@@ -39,6 +39,7 @@ export function TopBar() {
   const settings = useFlowStore((s) => s.settings);
   const updateSettings = useFlowStore((s) => s.updateSettings);
   const setUi = useFlowStore((s) => s.setUi);
+  const insightOpen = useFlowStore((s) => s.ui.insightOpen);
   const zoom = useDiagramStore((s) => s.zoom);
   const commands = useDiagramStore((s) => s.commands);
   const narrow = useIsNarrow();
@@ -50,11 +51,17 @@ export function TopBar() {
     ? [plural(steps, 'step'), plural(layers, 'layer'), chapters ? plural(chapters, 'chapter') : '']
         .filter(Boolean)
         .join(', ')
-    : '';
+    : flow && !flow.isSequence
+      ? flow.diagramType
+      : '';
   const toggleWheel = () => {
     updateSettings({ wheel: settings.wheel === 'scroll' ? 'zoom' : 'scroll' });
   };
   const wheelLabel = `Wheel: ${settings.wheel === 'scroll' ? 'Scroll' : 'Zoom'}`;
+  const wheelTitle =
+    settings.wheel === 'zoom'
+      ? 'The wheel zooms like mermaid.live. Click to scroll instead.'
+      : 'The wheel scrolls; Ctrl + wheel zooms. Click to zoom with the wheel.';
 
   return (
     <header className={styles.bar} id="topbar">
@@ -70,7 +77,11 @@ export function TopBar() {
             proposed
           </Chip>
         ) : null}
-        {meta ? <span className={styles.meta}>{meta}</span> : null}
+        {meta ? (
+          <span className={styles.meta} id="flowMeta">
+            {meta}
+          </span>
+        ) : null}
       </div>
       <div className={styles.right}>
         <div className={`${styles.seg} ${styles.extra}`} role="group" aria-label="View">
@@ -101,7 +112,7 @@ export function TopBar() {
         <Button
           className={`${styles.extra} ${styles.extraMd}`}
           pressed={settings.wheel === 'zoom'}
-          title="Mouse wheel behaviour"
+          title={wheelTitle}
           onClick={toggleWheel}
         >
           {wheelLabel}
@@ -136,7 +147,7 @@ export function TopBar() {
             <MenuItem onSelect={() => setView(view === 'diagram' ? 'table' : 'diagram')}>
               {view === 'diagram' ? 'Switch to table view' : 'Switch to diagram view'}
             </MenuItem>
-            <MenuItem onSelect={() => setUi({ insightOpen: true })}>Insight panel</MenuItem>
+            <MenuItem onSelect={() => setUi({ insightOpen: !insightOpen })}>Insight panel</MenuItem>
             <MenuItem onSelect={() => setUi({ aiSettingsOpen: true })}>Ask AI settings</MenuItem>
             <MenuItem onSelect={() => setUi({ findOpen: true })}>Find</MenuItem>
             <MenuItem onSelect={commands.fitWidth}>Fit width</MenuItem>

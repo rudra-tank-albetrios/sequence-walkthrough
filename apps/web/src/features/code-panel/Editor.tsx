@@ -16,26 +16,22 @@ import {
 import { useIsNarrow } from '../../shared/hooks/useMediaQuery.ts';
 import { LIVE_LINK_RE, readLiveState } from '../../shared/lib/codec.ts';
 import { errorLine } from '../../shared/lib/mermaidLines.ts';
-import { debounce } from '../../shared/lib/util.ts';
+import { cx, debounce } from '../../shared/lib/util.ts';
 import { useDiagramStore } from '../../shared/state/diagramStore.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { toast } from '../../shared/ui/toast.ts';
 import styles from './codePanel.module.css';
-import { cx, highlightLine } from './highlight.tsx';
+import { highlightLine } from './highlight.tsx';
+import { stepAtLine } from './stepAtLine.ts';
 
 /** The editor draws 20 px lines under 10 px of padding; the gutter and the overlay match. */
 const LINE_HEIGHT = 20;
 const PAD_TOP = 10;
-const EDIT_DEBOUNCE_MS = 150;
+const EDIT_DEBOUNCE_MS = 300;
 
 export interface EditorHandle {
   /** Selects a line, scrolls it into view and focuses the textarea. */
   gotoLine: (line: number) => void;
-}
-
-/** The step whose arrow line or annotation lines include a source line. */
-export function stepAtLine(flow: Flow | null, line: number): Step | undefined {
-  return flow?.steps.find((s) => s.line === line || s.annLines.includes(line));
 }
 
 interface LineMarks {

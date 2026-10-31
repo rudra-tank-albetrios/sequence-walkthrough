@@ -3,7 +3,7 @@
  * mermaid.live's `#pako:` and `#base64:` states; version 3 keeps both so old links still open.
  */
 
-const toBase64 = (bytes: Uint8Array): string => {
+export const toBase64 = (bytes: Uint8Array): string => {
   let bin = '';
   for (const b of bytes) bin += String.fromCharCode(b);
   return btoa(bin);

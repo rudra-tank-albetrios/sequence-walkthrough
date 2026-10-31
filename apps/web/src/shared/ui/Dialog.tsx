@@ -33,7 +33,7 @@ export function Dialog({
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay className={styles.overlay} />
-        <RadixDialog.Content className={`${styles.content} ${styles[size]}`}>
+        <RadixDialog.Content className={`${styles.content} ${styles[size]}`} data-modal>
           <div className={styles.head}>
             <RadixDialog.Title className={styles.title}>{title}</RadixDialog.Title>
             <RadixDialog.Close asChild>

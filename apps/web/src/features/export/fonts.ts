@@ -1,3 +1,4 @@
+import { toBase64 } from '../../shared/lib/codec.ts';
 import cyrillicExt from '../../shared/fonts/recursive-cyrillic-ext.woff2?url';
 import latinExt from '../../shared/fonts/recursive-latin-ext.woff2?url';
 import latin from '../../shared/fonts/recursive-latin.woff2?url';
@@ -48,14 +49,6 @@ export function parseRanges(text: string): [number, number][] {
 const SUBSETS: Subset[] = RANGES.map(([url, unicodeRange]) => ({ url, unicodeRange, ranges: parseRanges(unicodeRange) }));
 
 const cache = new Map<string, Promise<string>>();
-
-function toBase64(bytes: Uint8Array): string {
-  let bin = '';
-  for (let i = 0; i < bytes.length; i += 0x8000) {
-    bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  }
-  return btoa(bin);
-}
 
 function fontBase64(url: string): Promise<string> {
   let pending = cache.get(url);
