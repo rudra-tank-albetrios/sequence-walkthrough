@@ -2,6 +2,13 @@ import type { BlockKind, PayloadPart, Zone } from './types.ts';
 
 export const DEFAULT_TITLE = 'Sequence diagram';
 
+/**
+ * A lookup table for words read from a diagram. It has no prototype, so `constructor` or
+ * `__proto__` in the code is an unknown word, never a member of Object.
+ */
+export const wordTable = <T>(entries: Record<string, T>): Record<string, T> =>
+  Object.assign(Object.create(null) as Record<string, T>, entries);
+
 export const FLOW_TAGS = ['spec', 'title', 'mode', 'scope', 'trigger', 'term', 'layer'] as const;
 export const STEP_TAGS = [
   'step',
@@ -46,7 +53,7 @@ export const PART_LABEL: Record<PayloadPart, string> = {
 };
 
 /** Layer kinds with their icon. The order is the default order of a backend's layers. */
-export const LAYER_KINDS: Record<string, string> = {
+export const LAYER_KINDS: Record<string, string> = wordTable({
   person: '👤',
   client: '🖥',
   edge: '🛡',
@@ -66,7 +73,7 @@ export const LAYER_KINDS: Record<string, string> = {
   worker: '🛠',
   cron: '⏰',
   external: '🌐',
-};
+});
 
 export function layerZone(kind: string): Zone {
   if (!(kind in LAYER_KINDS)) return '';
@@ -182,7 +189,7 @@ export const LINETYPE = {
 } as const;
 
 /** Block keywords and the kind Mermaid records for them. `par_over` draws as `par`. */
-export const BLOCK_START: Record<string, BlockKind> = {
+export const BLOCK_START: Record<string, BlockKind> = wordTable({
   loop: 'loop',
   alt: 'alt',
   opt: 'opt',
@@ -190,11 +197,11 @@ export const BLOCK_START: Record<string, BlockKind> = {
   par_over: 'par',
   critical: 'critical',
   break: 'break',
-};
+});
 
 /** Keywords that start the next branch of an open block, and which block they belong to. */
-export const BLOCK_MID: Record<string, { kind: BlockKind; opens: BlockKind }> = {
+export const BLOCK_MID: Record<string, { kind: BlockKind; opens: BlockKind }> = wordTable({
   else: { kind: 'else', opens: 'alt' },
   and: { kind: 'and', opens: 'par' },
   option: { kind: 'option', opens: 'critical' },
-};
+});
