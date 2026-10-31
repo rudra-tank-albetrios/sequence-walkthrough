@@ -266,11 +266,14 @@ export function Viewer() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    let frame = 0;
     const observer = new ResizeObserver(() => {
-      camera.refresh();
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => camera.refresh());
     });
     observer.observe(canvas);
     return () => {
+      cancelAnimationFrame(frame);
       observer.disconnect();
     };
   }, [camera]);
@@ -341,9 +344,15 @@ export function Viewer() {
         const d = hit && m ? m.dom[Number(hit.getAttribute('data-step'))] : undefined;
         if (!d) return;
         for (const t of d.texts) {
-          const ctm = t.getScreenCTM();
-          if (!ctm || !(t instanceof SVGTextContentElement)) continue;
-          const pt = new DOMPoint(x, y).matrixTransform(ctm.inverse());
+          if (!(t instanceof SVGTextContentElement)) continue;
+          // The pointer's place in the label's own units, from its box on screen and its box in the drawing.
+          const box = t.getBoundingClientRect();
+          const own = t.getBBox();
+          if (!box.width || !box.height) continue;
+          const pt = new DOMPoint(
+            own.x + ((x - box.left) * own.width) / box.width,
+            own.y + ((y - box.top) * own.height) / box.height,
+          );
           let ci: number;
           try {
             ci = t.getCharNumAtPosition(pt);

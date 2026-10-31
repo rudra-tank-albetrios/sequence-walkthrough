@@ -52,9 +52,10 @@ export default defineConfig(
     '**/coverage/**',
     'playwright-report/**',
     'test-results/**',
-    // The version 2 skill, replaced in phase 5
-    'skill/**',
-    'skill-kit/**',
+    // Scratch files, ignored by git too; the queue writes its logs here
+    'tmp/**',
+    // Sample projects the skills are tested against, written like the frameworks they imitate
+    'skills/fixtures/**',
     '**/*.d.ts',
   ]),
   js.configs.recommended,

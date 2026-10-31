@@ -62,7 +62,10 @@ export function saveSettings(settings: Settings): void {
 /** `swv:code`: the last code the user had in the panel, written a moment after each edit. */
 export const CODE_KEY = 'swv:code';
 
-export const loadSavedCode = (): string | null => Store.get<string | null>(CODE_KEY, null);
+export function loadSavedCode(): string | null {
+  const saved = Store.get<unknown>(CODE_KEY, null);
+  return typeof saved === 'string' ? saved : null;
+}
 export const saveCode = (code: string): void => {
   Store.set(CODE_KEY, code);
 };

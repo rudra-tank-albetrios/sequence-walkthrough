@@ -17,6 +17,30 @@
       "kind": "file",
       "path": "apps/web/dist-single/sequence-viewer.html",
       "maxBytes": 16000000
+    },
+    {
+      "name": "seq-diagram SKILL.md",
+      "kind": "file",
+      "path": "tools/build-skills/dist/seq-diagram/SKILL.md",
+      "maxBytes": 8192
+    },
+    {
+      "name": "detailed-seq-diagram SKILL.md",
+      "kind": "file",
+      "path": "tools/build-skills/dist/detailed-seq-diagram/SKILL.md",
+      "maxBytes": 15360
+    },
+    {
+      "name": "seq-diagram description",
+      "kind": "skill-description",
+      "path": "tools/build-skills/dist/seq-diagram/SKILL.md",
+      "maxChars": 1024
+    },
+    {
+      "name": "detailed-seq-diagram description",
+      "kind": "skill-description",
+      "path": "tools/build-skills/dist/detailed-seq-diagram/SKILL.md",
+      "maxChars": 1024
     }
   ]
 }

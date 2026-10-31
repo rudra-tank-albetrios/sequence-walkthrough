@@ -1,0 +1,30 @@
+{
+  "framework": "Express",
+  "prompt": "Diagram this flow: placing an order.",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/orders",
+    "evidence": [
+      ["src/app.js", "app.use('/api/v1/orders', orderRoutes)"],
+      ["src/routes/order.routes.js", "router.post('/', authenticate, validate(createOrderSchema), OrderController.create)"]
+    ]
+  },
+  "layers": ["app", "router", "middleware", "validator", "controller", "service", "repository", "db", "serializer"],
+  "statuses": {
+    "201": ["src/controllers/order.controller.js", "res.status(201)"],
+    "401": ["src/errors.js", "super(401, 'unauthorized', message)"],
+    "409": ["src/errors.js", "super(409, 'out_of_stock', message)"],
+    "422": ["src/errors.js", "super(422, 'validation_failed', message)"]
+  },
+  "alsoAllowed": {
+    "500": ["src/app.js", "res.status(500)"]
+  },
+  "messages": {
+    "401": ["src/middleware/auth.middleware.js", "Missing or invalid token"],
+    "409": ["src/services/order.service.js", "Not enough stock"]
+  },
+  "requestFields": { "file": "src/validators/order.validator.js", "fields": ["productId", "quantity"] },
+  "replyFields": { "file": "src/serializers/order.serializer.js", "fields": ["id", "status", "total"] },
+  "names": ["authenticate", "validate", "OrderController.create", "OrderService.place", "OrderRepository.findProduct", "OrderRepository.insert", "serializeOrder"],
+  "offPath": ["src/services/report.service.js", "src/routes/health.routes.js", "test/orders.test.js"]
+}

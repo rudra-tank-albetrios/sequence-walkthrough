@@ -3,9 +3,8 @@ import { createHash } from 'node:crypto';
 import { existsSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { zipSync, type Zippable } from 'fflate';
 import type { Plugin } from 'vite';
-
-import { zipEntries } from './skillKit.ts';
 
 /**
  * Turns the page vite-plugin-singlefile has inlined into what the one-file build gives people
@@ -26,6 +25,15 @@ ${ARTIFACT_FILE}: only for publishing as a Claude artifact. Declare the "sample"
 Claude provider in Ask AI and "downloads" for the export menu. It has no security policy of its own,
 because the artifact host sets that, so do not put this file on a website of your own.
 `;
+
+/** Sorted with a fixed timestamp, so the same pages give the same bytes. */
+function zipEntries(files: [name: string, data: Uint8Array][]): Uint8Array {
+  const entries: Zippable = {};
+  for (const [name, data] of [...files].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))) {
+    entries[name] = [data, { level: 9, mtime: new Date(2026, 9, 29), os: 3, attrs: (0o100644 << 16) >>> 0 }];
+  }
+  return zipSync(entries, { level: 9 });
+}
 
 /** The policy of the file opened from disk, as strict as a page with one inlined script can be. */
 function policyFor(code: string): string {
@@ -48,7 +56,10 @@ function policyFor(code: string): string {
 }
 
 /** Both pages, from the document Vite wrote. Throws when anything is left outside the page. */
-function assemblePages(html: string): { page: string; artifact: string } {
+function assemblePages(built: string): { page: string; artifact: string } {
+  // The bundler writes "\0" in a string as a raw NUL byte. In a file of its own that is fine; in a
+  // page the HTML parser turns it into U+FFFD, which breaks the script's hash and so stops it running.
+  const html = built.replaceAll('\0', '\\u0000');
   const open = /<script type="module"[^>]*>/.exec(html);
   if (!open) throw new Error('the page has no inlined module script');
   const codeStart = open.index + open[0].length;

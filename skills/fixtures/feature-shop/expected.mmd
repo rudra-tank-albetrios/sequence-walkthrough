@@ -1,0 +1,118 @@
+sequenceDiagram
+    %% @spec walkthrough/2
+    %% @title Place an order
+    %% @trigger The client posts a new order to the shop API.
+    %% @layer FE kind=client The caller of the API, outside this project.
+    %% @layer APP kind=app src/server.ts mounts each feature's routes and holds the error handler.
+    %% @layer RT kind=router src/features/orders/routes.ts the path, the chain and the handler.
+    %% @layer MW kind=middleware src/features/auth/require-session.ts and src/shared/parse-body.ts.
+    %% @layer VAL kind=validator src/features/orders/schema.ts the zod schema of the body.
+    %% @layer CTRL kind=controller src/features/orders/handler.ts calls the logic and sends the reply.
+    %% @layer SVC kind=service src/features/orders/logic.ts business rules.
+    %% @layer REPO kind=repository src/features/orders/store.ts the only SQL.
+    %% @layer DB kind=db SQLite, through src/shared/db.ts.
+    %% @layer SER kind=serializer src/features/orders/view.ts picks the fields the client sees.
+    autonumber
+    participant FE as Client
+    participant APP as App
+    participant RT as Routes
+    participant MW as Middleware
+    participant VAL as Validator
+    participant CTRL as Controller
+    participant SVC as Service
+    participant REPO as Repository
+    participant DB as Database
+    participant SER as Serializer
+
+    %% @section Check the request
+    %% @summary Session and body are checked before any work starts.
+    %% @step The client sends the new order with its session header.
+    %% @payload.headers x-session: <session id>
+    %% @payload.body { item, count }
+    %% @ref src/server.ts:9
+    FE->>APP: POST /v2/orders
+    %% @step The server hands the request to the orders feature's routes.
+    %% @ref src/server.ts:9
+    APP->>RT: ordersRoutes
+    %% @step The route runs its chain in order before the handler.
+    %% @ref src/features/orders/routes.ts:10
+    RT->>MW: ordersRoutes.post("/", requireSession, parseBody(placeOrderSchema), placeOrderHandler)
+    %% @step requireSession turns the x-session header into the customer.
+    %% @ref src/features/auth/require-session.ts:7
+    MW->>MW: requireSession()
+    alt no session, or an unknown one
+        %% @step The middleware throws, and the server's error handler answers.
+        %% @ref src/features/auth/require-session.ts:9
+        MW-->>APP: throw new HTTPException(401, "No session")
+        %% @step The client gets 401 with the problem text.
+        %% @payload.body { problem }
+        %% @ref src/server.ts:14
+        APP-->>FE: 401 Unauthorized<br/>"No session"
+    end
+    %% @step parseBody checks the JSON body against the schema.
+    %% @ref src/shared/parse-body.ts:7
+    MW->>VAL: placeOrderSchema.safeParse(body)
+    %% @step The parsed body comes back, or the failure.
+    VAL-->>MW: { success, data }
+    alt the body is wrong
+        %% @step The middleware throws with one fixed message.
+        %% @ref src/shared/parse-body.ts:9
+        MW-->>APP: throw new HTTPException(422, "The order is not complete")
+        %% @step The client gets 422 with the problem text.
+        %% @ref src/server.ts:14
+        APP-->>FE: 422 Unprocessable Entity<br/>"The order is not complete"
+    end
+    %% @step The chain ends and the handler takes over with customer and body set.
+    %% @ref src/features/orders/routes.ts:10
+    MW->>CTRL: next() → placeOrderHandler()
+
+    %% @section Place the order
+    %% @summary The logic checks stock, then saves the order.
+    %% @step The handler passes the customer and the body to the logic.
+    %% @ref src/features/orders/handler.ts:7
+    CTRL->>SVC: placeOrder(customer, body)
+    %% @step The logic needs the item's remaining stock and unit price.
+    %% @ref src/features/orders/logic.ts:6
+    SVC->>REPO: readStock(item)
+    %% @step One query reads the stock row.
+    %% @ref src/features/orders/store.ts:4
+    REPO->>DB: SELECT remaining, unit_price FROM stock WHERE item = ?
+    %% @step The row comes back, or nothing for an unknown item.
+    DB-->>REPO: 1 row or none
+    %% @step The stock decides whether the order can be placed.
+    REPO-->>SVC: stock or undefined
+    alt no stock row, or remaining below count
+        %% @step The logic throws, and the error reaches the server's handler.
+        %% @ref src/features/orders/logic.ts:8
+        SVC-->>APP: throw new HTTPException(409, "Out of stock")
+        %% @step The client gets 409 with the problem text.
+        %% @ref src/server.ts:14
+        APP-->>FE: 409 Conflict<br/>"Out of stock"
+    end
+    %% @step The order is saved with state waiting and due unit_price × count.
+    %% @ref src/features/orders/logic.ts:10
+    SVC->>REPO: insertOrder(customer, item, count, due)
+    %% @step One insert writes the order and returns the row.
+    %% @ref src/features/orders/store.ts:11
+    REPO->>DB: INSERT INTO orders (customer, item, count, due, state) VALUES (?, ?, ?, ?, ?) RETURNING *
+    %% @step The saved row comes back.
+    DB-->>REPO: 1 row
+    %% @step The logic returns the saved order.
+    REPO-->>SVC: order
+    %% @step The handler gets the order to send.
+    SVC-->>CTRL: order
+
+    %% @section Reply
+    %% @summary Only the public fields leave.
+    %% @step The view picks the fields the client may see.
+    %% @ref src/features/orders/handler.ts:8
+    CTRL->>SER: toOrderView(order)
+    %% @step Three fields, nothing internal.
+    SER-->>CTRL: { orderId, state, amountDue }
+    %% @step The handler sends the view with status 201.
+    %% @ref src/features/orders/handler.ts:8
+    CTRL-->>APP: c.json(view, 201)
+    %% @step The client gets 201 Created with the new order.
+    %% @payload.body { orderId, state, amountDue }
+    %% @ref src/features/orders/handler.ts:8
+    APP-->>FE: 201 Created

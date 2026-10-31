@@ -97,6 +97,45 @@ export async function goToStep(page: Page, n: number): Promise<void> {
   await diagram(page).focus();
 }
 
+interface DomRange {
+  setStart: (node: unknown, offset: number) => void;
+  setEnd: (node: unknown, offset: number) => void;
+  getBoundingClientRect: () => { x: number; y: number; width: number; height: number };
+}
+
+interface DomScope {
+  document: {
+    createRange: () => DomRange;
+    createTreeWalker: (
+      root: unknown,
+      show: number,
+    ) => { nextNode: () => { nodeValue: string | null } | null };
+  };
+  getSelection: () => { removeAllRanges: () => void; addRange: (range: DomRange) => void };
+}
+
+/** Selects the first occurrence of a word inside an element and right-clicks it. */
+export async function rightClickWord(page: Page, testId: string, word: string): Promise<void> {
+  const box = await page.getByTestId(testId).evaluate((el, target) => {
+    const scope = globalThis as unknown as DomScope;
+    const walker = scope.document.createTreeWalker(el, 4);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const at = (node.nodeValue ?? '').indexOf(target);
+      if (at < 0) continue;
+      const range = scope.document.createRange();
+      range.setStart(node, at);
+      range.setEnd(node, at + target.length);
+      const selection = scope.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      const { x, y, width, height } = range.getBoundingClientRect();
+      return { x, y, width, height };
+    }
+    throw new Error(`No "${target}" in the element`);
+  }, word);
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
+}
+
 export interface CameraState {
   x: number;
   y: number;
@@ -131,7 +170,7 @@ export async function expectNoAxeViolations(page: Page): Promise<void> {
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze();
-  expect(results.violations.map((v) => ({ id: v.id, nodes: v.nodes.map((n) => n.target) }))).toEqual(
-    [],
-  );
+  expect(
+    results.violations.map((v) => ({ id: v.id, nodes: v.nodes.map((n) => n.target) })),
+  ).toEqual([]);
 }

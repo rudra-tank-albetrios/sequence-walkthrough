@@ -1,0 +1,28 @@
+{
+  "framework": "Feature folders",
+  "prompt": "Walk me through placing an order.",
+  "request": {
+    "method": "POST",
+    "path": "/v2/orders",
+    "evidence": [
+      ["src/server.ts", "server.route('/v2/orders', ordersRoutes)"],
+      ["src/features/orders/routes.ts", "ordersRoutes.post('/', requireSession, parseBody(placeOrderSchema), placeOrderHandler)"]
+    ]
+  },
+  "layers": ["app", "router", "middleware", "validator", "controller", "service", "repository", "db", "serializer"],
+  "statuses": {
+    "201": ["src/features/orders/handler.ts", "toOrderView(order), 201"],
+    "401": ["src/features/auth/require-session.ts", "new HTTPException(401"],
+    "409": ["src/features/orders/logic.ts", "new HTTPException(409"],
+    "422": ["src/shared/parse-body.ts", "new HTTPException(422"]
+  },
+  "messages": {
+    "401": ["src/features/auth/require-session.ts", "No session"],
+    "409": ["src/features/orders/logic.ts", "Out of stock"],
+    "422": ["src/shared/parse-body.ts", "The order is not complete"]
+  },
+  "requestFields": { "file": "src/features/orders/schema.ts", "fields": ["item", "count"] },
+  "replyFields": { "file": "src/features/orders/view.ts", "fields": ["orderId", "state", "amountDue"] },
+  "names": ["requireSession", "parseBody", "placeOrderHandler", "placeOrder", "readStock", "insertOrder", "toOrderView"],
+  "offPath": ["src/features/profile/routes.ts", "src/features/orders/orders.test.ts"]
+}

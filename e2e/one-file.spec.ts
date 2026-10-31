@@ -100,7 +100,7 @@ test.describe('one-file page, opened from disk', () => {
     expect(requestsBeyond(watch, PAGE_URL)).toEqual([]);
   });
 
-  test('has its own strict policy, allowing only the hash of its one script', async () => {
+  test('has its own strict policy, allowing only the hash of its one script', () => {
     const html = readFileSync(PAGE_FILE, 'utf8');
     const meta = /<meta http-equiv="Content-Security-Policy" content="([^"]*)"/.exec(html);
     const open = /<script type="module"[^>]*>/.exec(html);

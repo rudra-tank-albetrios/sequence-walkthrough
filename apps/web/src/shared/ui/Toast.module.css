@@ -1,15 +1,15 @@
+/* Above popovers, dialogs and the step bar, as in version 2; only the toast itself takes clicks. */
 .host {
   position: fixed;
   left: 50%;
   bottom: 16px;
   transform: translateX(-50%);
-  z-index: 60;
-  width: max-content;
-  max-width: min(560px, calc(100vw - 32px));
+  z-index: 100;
   pointer-events: none;
 }
 
 .toast {
+  pointer-events: auto;
   padding: 8px 14px;
   background: var(--ink);
   color: var(--surface);
@@ -18,23 +18,6 @@
   font-weight: 500;
   box-shadow: var(--shadow-1), var(--shadow-2);
   animation: rise 160ms ease-out;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-/* The host lets clicks through to the page under it; only this button takes them. */
-.toast button {
-  flex: none;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  font-weight: 700;
-  text-decoration: underline;
-  cursor: pointer;
-  pointer-events: auto;
 }
 
 @keyframes rise {

@@ -35,7 +35,7 @@ export function EffectsRow({ step }: { step: Step }) {
   );
 }
 
-/** A `@ref`: a URL opens in a new tab; `path:line` copies itself on click. */
+/** A `@ref` that is not a web address: plain text, as version 2 showed it. */
 export function RefChip({ value }: { value: string }) {
   if (isUrl(value)) {
     return (

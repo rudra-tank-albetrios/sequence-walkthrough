@@ -59,7 +59,10 @@ const pick = async (page: Page, name: RegExp) => {
 const exported = (page: Page, name: RegExp) => download(page, () => pick(page, name));
 
 /** The width and height in a PNG's header. */
-const pngSize = (bytes: Buffer) => ({ width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) });
+const pngSize = (bytes: Buffer) => ({
+  width: bytes.readUInt32BE(16),
+  height: bytes.readUInt32BE(20),
+});
 
 /** Reports that a modal asks the file input: a chooser is not needed, the input is in the page. */
 const fileInput = (page: Page) => page.getByTestId('import-file');
@@ -104,6 +107,16 @@ test.describe('export menu', () => {
     await expect(dialog.getByLabel('Include my notes')).not.toBeChecked();
     await expect(dialog.getByLabel('Paper').locator('option')).toHaveText(['A4', 'US Letter']);
     await expect(dialog).toContainText(/\d+ diagram pages?\./);
+    // The toast lasts 3.2 s and reading a large file back can take longer, so keep what it said.
+    await page.evaluate(`
+      globalThis.__toasts = [];
+      const box = document.querySelector('[data-testid="toast"]');
+      new MutationObserver(() => __toasts.push(box.textContent)).observe(box, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    `);
     const file = await download(page, () =>
       dialog.getByRole('button', { name: 'Download Place an order.pdf' }).click(),
     );
@@ -111,7 +124,7 @@ test.describe('export menu', () => {
     expect(file.bytes.subarray(0, 5).toString('latin1')).toBe('%PDF-');
     const pages = file.bytes.toString('latin1').match(/\/Type\s*\/Page[^s]/g) ?? [];
     expect(pages.length).toBeGreaterThanOrEqual(2);
-    await expect(toastBox(page)).toContainText('Downloaded Place an order.pdf');
+    expect(await page.evaluate<string[]>('__toasts')).toContain('Downloaded Place an order.pdf');
   });
 
   test('F9 PNG at 1× and 2× has the size of the drawing', async ({ page }) => {
@@ -242,7 +255,9 @@ test.describe('export menu', () => {
       pick(page, /^Open in mermaid.live/),
     ]);
     expect(tab.url()).toContain('https://mermaid.live/edit#pako:');
-    expect(await tab.evaluate(() => (globalThis as unknown as { opener: unknown }).opener)).toBeNull();
+    expect(
+      await tab.evaluate(() => (globalThis as unknown as { opener: unknown }).opener),
+    ).toBeNull();
   });
 });
 
@@ -276,7 +291,10 @@ test.describe('import', () => {
   });
 
   test('F5 a mermaid.live link brings its theme, and the camera starts over', async ({ page }) => {
-    await open(page, { clipboard: true, code: 'sequenceDiagram\n  %% @title Linked\n  A->>B: one' });
+    await open(page, {
+      clipboard: true,
+      code: 'sequenceDiagram\n  %% @title Linked\n  A->>B: one',
+    });
     await page.locator('#themeSel').selectOption('forest');
     await pick(page, /^Copy mermaid.live link/);
     await expect(toastBox(page)).toContainText('Copied the mermaid.live link');
@@ -295,7 +313,9 @@ test.describe('import', () => {
     await expect(page.locator('#themeSel')).toHaveValue('forest');
   });
 
-  test('F6 a file loads, a Markdown file needs a block, other types are refused', async ({ page }) => {
+  test('F6 a file loads, a Markdown file needs a block, other types are refused', async ({
+    page,
+  }) => {
     await open(page);
     const input = fileInput(page);
     await input.setInputFiles({
@@ -367,7 +387,10 @@ test.describe('import', () => {
   test('F7 a mermaid.live link pasted in the editor imports instead of inserting', async ({
     page,
   }) => {
-    await open(page, { clipboard: true, code: 'sequenceDiagram\n  %% @title Linked\n  A->>B: one' });
+    await open(page, {
+      clipboard: true,
+      code: 'sequenceDiagram\n  %% @title Linked\n  A->>B: one',
+    });
     await pick(page, /^Copy mermaid.live link/);
     await expect(toastBox(page)).toContainText('Copied the mermaid.live link');
     const link = await copied(page);
@@ -448,10 +471,24 @@ test.describe('saving and copying', () => {
     const fromMenu = await exported(page, /^Download the skill/);
     expect(fromMenu.name).toBe('sequence-walkthrough-skill-kit.zip');
     expect(fromMenu.bytes.subarray(0, 2).toString('latin1')).toBe('PK');
+    const names = fromMenu.bytes.toString('latin1');
+    for (const inside of [
+      'SKILL-SETUP-GUIDE.md',
+      'install.mjs',
+      'seq-diagram/SKILL.md',
+      'detailed-seq-diagram/SKILL.md',
+      'seq-diagram.zip',
+      'detailed-seq-diagram.zip',
+    ]) {
+      expect(names).toContain(`sequence-walkthrough-skill-kit/${inside}`);
+    }
     await expect(toastBox(page)).toContainText('Downloaded sequence-walkthrough-skill-kit.zip');
     await page.getByRole('button', { name: 'How it works' }).click();
     const fromGuide = await download(page, () =>
-      page.getByRole('dialog', { name: 'How it works' }).getByRole('button', { name: 'Download the skill' }).click(),
+      page
+        .getByRole('dialog', { name: 'How it works' })
+        .getByRole('button', { name: 'Download the skill' })
+        .click(),
     );
     expect(fromGuide.name).toBe('sequence-walkthrough-skill-kit.zip');
     await expect(stepInput(page)).toBeHidden();

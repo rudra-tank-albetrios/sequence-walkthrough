@@ -7,7 +7,7 @@ The project has two parts:
 | Part | What it is |
 |---|---|
 | **Viewer** | A static web page, also available as one self-contained file. No server, no account, no install. Paste Mermaid code and walk through it. |
-| **`sequence-walkthrough` skill** | A Claude skill that writes these diagrams from your source code, an API spec, logs or a plain description, in four modes: explain, proposed design, scoped cut and easy wording. It also checks and fixes existing ones. |
+| **`seq-diagram` and `detailed-seq-diagram` skills** | Two Claude skills that write these diagrams from your source code, in five modes: explain, proposed design, scoped cut, easy wording and compact. The fast one answers in about a minute; the detailed one gives every hop, payload and code link, checked by a bundled validator. |
 
 The diagrams are plain Mermaid. The walkthrough text lives in `%%` comments (format `walkthrough/2`), so the same code still renders unchanged on GitHub, mermaid.live and anywhere else Mermaid runs.
 
@@ -40,8 +40,7 @@ This writes the website to `apps/web/dist/` and the one-file viewer to `apps/web
 
 ```text
 apps/web/dist/index.html                            the website: the viewer, with its code in assets/
-apps/web/dist/sequence-walkthrough.zip              the skill, ready to upload to Claude
-apps/web/dist/sequence-walkthrough-skill-kit.zip    the skill, its setup guide and install scripts
+apps/web/dist/sequence-walkthrough-skill-kit.zip    both skills, their setup guide and the installer
 apps/web/dist/sequence-walkthrough-one-file.zip     the two pages below, as one download
 apps/web/dist-single/sequence-walkthrough.html      the whole viewer in one file (about 7 MB)
 apps/web/dist-single/sequence-viewer.html           the same page, only for publishing as a Claude artifact
@@ -218,67 +217,45 @@ sequenceDiagram
 | `@async` `@retry` `@timeout` `@idempotent` | step | Chips, with a short text |
 | `@unconfirmed <text>` | step | A detail that could not be confirmed from the code |
 
-The full specification, including what the viewer derives from the arrows (request-reply pairs, endings, happy path, data touched) and every lint code, is in [skill/sequence-walkthrough/references/annotation-spec.md](skill/sequence-walkthrough/references/annotation-spec.md). The viewer checks the annotations as you type: the code panel lists any arrow without a `@step`, empty chapters, malformed tags and similar problems. **Copy fix-prompt** turns that list into a request you can paste straight to Claude.
+The full specification, including what the viewer derives from the arrows (request-reply pairs, endings, happy path, data touched) and every lint code, is in [skills/shared/references/annotation-spec.md](skills/shared/references/annotation-spec.md). The viewer checks the annotations as you type: the code panel lists any arrow without a `@step`, empty chapters, malformed tags and similar problems. **Copy fix-prompt** turns that list into a request you can paste straight to Claude.
 
 ---
 
-## The Claude skill
+## The Claude skills
 
-The skill is called **`sequence-walkthrough`**. It teaches Claude to write diagrams in this format from your code, check them with a bundled validator, and fix them from the viewer's fix-prompt.
+Two skills write these diagrams from a project's code, in the `walkthrough/2` format the viewer reads:
 
-### Get it
+| Skill | What you get | Say |
+|---|---|---|
+| **`seq-diagram`** | The everyday flow, in about a minute: every layer the flow crosses, numbered arrows, statuses and messages, field names, a code link on calls and client replies. | "diagram this flow", "how does X work", "walk me through the checkout", "explain only the part after the service layer", "how would I build X here", "in easy language" |
+| **`detailed-seq-diagram`** | Every hop and every return, full payloads with example values, error bodies, schemas, state changes and a code link on every step, checked with the bundled validator. Slower, and more tokens. | "detailed seq diagram", "detailed flow", "full detail" |
+
+Both put the code in the chat in one `mermaid` block (a `.md` file only over about 50 KB, never an artifact), draw middleware as its own layer, keep every layer in Easy mode, and link only code they really opened.
+
+### Get them
 
 - In the viewer: **Export → Skill for Claude → Download the skill**. This saves `sequence-walkthrough-skill-kit.zip`.
-- Or after `npm run build`: `apps/web/dist/sequence-walkthrough-skill-kit.zip`, or `apps/web/dist/sequence-walkthrough.zip` for the skill alone.
-- Or from source: the folder [skill/sequence-walkthrough/](skill/sequence-walkthrough/).
+- Or after `npm run build`: `apps/web/dist/sequence-walkthrough-skill-kit.zip`.
+- From source: `npm run build:skills` writes `tools/build-skills/dist/` with `seq-diagram/`, `detailed-seq-diagram/`, one zip per skill, `install.mjs`, the [setup guide](skills/shared/kit/SKILL-SETUP-GUIDE.md) and `sequence-walkthrough-skill-kit.zip`, which holds all of it.
+- The sources are in `skills/`: rules both skills share in `skills/shared/`, each skill's own text in `skills/<name>/SKILL.src.md`. The validator lives in `packages/core` and is bundled into each skill's `scripts/validate.mjs` (Node only, no packages).
 
-The kit holds the upload zip, the skill folder, [SKILL-SETUP-GUIDE.md](skill-kit/SKILL-SETUP-GUIDE.md) and install scripts for Windows and macOS/Linux.
+### Install them
 
-### Install it
-
-**Claude Code** (terminal, desktop app, IDE). Copy the folder into your personal skills folder, then start a new session:
-
-```powershell
-# Windows, from the unzipped kit
-powershell -ExecutionPolicy Bypass -File .\install-claude-code.ps1
-```
-
-```bash
-# macOS / Linux, from the unzipped kit
-sh ./install-claude-code.sh
-```
-
-To install it for one project only, and share it with your team through Git, copy the folder to `<project>/.claude/skills/sequence-walkthrough/` instead.
+**Claude Code** (terminal, desktop app, IDE): `npm run install:skills`, or `node install.mjs` from the unzipped kit. It copies both skills into `~/.claude/skills`, moves anything it replaces and the old `sequence-walkthrough` and `detailed-seqflow` skills to `~/.claude/skill-backups`, and can be run again. Start a new session afterwards. For one project only, copy the two folders to `<project>/.claude/skills/` instead.
 
 **Claude app** (claude.ai, desktop, mobile):
 1. Open **Settings → Capabilities** and turn on **Code execution and file creation**.
-2. Open **Customize → Skills**, click **+**, then **Create skill → Upload a skill**, and pick `sequence-walkthrough.zip`. Upload the zip itself, not the whole kit.
-3. Make sure `sequence-walkthrough` is switched on. To update it later, delete the old one there and upload the new zip.
+2. Open **Customize → Skills**, click **+**, then **Create skill → Upload a skill**, and upload `seq-diagram.zip`, then `detailed-seq-diagram.zip`. Remove the older `sequence-walkthrough` or `detailed-seqflow` if it is there.
 
-**Claude Agent SDK.** Put the folder in `<project>/.claude/skills/` and load filesystem skills:
+**Claude Agent SDK.** Put the two folders in `<project>/.claude/skills/` and load filesystem skills with `settingSources: ["user", "project"]` and `skills: ["seq-diagram", "detailed-seq-diagram"]`.
 
-```typescript
-import { query } from "@anthropic-ai/claude-agent-sdk";
+**Claude API.** Upload each zip once with `client.skills.create(files=[open("seq-diagram.zip", "rb")])`, then pass `container={"skills": [{"type": "custom", "skill_id": "<id>", "version": "latest"}]}` together with the code execution tool.
 
-for await (const message of query({
-  prompt: "Make a walkthrough diagram of the payment flow in ./src",
-  options: {
-    settingSources: ["user", "project"],
-    skills: ["sequence-walkthrough"],
-    allowedTools: ["Read", "Grep", "Glob", "Bash"],
-  },
-})) {
-  if (message.type === "result" && message.subtype === "success") console.log(message.result);
-}
-```
-
-**Claude API.** Upload once with `client.skills.create(files=[open("sequence-walkthrough.zip", "rb")])`, then pass `container={"skills": [{"type": "custom", "skill_id": "<id>", "version": "latest"}]}` together with the code execution tool.
-
-The [setup guide](skill-kit/SKILL-SETUP-GUIDE.md) has the full steps for each of these, in Python and TypeScript, plus Managed Agents, updating and troubleshooting.
+The [setup guide](skills/shared/kit/SKILL-SETUP-GUIDE.md) has the full steps for each of these, plus updating and troubleshooting.
 
 ### Use it
 
-Ask in plain words, or in Claude Code call it by name. The skill picks one of four modes from your words:
+Ask in plain words, or in Claude Code call one by name. Both skills pick the mode from your words:
 
 | You say | Mode | What you get |
 |---|---|---|
@@ -286,9 +263,10 @@ Ask in plain words, or in Claude Code call it by name. The skill picks one of fo
 | "I want to add a receipt email, how would it be done here, give me the flow" | **Proposed** | A design marked `@mode proposed` that reuses the project's real layers, middleware chain, naming, response envelope and error format. Existing steps keep real code links; new steps point at the code they should follow. |
 | "Only the email sending after the service layer" | **Scoped** | The flow starts exactly at that boundary, says where it is entered from, and draws nothing outside the asked part. |
 | "Explain it in easy language", "beginner friendly" | **Easy** | The same layers and the same arrows, with the explanations in everyday words and a glossary line for every technical word. Layers are never removed or merged unless you ask for fewer or combined layers. |
+| "Fewer steps", "combine the layers" | **Compact** | Routes through Repository folded into one Backend participant. Only when you ask for it. |
 
 ```text
-/sequence-walkthrough diagram the checkout flow in ./src/checkout
+/seq-diagram diagram the checkout flow in ./src/checkout
 ```
 
 ```text
@@ -304,7 +282,7 @@ Check this diagram and add the missing @step lines: <paste the Mermaid code>
 ```
 
 What you get back:
-- **The code only, in the reply.** Claude checks it with `scripts/validate.py` through stdin and doesn't create any file, unless you ask for one and say where.
+- **The code only, in the reply.** Claude doesn't create any file, unless you ask for one and say where.
 - **The real API detail.** Each request shows the method and full path, each reply the status code and message, with payload parts for what is sent and returned, every error branch, the hooks and crons behind each step, a glossary, chapter summaries and code links.
 - **Taken from your project, then verified.** Every endpoint, field, status code and message comes from the code. Before replying Claude re-opens every referenced line and confirms it; anything it could not confirm is marked `@unconfirmed` on the step or listed under *Not confirmed*. The reply ends with `Verified: N of N refs re-opened, M unconfirmed`.
 - **Middleware as a main layer**, always, in every mode.
@@ -319,7 +297,8 @@ Notes you took in the viewer stay attached to steps whose arrows didn't change.
 The validator also runs on its own, on a file or on stdin:
 
 ```bash
-python skill/sequence-walkthrough/scripts/validate.py my-flow.mmd
+npm run build:skills
+node tools/build-skills/dist/seq-diagram/scripts/validate.mjs my-flow.mmd
 ```
 
 Use `-` instead of a file name to read the code from stdin. Add `--json` for machine-readable output or `--strict` to fail on style hints. It exits with 0 when clean, 1 on errors or warnings, and 2 when a file can't be read.
@@ -379,20 +358,19 @@ Connect the repository and use these settings. Netlify reads them from [netlify.
 ```text
 .
 ├── apps/web/                   the viewer: React, TypeScript and Vite
-├── packages/core/              the walkthrough/2 parser and the flow model
+├── packages/core/              the walkthrough/2 parser, the flow model and the validator
 ├── examples/demo-store/        the small real project behind the demo flow
 ├── e2e/                        browser tests and the live-site smoke test
-├── tools/                      the size budgets and the demo's code-link check
 ├── docs/                       architecture, decisions, the build plan and feature parity
-├── skill/
-│   └── sequence-walkthrough/   the Claude skill
-│       ├── SKILL.md            modes, accuracy rules, token budget, workflow, output shape
-│       ├── references/         annotation spec (walkthrough/2), writing guide, layer naming
-│       ├── examples/           payment-idempotency.mmd, oauth-login.mmd
-│       └── scripts/validate.py
-├── skill-kit/                  setup guide and install scripts packed into the skill download
+├── skills/
+│   ├── shared/                 rules both skills share, their references, the kit's setup guide
+│   ├── seq-diagram/            SKILL.src.md of the fast skill
+│   ├── detailed-seq-diagram/   SKILL.src.md of the detailed skill, and its examples
+│   └── fixtures/               sample projects (Express, NestJS, Next.js, Django, feature folders) the skills are tested against
+├── tools/build-skills/         builds both skills, their zips, the installer and the kit into tools/build-skills/dist/
+├── tools/                      also the size budgets and the demo's code-link check
 ├── FEATURE-IDEAS.md            the feature list this version was built from, with what is still open
-├── .github/workflows/          CI, CodeQL and GitHub Pages deployment
+├── .github/workflows/          GitHub Pages deployment
 ├── netlify.toml                Netlify build settings
 └── apps/web/dist, dist-single/ build output, not committed: the website and the one-file viewer
 ```
@@ -401,13 +379,13 @@ Connect the repository and use these settings. Netlify reads them from [netlify.
 
 ## Development
 
-> **Version 3 is being built.** The plan is in [`docs/IMPLEMENTATION-PLAN.md`](docs/IMPLEMENTATION-PLAN.md), the layout in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and the setup in [`CONTRIBUTING.md`](CONTRIBUTING.md): `npm ci`, then `npm run verify`.
+> **Version 3 is being built.** The plan is in [`docs/IMPLEMENTATION-PLAN.md`](docs/IMPLEMENTATION-PLAN.md), the layout in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and the setup in [`CONTRIBUTING.md`](CONTRIBUTING.md): `npm ci`, then `npm run check` before a merge (`npm run verify` is the full run by hand).
 
 - Edit files in `apps/web/src` with `npm run dev` running. `npm run build` writes the website and the one-file viewer, which inlines the scripts, styles and fonts and embeds the skill kit.
 - The build is reproducible: the same sources always give the same bytes, including the zips.
 - **To change the default diagram,** edit `examples/demo-store/flows/place-order.mmd`. Keep its arrow lines unchanged if you want existing notes to stay attached.
-- **To change the skill,** edit `skill/sequence-walkthrough/`, run the validator on both examples, rebuild so the download in the viewer picks it up, then reinstall it wherever you use it. For the Claude app and the API, upload the new `sequence-walkthrough.zip`.
-- **To add a tag,** update `references/annotation-spec.md` first, then the parser in `packages/core`, the card in `apps/web/src/features/walkthrough`, and `scripts/validate.py` so the viewer and the validator agree on codes and messages.
+- **To add a tag,** update `skills/shared/references/annotation-spec.md` first, then the parser in `packages/core`, the card in `apps/web/src/features/walkthrough`, and `packages/core/src/validate.ts` so the viewer and the validator agree on codes and messages.
+- **The skills** live in `skills/`: rules both share in `skills/shared`, each skill's own text in `skills/<name>/SKILL.src.md`. `npm run build:skills` writes both folders, their zips and the kit to `tools/build-skills/dist/`, and stops if a skill breaks a rule. `npm run install:skills` installs them for Claude Code and backs up what it replaces.
 - Mermaid is pinned to **12.2.0** and jsPDF to **4.2.1** through `apps/web/package.json` and the lockfile. The viewer's line numbers, highlighting and chapter bands depend on Mermaid's SVG structure, so test a diagram with steps, chapters, notes and exports before you change the version.
 
 ---

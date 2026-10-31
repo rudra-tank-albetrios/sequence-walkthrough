@@ -1,9 +1,9 @@
 import react from '@vitejs/plugin-react';
 import { viteSingleFile } from 'vite-plugin-singlefile';
-import { defineConfig, type Plugin } from 'vitest/config';
+import { defineConfig, type Plugin, type ViteUserConfigFnPromise } from 'vitest/config';
 
 import { oneFilePage } from './vite-plugins/oneFilePage.ts';
-import { skillKit, skillKitBase64url } from './vite-plugins/skillKit.ts';
+import { readSkillKit, skillKit } from './vite-plugins/skillKit.ts';
 
 // Plan section 4: no external scripts, everything bundled. GitHub Pages cannot send headers, so the
 // policy is a <meta> tag. It is added to production builds only: the dev server and React refresh
@@ -36,7 +36,7 @@ function contentSecurityPolicy(): Plugin {
   };
 }
 
-export default defineConfig(({ mode }) => {
+const config: ViteUserConfigFnPromise = async ({ mode }) => {
   // `vite build --mode single` is the one-file build, in its own output folder.
   const oneFile = mode === 'single';
   return {
@@ -47,7 +47,9 @@ export default defineConfig(({ mode }) => {
     ],
     define: {
       // A file next to the page on the website; inside the page in the one-file build.
-      __SKILL_KIT__: JSON.stringify(oneFile ? skillKitBase64url() : ''),
+      __SKILL_KIT__: JSON.stringify(
+        oneFile ? Buffer.from(await readSkillKit()).toString('base64url') : '',
+      ),
     },
     build: {
       target: 'es2022',
@@ -61,4 +63,6 @@ export default defineConfig(({ mode }) => {
       css: { modules: { classNameStrategy: 'non-scoped' } },
     },
   };
-});
+};
+
+export default defineConfig(config);

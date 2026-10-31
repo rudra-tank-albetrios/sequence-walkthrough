@@ -19,6 +19,9 @@ export interface FollowState {
   hits: number[];
 }
 
+/** Mermaid's own default limit: longer code is refused before anything reads it. */
+export const MAX_CODE_SIZE = 50_000;
+
 export interface FlowState {
   code: string;
   parsed: ParsedFlow | null;
@@ -136,6 +139,11 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   fitRequest: 0,
 
   setCode(code) {
+    // Refused when drawn; reading it first and showing its steps would stop the page for seconds.
+    if (code.length > MAX_CODE_SIZE) {
+      set({ code });
+      return;
+    }
     const parsed = parseFlow(code);
     const flow = parsed.flow;
     const steps = flow.isSequence ? flow.steps.length : 0;

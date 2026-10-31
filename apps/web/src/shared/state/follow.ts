@@ -10,7 +10,7 @@ export function startFollow(raw: string): boolean {
   const state = useFlowStore.getState();
   const hits = followHits(state.flow, token);
   if (hits === null) {
-    toast(`"${token}" is too short or too common to follow`);
+    toast(`“${token}” is too short or too common to follow`);
     return false;
   }
   if (hits.length === 0) {

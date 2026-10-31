@@ -55,4 +55,12 @@ describe('flow store navigation', () => {
     expect(s.prev()).toBeNull();
     expect(useFlowStore.getState().cur).toBe(-1);
   });
+
+  it('stores code over the limit without reading it, and keeps the last good flow', () => {
+    const before = useFlowStore.getState().flow;
+    const huge = `sequenceDiagram\n${'A-->>B: y\n'.repeat(10_000)}`;
+    useFlowStore.getState().setCode(huge);
+    expect(useFlowStore.getState().code).toBe(huge);
+    expect(useFlowStore.getState().flow).toBe(before);
+  });
 });

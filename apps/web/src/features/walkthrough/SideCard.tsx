@@ -15,11 +15,12 @@ export function SideCard({ step, testId }: { step: Step | undefined; testId: str
     <button
       type="button"
       className={cx(styles.card, styles.side, !pathVisible(step, path) && styles.off)}
-      aria-label={`Go to step ${step.n}`}
       data-testid={testId}
       onClick={() => go(step.idx)}
     >
-      <span className={styles.sideH}>Step {step.n}</span>
+      <span className={styles.sideH}>
+        <span className="sr-only">Go to </span>Step {step.n}
+      </span>
       <span className={styles.sideR}>{shortRoute(step)}</span>
       <span className={cx(styles.sideS, 'mono')}>{step.label.join(' ')}</span>
       <span className={styles.sideD}>{step.explain}</span>

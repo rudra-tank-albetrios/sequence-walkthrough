@@ -204,7 +204,8 @@ describe('the request', () => {
 
   it("shows the host's own words when it refuses, and keeps the refusal as the cause", async () => {
     const refusal = { code: 'rate_limited', message: 'Too many questions just now.' };
-    const sample = () => Promise.reject(refusal as unknown as Error);
+    // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- the host rejects with a plain object
+    const sample = () => Promise.reject(refusal);
     (window as unknown as { claude?: unknown }).claude = { use: () => Promise.resolve(sample) };
     const error = await complete(settingsWith({ provider: 'claude' }), 'Q').catch((err: unknown) => err);
     expect(error).toBeInstanceOf(Error);
@@ -213,7 +214,8 @@ describe('the request', () => {
   });
 
   it('has a sentence of its own when the refusal carries no message', async () => {
-    const sample = () => Promise.reject({ code: 'unknown' } as unknown as Error);
+    // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- the host rejects with a plain object
+    const sample = () => Promise.reject({ code: 'unknown' });
     (window as unknown as { claude?: unknown }).claude = { use: () => Promise.resolve(sample) };
     await expect(complete(settingsWith({ provider: 'claude' }), 'Q')).rejects.toThrow('Claude did not answer.');
   });

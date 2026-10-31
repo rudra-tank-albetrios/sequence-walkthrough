@@ -7,53 +7,13 @@ import {
   goToStep,
   open,
   openFocused,
+  rightClickWord,
   stepInput,
   svg,
   toastBox,
 } from './helpers.ts';
 
 const card = (page: Page) => page.getByTestId('step-card');
-
-/** Selects the first occurrence of a word inside an element and right-clicks it. */
-async function rightClickWord(page: Page, testId: string, word: string): Promise<void> {
-  const box = await page.getByTestId(testId).evaluate((el, target) => {
-    interface Range {
-      setStart: (n: unknown, o: number) => void;
-      setEnd: (n: unknown, o: number) => void;
-      getBoundingClientRect: () => { x: number; y: number; width: number; height: number };
-    }
-    interface TextNode {
-      nodeValue: string | null;
-    }
-    const doc = (
-      globalThis as unknown as {
-        document: {
-          createRange: () => Range;
-          createTreeWalker: (r: unknown, w: number) => { nextNode: () => TextNode | null };
-        };
-        getSelection: () => { removeAllRanges: () => void; addRange: (r: Range) => void };
-      }
-    ).document;
-    const walker = doc.createTreeWalker(el, 4);
-    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      const at = (node.nodeValue ?? '').indexOf(target);
-      if (at < 0) continue;
-      const range = doc.createRange();
-      range.setStart(node, at);
-      range.setEnd(node, at + target.length);
-      const selection = (globalThis as unknown as { getSelection: () => {
-        removeAllRanges: () => void;
-        addRange: (r: Range) => void;
-      } }).getSelection();
-      selection.removeAllRanges();
-      selection.addRange(range);
-      const r = range.getBoundingClientRect();
-      return { x: r.x, y: r.y, width: r.width, height: r.height };
-    }
-    throw new Error(`No "${target}" in the element`);
-  }, word);
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
-}
 
 test.describe('step details', () => {
   test('S1 the header row has the count, chapter, branch and flag chips and actions', async ({
@@ -105,7 +65,9 @@ test.describe('step details', () => {
     await expect(stepInput(page)).toHaveValue('4');
   });
 
-  test('S3 S4 a reply shows its status code, its meaning, and following words', async ({ page }) => {
+  test('S3 S4 a reply shows its status code, its meaning, and following words', async ({
+    page,
+  }) => {
     await openFocused(page);
     await goToStep(page, 22);
     const status = page.getByTestId('status');
@@ -159,7 +121,9 @@ test.describe('step details', () => {
     const payload = page.getByTestId('payload');
     await expect(payload.getByText('Body', { exact: true })).toBeHidden();
     await payload.getByText('Show payload').click();
-    await expect(payload.getByText('Headers', { exact: true })).toBeVisible();
+    // Two @payload.headers lines give two labelled boxes, as version 2 drew them.
+    await expect(payload.getByText('Headers', { exact: true })).toHaveCount(2);
+    await expect(payload.getByText('Headers', { exact: true }).first()).toBeVisible();
     await expect(payload.getByText('Body', { exact: true })).toBeVisible();
     await expect(payload).toContainText('Authorization: Bearer demo-token');
     await goToStep(page, 7);
@@ -254,7 +218,9 @@ test.describe('step details', () => {
       ].join('\n'),
     });
     await page.keyboard.press('ArrowRight');
-    await expect(page.getByTestId('unconfirmed')).toContainText('Not confirmed: Which queue is used');
+    await expect(page.getByTestId('unconfirmed')).toContainText(
+      'Not confirmed: Which queue is used',
+    );
     const uses = page.getByTestId('uses');
     await expect(uses.locator('summary')).toHaveText('Also involved: 1 hook · 1 util');
     await uses.locator('summary').click();
@@ -284,11 +250,7 @@ test.describe('step details', () => {
     await expect(page.getByTestId('follow-strip')).toContainText('widget');
     await expect(pop).toBeHidden();
     await page.keyboard.press('i');
-    await page
-      .getByTestId('insight')
-      .getByRole('button', { name: 'widget' })
-      .first()
-      .click();
+    await page.getByTestId('insight').getByRole('button', { name: 'widget' }).first().click();
     await expect(pop).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(pop).toBeHidden();
