@@ -11,8 +11,10 @@ import {
   notice,
   open,
   openFocused,
+  overlay,
   stepInput,
   svg,
+  topActor,
   toastBox,
 } from './helpers.ts';
 
@@ -423,17 +425,23 @@ test.describe('walkthrough', () => {
     await expect(page.locator('#topbar')).toBeHidden();
     const showHeader = page.getByRole('button', { name: 'Show the header' });
     await expect(showHeader).toHaveAttribute('aria-expanded', 'false');
+    // The tab puts the cards away; the dock stays, so Play and the Flow Rail are still there.
+    const deck = page.locator('[data-tour="deck"]');
+    const dock = page.locator('[data-tour="dock"]');
+    await expect(deck).toBeVisible();
     await page.getByRole('button', { name: 'Hide the step bar' }).click();
-    await expect(page.locator('#wbar')).toBeHidden();
+    await expect(deck).toBeHidden();
+    await expect(dock).toBeVisible();
     expect((await settings(page)).fold).toEqual({ top: true, bar: true });
     await page.reload();
     await expect(svg(page)).toBeVisible({ timeout: 30_000 });
     await expect(page.locator('#topbar')).toBeHidden();
-    await expect(page.locator('#wbar')).toBeHidden();
+    await expect(deck).toBeHidden();
+    await expect(dock).toBeVisible();
     await showHeader.click();
     await page.getByRole('button', { name: 'Show the step bar' }).click();
     await expect(page.locator('#topbar')).toBeVisible();
-    await expect(page.locator('#wbar')).toBeVisible();
+    await expect(deck).toBeVisible();
   });
 
   test('W15 the left tab exists only while the code is open, and the tabs re-centre', async ({
@@ -451,8 +459,10 @@ test.describe('walkthrough', () => {
     await expect(page.locator('#codePanel')).toBeHidden();
     await expect.poll(async () => (await top.boundingBox())?.x ?? 0).toBeCloseTo(centred, 0);
     await diagram(page).focus();
+    // The overlay floats over the page and takes no room from it, so the tabs stay put.
     await page.keyboard.press('i');
-    await expect.poll(async () => (await top.boundingBox())?.x ?? 0).toBeLessThan(centred - 100);
+    await expect(overlay(page)).toBeVisible();
+    expect((await top.boundingBox())?.x ?? 0).toBeCloseTo(centred, 0);
   });
 
   test('W16 the step box jumps on Enter, restores on Esc, selects on focus', async ({ page }) => {
@@ -480,10 +490,8 @@ test.describe('walkthrough', () => {
   test('W17 Esc closes one thing at a time, in order', async ({ page }) => {
     await openFocused(page);
     // The spotlight first, while the whole drawing is in view and no panel covers it.
-    await svg(page).locator('.swv-actor[data-alias="RD"]').first().click();
+    await (await topActor(page, 'RD')).click();
     await expect(notice(page)).toContainText('Showing only');
-    await page.keyboard.press('i');
-    await expect(page.getByTestId('insight')).toBeVisible();
     await page.keyboard.press('c');
     await expect(page.locator('#codePanel')).toBeVisible();
     await diagram(page).focus();
@@ -499,14 +507,18 @@ test.describe('walkthrough', () => {
     await expect(page.getByTestId('find')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('find')).toBeHidden();
+    // The overlay is modal, so it closes first and alone, whatever is open behind it.
+    await diagram(page).focus();
+    await page.keyboard.press('i');
+    await expect(overlay(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(overlay(page)).toBeHidden();
     await expect(notice(page)).toContainText('Showing only');
+    await diagram(page).focus();
     await page.keyboard.press('Escape');
     await expect(notice(page)).toContainText('Path:');
     await page.keyboard.press('Escape');
     await expect(notice(page)).toBeHidden();
-    await expect(page.getByTestId('insight')).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(page.getByTestId('insight')).toBeHidden();
     await expect(page.locator('#codePanel')).toBeVisible();
     await diagram(page).focus();
     await page.keyboard.press('Escape');
@@ -517,19 +529,21 @@ test.describe('walkthrough', () => {
     await expect(page.getByTestId('overview')).toBeVisible();
   });
 
-  test('W17 Follow closes before Insight', async ({ page }) => {
+  test('W17 the overlay closes before Follow', async ({ page }) => {
     await openFocused(page);
-    await page.keyboard.press('i');
     await goToStep(page, 4);
     await page.getByTestId('step-card').locator('[data-tok]').first().click();
     const strip = page.getByTestId('follow-strip');
     await expect(strip).toBeVisible();
     await diagram(page).focus();
+    await page.keyboard.press('i');
+    await expect(overlay(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(overlay(page)).toBeHidden();
+    await expect(strip).toBeVisible();
+    await diagram(page).focus();
     await page.keyboard.press('Escape');
     await expect(strip).toBeHidden();
-    await expect(page.getByTestId('insight')).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(page.getByTestId('insight')).toBeHidden();
   });
 
   test('W18 a toast stays about three seconds and the next replaces it', async ({ page }) => {
