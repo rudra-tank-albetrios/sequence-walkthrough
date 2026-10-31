@@ -266,11 +266,14 @@ export function Viewer() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    let frame = 0;
     const observer = new ResizeObserver(() => {
-      camera.refresh();
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => camera.refresh());
     });
     observer.observe(canvas);
     return () => {
+      cancelAnimationFrame(frame);
       observer.disconnect();
     };
   }, [camera]);

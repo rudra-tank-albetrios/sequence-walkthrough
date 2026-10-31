@@ -104,6 +104,15 @@ export interface Armed {
 const isWeb = (url: string): boolean => /^https?:/i.test(url);
 
 /**
+ * Messages WebKit raises as errors on the page that are not code running: a layout observer that
+ * re-ran, and a cross-site fetch it refused (the refusal is the point of that test).
+ */
+const BROWSER_NOTICES = [
+  /^ResizeObserver loop completed with undelivered notifications\.$/,
+  /due to access control checks\.$/,
+];
+
+/**
  * Starts recording on a page, before it opens anything. Requests to other sites are refused here,
  * so a hostile page cannot reach the network even when an attack gets through.
  */
@@ -121,7 +130,11 @@ export async function arm(page: Page, baseURL: string | undefined): Promise<Arme
     });
   });
   page.on('console', (message) => armed.console.push(message.text()));
-  page.on('pageerror', (error) => armed.pageErrors.push(error.message));
+  page.on('pageerror', (error) => {
+    if (!BROWSER_NOTICES.some((notice) => notice.test(error.message))) {
+      armed.pageErrors.push(error.message);
+    }
+  });
   await page.route(
     (url) => isWeb(url.href) && url.origin !== origin,
     (route) => {

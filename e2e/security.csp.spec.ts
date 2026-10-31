@@ -187,7 +187,11 @@ for (const attack of ATTACKS) {
       test.describe('with the policy off', () => {
         test.use({ bypassCSP: true });
 
-        test('does what it was written to do', async ({ page, baseURL }) => {
+        test('does what it was written to do', async ({ page, baseURL, browserName }) => {
+          test.skip(
+            browserName === 'webkit' && /eval|Function constructor/.test(attack.name),
+            'WebKit keeps eval blocked even when the test tool lifts the policy.',
+          );
           const armed = await arm(page, baseURL);
           await openSafeFlow(page);
           await page.evaluate(inLaterTask(attack.run));
