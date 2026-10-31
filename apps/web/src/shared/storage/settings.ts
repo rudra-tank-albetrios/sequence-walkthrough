@@ -41,13 +41,13 @@ export const DEFAULT_SETTINGS: Settings = {
   bands: true,
 };
 
-const isTheme = (value: unknown): value is DiagramTheme =>
+export const isDiagramTheme = (value: unknown): value is DiagramTheme =>
   typeof value === 'string' && (DIAGRAM_THEMES as readonly string[]).includes(value);
 
 export function loadSettings(): Settings {
   const stored = Store.get<Partial<Settings>>(SETTINGS_KEY, {});
   const merged: Settings = { ...DEFAULT_SETTINGS, ...stored };
-  if (!isTheme(merged.theme)) merged.theme = DEFAULT_SETTINGS.theme;
+  if (!isDiagramTheme(merged.theme)) merged.theme = DEFAULT_SETTINGS.theme;
   if (merged.wheel !== 'zoom') merged.wheel = 'scroll';
   if (typeof merged.speed !== 'number' || !Number.isFinite(merged.speed)) {
     merged.speed = DEFAULT_SETTINGS.speed;
@@ -62,7 +62,10 @@ export function saveSettings(settings: Settings): void {
 /** `swv:code`: the last code the user had in the panel, written a moment after each edit. */
 export const CODE_KEY = 'swv:code';
 
-export const loadSavedCode = (): string | null => Store.get<string | null>(CODE_KEY, null);
+export function loadSavedCode(): string | null {
+  const saved = Store.get<unknown>(CODE_KEY, null);
+  return typeof saved === 'string' ? saved : null;
+}
 export const saveCode = (code: string): void => {
   Store.set(CODE_KEY, code);
 };

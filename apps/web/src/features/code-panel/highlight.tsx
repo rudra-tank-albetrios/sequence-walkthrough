@@ -1,8 +1,6 @@
 import { findArrow } from '@swv/core';
 import type { ReactNode } from 'react';
 
-import styles from './codePanel.module.css';
-
 const TAG_RE = /^(\s*)(%%\s*@[A-Za-z]+(?:\.[A-Za-z]+)?)(.*)$/;
 const COMMENT_RE = /^\s*%%/;
 const KEYWORD_RE =
@@ -20,12 +18,12 @@ export function highlightLine(line: string): ReactNode {
     return (
       <>
         {tag[1]}
-        <span className={styles['t-tag']}>{tag[2]}</span>
-        <span className={styles['t-tagtx']}>{tag[3]}</span>
+        <span className="t-tag">{tag[2]}</span>
+        <span className="t-tagtx">{tag[3]}</span>
       </>
     );
   }
-  if (COMMENT_RE.test(line)) return <span className={styles['t-cm']}>{line}</span>;
+  if (COMMENT_RE.test(line)) return <span className="t-cm">{line}</span>;
   const keyword = KEYWORD_RE.exec(line);
   if (keyword) {
     const rest = keyword[3] ?? '';
@@ -33,11 +31,11 @@ export function highlightLine(line: string): ReactNode {
     return (
       <>
         {keyword[1]}
-        <span className={styles['t-kw']}>{keyword[2]}</span>
+        <span className="t-kw">{keyword[2]}</span>
         {alias ? (
           <>
             {alias[1]}
-            <span className={styles['t-al']}>{alias[2]}</span>
+            <span className="t-al">{alias[2]}</span>
             {alias[3]}
             {alias[4]}
           </>
@@ -55,9 +53,9 @@ export function highlightLine(line: string): ReactNode {
     const end = start + arrow[0].length;
     return (
       <>
-        <span className={styles['t-al']}>{left.slice(0, start)}</span>
-        <span className={styles['t-ar']}>{left.slice(start, end)}</span>
-        <span className={styles['t-al']}>{left.slice(end)}</span>
+        <span className="t-al">{left.slice(0, start)}</span>
+        <span className="t-ar">{left.slice(start, end)}</span>
+        <span className="t-al">{left.slice(end)}</span>
         {colon >= 0 ? line.slice(colon) : null}
       </>
     );

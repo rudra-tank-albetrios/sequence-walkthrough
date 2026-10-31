@@ -46,19 +46,44 @@ function luminance(color: string): number {
 }
 
 /**
+ * CSS that came from the diagram (an `%%{init}%%` directive can set `themeCSS`) may not fetch
+ * anything: `@import` goes, and so does every `url()` that is not a reference into the SVG itself.
+ */
+function inertCss(css: string): string {
+  return css.replace(/@import[^;]*;?/gi, '').replace(/url\(\s*(?!['"]?#)[^)]*\)/gi, 'none');
+}
+
+/**
  * Pasted code is untrusted (plan section 4): Mermaid runs at `securityLevel: 'strict'` and every
  * SVG it produces goes through DOMPurify before it reaches the page. `name` is kept because Mermaid
- * marks participants with it, and `<style>` because the theme lives there.
+ * marks participants with it, and `<style>` because the theme lives there, made inert.
  */
 function sanitize(svg: string): string {
-  return DOMPurify.sanitize(svg, {
+  const clean = DOMPurify.sanitize(svg, {
     USE_PROFILES: { svg: true, svgFilters: true, html: true },
     ADD_TAGS: ['style'],
     ADD_ATTR: ['name', 'dominant-baseline', 'marker-end', 'marker-start'],
     FORBID_TAGS: ['script', 'iframe', 'object', 'embed'],
     FORBID_ATTR: ['onload', 'onerror', 'onclick', 'onmouseover', 'href', 'xlink:href'],
   });
+  return clean
+    .replace(
+      /(<style\b[^>]*>)([\s\S]*?)(<\/style>)/gi,
+      (_, open: string, css: string, close: string) => `${open}${inertCss(css)}${close}`,
+    )
+    .replace(/\sstyle="([^"]*)"/gi, (_, css: string) => ` style="${inertCss(css)}"`);
 }
+
+/**
+ * Mermaid puts its drawing in the document before the sanitiser sees it, and the browser would
+ * fetch what the theme CSS of an `%%{init}%%` directive or front matter names at that moment. So
+ * the config inside the code is made inert first; the arrows and lines stay as they were.
+ */
+const inertConfig = (code: string): string =>
+  code.replace(/%%\{[\s\S]*?\}%%/g, inertCss).replace(/^---\r?\n[\s\S]*?\r?\n---/, inertCss);
+
+/** Mermaid's own default limit, checked here before Mermaid parses, so huge code is refused at once. */
+const MAX_TEXT_SIZE = 50_000;
 
 /** Draws the code with the given theme. Throws DiagramSyntaxError when Mermaid refuses it. */
 export async function renderDiagram(code: string, theme: string, id: string): Promise<RenderedDiagram> {
@@ -67,6 +92,7 @@ export async function renderDiagram(code: string, theme: string, id: string): Pr
     startOnLoad: false,
     theme: theme as NonNullable<MermaidConfig['theme']>,
     securityLevel: 'strict',
+    maxTextSize: MAX_TEXT_SIZE,
   });
   let themeBg = theme.includes('dark') ? '#1e1e1e' : '#ffffff';
   try {
@@ -80,14 +106,20 @@ export async function renderDiagram(code: string, theme: string, id: string): Pr
   } catch {
     /* keep the fallback */
   }
+  if (code.length > MAX_TEXT_SIZE) {
+    throw new DiagramSyntaxError(
+      `Maximum text size in diagram exceeded: ${code.length} characters, the limit is ${MAX_TEXT_SIZE}`,
+    );
+  }
+  const safeCode = inertConfig(code);
   try {
-    await mermaid.parse(code);
+    await mermaid.parse(safeCode);
   } catch (error) {
     throw new DiagramSyntaxError(error instanceof Error ? error.message : String(error));
   }
   let rendered: { svg: string };
   try {
-    rendered = await mermaid.render(id, code);
+    rendered = await mermaid.render(id, safeCode);
   } catch (error) {
     document.getElementById(`d${id}`)?.remove();
     throw new DiagramSyntaxError(error instanceof Error ? error.message : String(error));

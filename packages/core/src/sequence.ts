@@ -31,6 +31,12 @@ interface OpenBlock {
   line: number;
 }
 
+/**
+ * How many open blocks an arrow remembers. No real diagram nests this deep, and every arrow keeps
+ * a copy of its blocks, so without a limit a few kilobytes of `alt` lines fill the browser's memory.
+ */
+const MAX_BRANCH_DEPTH = 32;
+
 const DRAWING_HINTS = new Set([
   'destroy',
   'activate',
@@ -171,6 +177,7 @@ export function parseSequence(code: string): SequenceInfo | null {
     addParticipant(arrow.from, arrow.from, 'participant');
     addParticipant(arrow.to, arrow.to, 'participant');
     const branch: Branch[] = stack
+      .slice(0, MAX_BRANCH_DEPTH)
       .filter((b): b is OpenBlock & { kind: BlockKind } => b.kind !== 'box' && b.kind !== 'rect')
       .map((b) => ({ id: b.id, kind: b.kind, label: b.label, first: b.first }));
     info.arrows.push({
