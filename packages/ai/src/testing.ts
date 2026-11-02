@@ -9,7 +9,7 @@
  *   const mock = mockModel({ reply: JSON.stringify({ questions: [] }) });
  *   const result = await callModel({ … });
  *   expect(mock.calls).toHaveLength(1);
- *   expect(mock.calls[0]?.body.max_tokens).toBe(1200);
+ *   expect(mock.calls[0]?.body.max_tokens).toBe(3000);
  *   mock.restore();
  */
 import { grantConsent } from './consent.ts';

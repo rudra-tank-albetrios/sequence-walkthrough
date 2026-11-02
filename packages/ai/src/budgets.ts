@@ -4,8 +4,11 @@
 export const REPLY_TOKENS = {
   /** One Ask AI answer. */
   ask: 220,
-  /** A quiz of 5 questions. */
-  quiz: 1200,
+  /**
+   * One batch of 5 quiz questions. The questions themselves need about 1,000 tokens; the rest is
+   * room for the thinking a reasoning model spends out of the same limit before it writes.
+   */
+  quiz: 3000,
   /** Marking one-line answers, in one batch per quiz. */
   mark: 80,
   /** The day recap. */

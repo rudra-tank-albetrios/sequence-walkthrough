@@ -88,7 +88,7 @@ test.describe('Ask AI', () => {
     await dialog.getByRole('button', { name: 'Why this step?' }).click();
     const answer = dialog.getByTestId('ask-answer');
     await expect(answer).toContainText('The page starts the submit.');
-    await expect(answer).toContainText('Groq · llama-3.3-70b-versatile');
+    await expect(answer).toContainText('Groq · openai/gpt-oss-120b');
     await expect(answer).toContainText("Saved to this step's note");
     expect(sent).toHaveLength(1);
     expect(sent[0]?.authorization).toBe('Bearer gsk_e2e');

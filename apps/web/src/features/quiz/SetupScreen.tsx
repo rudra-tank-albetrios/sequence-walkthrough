@@ -2,11 +2,14 @@ import { hasUsableModel } from '@swv/ai';
 import type { Flow } from '@swv/core';
 import { useMemo, useState, type SyntheticEvent } from 'react';
 
+import { plural } from '../../shared/lib/util.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
+import { forgetFlow, otherFlows } from '../../shared/storage/flowHistory.ts';
 import { flowId } from '../../shared/storage/notes.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { ChoiceGroup } from './ChoiceGroup.tsx';
 import { CUSTOM_MINUTES, validMinutes } from './clock.ts';
+import { ConnectFlows } from './ConnectFlows.tsx';
 import { modelHosts } from './hosts.ts';
 import { useQuizStore } from './quizStore.ts';
 import { pickSample, sampleQuestions } from './sample/index.ts';
@@ -63,6 +66,7 @@ function SourceNote({
   ready,
   hosts,
   pick,
+  connected,
   onPick,
 }: {
   source: QuizSource | null;
@@ -71,6 +75,8 @@ function SourceNote({
   /** Where the text goes, named before anything is sent (plan section 4). */
   hosts: string[];
   pick: QuizSource;
+  /** How many other flows go in the quiz: their summaries are sent too. */
+  connected: number;
   onPick: (source: QuizSource) => void;
 }) {
   const setUi = useFlowStore((s) => s.setUi);
@@ -91,8 +97,9 @@ function SourceNote({
       ) : null}
       {source === 'model' ? (
         <p className={styles.note}>
-          Your model gets a short summary of this flow (never the diagram code), the questions you
-          were asked lately and your weak topics. Written answers go to it for marking, in one batch.
+          Your model gets a short summary of this flow
+          {connected > 0 ? ` and of the ${plural(connected, 'connected flow')}` : ''} (never the
+          diagram code), the questions you were asked lately and your weak topics. Written answers go to it for marking, in one batch.
           All of it goes to <strong>{hosts.join(', ')}</strong> with your key, and nowhere else.
         </p>
       ) : null}
@@ -137,6 +144,9 @@ export function SetupScreen({ flow }: { flow: Flow }) {
   const [timerChoice, setTimerChoice] = useState<TimerChoice>(5);
   const [customMinutes, setCustomMinutes] = useState('20');
   const [pick, setPick] = useState<QuizSource>('model');
+  const [others, setOthers] = useState(() => otherFlows(flow));
+  const lastConnected = useQuizStore((s) => s.connected);
+  const [chosen, setChosen] = useState<string[]>(lastConnected);
 
   const ready = hasUsableModel();
   const hosts = ready ? modelHosts() : [];
@@ -150,6 +160,13 @@ export function SetupScreen({ flow }: { flow: Flow }) {
   const focused = focus.length > 0;
   const config: QuizConfig = { difficulty: focused ? 'all' : difficulty, count, type, time, focus };
 
+  // A flow removed from the list, or the one now on screen, cannot stay chosen.
+  const connected = source === 'model' ? chosen.filter((id) => others.some((o) => o.id === id)) : [];
+  const forget = (id: string) => {
+    forgetFlow(id);
+    setOthers(otherFlows(flow));
+  };
+
   const sampleSize =
     source === 'sample' ? pickSample(flow, config, { weak: [], recent: [] }).length : count;
   const canStart = timeValid && sampleSize > 0;
@@ -160,7 +177,7 @@ export function SetupScreen({ flow }: { flow: Flow }) {
       setUi({ aiSettingsOpen: true });
       return;
     }
-    if (canStart) void start(config, source);
+    if (canStart) void start(config, source, connected);
   };
 
   return (
@@ -176,7 +193,7 @@ export function SetupScreen({ flow }: { flow: Flow }) {
           <Button onClick={dropRetry}>Ask all topics instead</Button>
         </div>
       ) : (
-        <div>
+        <div className={styles.panel}>
           <ChoiceGroup
             legend="Difficulty"
             name="quiz-level"
@@ -187,21 +204,27 @@ export function SetupScreen({ flow }: { flow: Flow }) {
           <p className={styles.hint}>{levelHint(difficulty)}</p>
         </div>
       )}
-      <ChoiceGroup
-        legend="Questions"
-        name="quiz-count"
-        value={count}
-        options={COUNT_OPTIONS}
-        onChange={setCount}
-      />
-      <ChoiceGroup
-        legend="Question types"
-        name="quiz-type"
-        value={type}
-        options={TYPE_OPTIONS}
-        onChange={setType}
-      />
-      <div>
+      <div className={styles.panelRow}>
+        <div className={styles.panel}>
+          <ChoiceGroup
+            legend="Questions"
+            name="quiz-count"
+            value={count}
+            options={COUNT_OPTIONS}
+            onChange={setCount}
+          />
+        </div>
+        <div className={styles.panel}>
+          <ChoiceGroup
+            legend="Question types"
+            name="quiz-type"
+            value={type}
+            options={TYPE_OPTIONS}
+            onChange={setType}
+          />
+        </div>
+      </div>
+      <div className={styles.panel}>
         <ChoiceGroup
           legend="Time"
           name="quiz-time"
@@ -242,12 +265,22 @@ export function SetupScreen({ flow }: { flow: Flow }) {
           </div>
         ) : null}
       </div>
+      {source === 'model' && others.length > 0 ? (
+        <ConnectFlows
+          title={flow.title}
+          flows={others}
+          chosen={connected}
+          onChange={setChosen}
+          onForget={forget}
+        />
+      ) : null}
       <SourceNote
         source={source}
         hasSample={hasSample}
         ready={ready}
         hosts={hosts}
         pick={pick}
+        connected={connected.length}
         onPick={setPick}
       />
       {source === 'sample' && sampleSize < count ? (

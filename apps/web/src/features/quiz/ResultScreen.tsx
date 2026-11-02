@@ -85,7 +85,12 @@ function ResultItem({ question, flow, index }: { question: Question; flow: Flow;
         ) : null}
       </dl>
       <div className={styles.itemActions}>
-        {step ? (
+        {step && question.from ? (
+          <Chip>
+            {question.from.title}, step {step.n}: {route(step)}
+          </Chip>
+        ) : null}
+        {step && !question.from ? (
           <Button
             variant="ghost"
             onClick={() => {

@@ -190,11 +190,11 @@
   --x: calc((100% - var(--gap) * (var(--k) - 1)) * ((var(--i) + 0.5) / var(--n)) + var(--gap) * var(--j));
   position: absolute;
   z-index: 3;
-  left: clamp(0px, calc(var(--x) - 160px), calc(100% - 320px));
-  bottom: calc(100% + 10px);
+  left: clamp(0px, calc(var(--x) - 190px), calc(100% - min(380px, 100%)));
+  bottom: calc(100% + 26px);
   display: grid;
   gap: 2px;
-  width: min(320px, 100%);
+  width: min(380px, 100%);
   padding: 8px 12px 10px;
   border: 1px solid var(--line);
   border-top: 2px solid light-dark(hsl(var(--ch) 72% 38%), hsl(var(--ch) 74% 62%));
@@ -225,57 +225,59 @@
   white-space: nowrap;
 }
 
-.previewRoute {
-  color: var(--muted);
-  font-weight: 600;
-}
-
-.previewLabel {
-  overflow: hidden;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .previewText {
   display: -webkit-box;
-  margin: 2px 0 0;
+  margin: 4px 0 2px;
   overflow: hidden;
-  color: var(--muted);
+  color: var(--ink);
+  font-size: var(--text-md);
+  line-height: 1.4;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
 }
 
-.previewMarks {
+/* The key points: a label and one line each */
+.previewFacts {
   display: grid;
-  gap: 2px;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 3px var(--space-2);
   margin: 4px 0 0;
-  padding: 4px 0 0;
+  padding-top: 6px;
   border-top: 1px solid var(--line);
-  list-style: none;
 }
 
-.previewMarks li {
+.previewFacts dt {
+  color: var(--muted);
+}
+
+.previewFacts dd {
+  margin: 0;
   overflow: hidden;
-  font-weight: 600;
+  font-weight: 550;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.previewMarks li[data-kind='error'] {
+.previewFacts dd[data-kind='error'] {
   color: var(--danger);
 }
 
-.previewMarks li[data-kind='side'] {
+.previewFacts dd[data-kind='side'] {
   color: var(--side);
 }
 
-.previewMarks li[data-kind='threat'] {
+.previewFacts dd[data-kind='threat'] {
   color: var(--threat);
 }
 
-.previewMarks li[data-kind='star'] {
+.previewFacts dd[data-kind='star'] {
   color: var(--star);
+}
+
+.previewFoot {
+  margin-top: 6px;
+  color: var(--faint);
+  font-size: var(--text-xs);
 }
 
 @media (max-width: 720px) {

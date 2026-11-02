@@ -23,6 +23,8 @@ export interface Preset {
   url: string;
   /** Default model name. Empty when the preset has none. */
   model: string;
+  /** Old defaults the provider has shut down. A saved entry still on one moves to `model`. */
+  retired?: readonly string[];
   key: 'required' | 'optional' | 'none';
   /** Where to get a key. */
   keyPage?: string;
@@ -40,7 +42,8 @@ export const PRESETS: readonly Preset[] = [
     label: 'Groq (free tier)',
     name: 'Groq',
     url: 'https://api.groq.com/openai/v1/chat/completions',
-    model: 'llama-3.3-70b-versatile',
+    model: 'openai/gpt-oss-120b',
+    retired: ['llama-3.3-70b-versatile'],
     key: 'required',
     keyPage: 'https://console.groq.com/keys',
   },
@@ -49,7 +52,7 @@ export const PRESETS: readonly Preset[] = [
     label: 'Google Gemini (free tier)',
     name: 'Gemini',
     url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.8-flash',
     key: 'required',
     keyPage: 'https://aistudio.google.com/apikey',
   },
@@ -58,7 +61,8 @@ export const PRESETS: readonly Preset[] = [
     label: 'OpenRouter (free models)',
     name: 'OpenRouter',
     url: 'https://openrouter.ai/api/v1/chat/completions',
-    model: 'meta-llama/llama-3.3-70b-instruct:free',
+    model: 'google/gemma-4-31b-it:free',
+    retired: ['meta-llama/llama-3.3-70b-instruct:free'],
     key: 'required',
     keyPage: 'https://openrouter.ai/keys',
     keyInfoUrl: 'https://openrouter.ai/api/v1/key',
@@ -68,7 +72,8 @@ export const PRESETS: readonly Preset[] = [
     label: 'Cerebras (free tier)',
     name: 'Cerebras',
     url: 'https://api.cerebras.ai/v1/chat/completions',
-    model: 'llama-3.3-70b',
+    model: 'gpt-oss-120b',
+    retired: ['llama-3.3-70b'],
     key: 'required',
     keyPage: 'https://cloud.cerebras.ai',
     hidesBadKey: true,

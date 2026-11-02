@@ -1,5 +1,7 @@
-/* Slim and flush with the top edge, frosted so the diagram stays felt as it scrolls under */
+/* Slim and flush with the top edge, in the navigation colour shared with the bottom bar */
 .bar {
+  color-scheme: dark;
+  color: var(--nav-ink);
   position: absolute;
   top: 0;
   left: 0;
@@ -11,12 +13,9 @@
   height: calc(46px + env(safe-area-inset-top, 0px));
   padding: env(safe-area-inset-top, 0px) max(12px, env(safe-area-inset-right, 0px)) 0
     max(12px, env(safe-area-inset-left, 0px));
-  background: var(--glass);
-  backdrop-filter: var(--glass-filter);
-  border-bottom: 1px solid var(--glass-edge);
-  box-shadow:
-    inset 0 -1px 0 var(--glass-sheen),
-    0 8px 20px -14px light-dark(rgba(16, 24, 40, 0.4), rgba(0, 0, 0, 0.7));
+  background: var(--nav);
+  border-bottom: 2px solid var(--marker);
+  box-shadow: 0 8px 20px -14px rgba(0, 0, 0, 0.7);
 }
 
 .brand {

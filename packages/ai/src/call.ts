@@ -4,6 +4,7 @@ import { estimateTokens, MAX_PROMPT_TOKENS } from './budgets.ts';
 import { readAnswer, writeAnswer, type AnswerKey } from './cache.ts';
 import { readKeyInfo, sendChat, type Failure, type FailureKind } from './client.ts';
 import { consentMissing, modelHost } from './consent.ts';
+import { parseJsonLoosely } from './json.ts';
 import { loadModelState, type ModelEntry } from './models.ts';
 import { presetFor } from './presets.ts';
 import type { RateWindow } from './ratelimit.ts';
@@ -85,12 +86,19 @@ export const TextReply = z.string().trim().min(1);
 
 const refOf = (entry: ModelEntry): ModelRef => ({ id: entry.id, name: entry.name, model: entry.model });
 
-/** A JSON reply, allowing code fences and words around it. Throws when there is none. */
+/** Thinking a model writes into its answer, closed or cut off by the token limit. */
+const THINKING = /<think>[\s\S]*?(?:<\/think>|$)/gi;
+
+/**
+ * A JSON reply, allowing code fences, thinking tags and words around it, and a reply the token
+ * limit cut short, from which the complete items are kept. Throws when there is no JSON at all.
+ */
 function parseJsonReply(text: string): unknown {
-  const body = /```(?:json)?\s*([\s\S]*?)```/i.exec(text)?.[1] ?? text;
+  const bare = text.replace(THINKING, '');
+  const body = /```(?:json)?\s*([\s\S]*?)(?:```|$)/i.exec(bare)?.[1] ?? bare;
   const start = body.search(/[[{]/);
-  const end = Math.max(body.lastIndexOf('}'), body.lastIndexOf(']'));
-  return JSON.parse(body.slice(start, end + 1));
+  if (start < 0) throw new Error('The reply holds no JSON.');
+  return parseJsonLoosely(body.slice(start));
 }
 
 function validate<T>(text: string, request: ModelRequest<T>): { valid: true; data: T } | { valid: false } {

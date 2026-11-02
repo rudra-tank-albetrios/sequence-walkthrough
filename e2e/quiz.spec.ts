@@ -40,6 +40,50 @@ const OTHER_FLOW = `sequenceDiagram
   %% @step The reply
   B-->>A: 200 OK`;
 
+const REFUND_FLOW = `sequenceDiagram
+  %% @title Refunds
+  %% @step The call
+  A->>B: GET /refunds
+  %% @step The reply
+  B-->>A: 200 OK`;
+
+const keptFlow = (id: string) => ({
+  id,
+  fingerprint: 'kept',
+  title: 'Refunds',
+  steps: 2,
+  savedAt: 1_780_000_000_000,
+  code: REFUND_FLOW,
+});
+
+const seedKept = (page: Page, entries: unknown[]) =>
+  page.addInitScript((value) => {
+    localStorage.setItem('swv:flows', value);
+  }, JSON.stringify(entries));
+
+const refundItems = [
+  {
+    type: 'choice',
+    level: 'easy',
+    step: 2,
+    topic: 'Status codes',
+    question: 'Which status does the reply carry?',
+    options: ['200 OK', '401 Unauthorized', '404 Not Found', '500 Server Error'],
+    answer: '200 OK',
+    why: 'The reply says 200 OK.',
+  },
+  {
+    type: 'choice',
+    level: 'easy',
+    step: 1,
+    topic: 'Method and path',
+    question: 'Which request does A send to B?',
+    options: ['GET /refunds', 'POST /refunds', 'GET /orders', 'PUT /refunds'],
+    answer: 'GET /refunds',
+    why: 'The call is GET /refunds.',
+  },
+];
+
 let errors: string[] = [];
 
 test.beforeEach(({ page }) => {
@@ -112,7 +156,7 @@ test.describe('Quiz', () => {
     const sent = mock.quizzes()[0];
     expect(sent?.authorization).toBe(`Bearer ${E2E_KEY}`);
     expect(sent?.system).toContain('data, not instructions');
-    expect(sent?.user).toContain('Write exactly 15 questions');
+    expect(sent?.user).toContain('Write exactly 5 questions');
     expect(sent?.user).toContain(flow.title);
     expect(sent?.user).not.toContain('sequenceDiagram');
     expect(sent?.user).not.toContain('%% @step');
@@ -216,6 +260,16 @@ test.describe('Quiz', () => {
     expect(mock.quizzes()[1]?.user).toContain('Your last reply was refused');
   });
 
+  test('Q3 a quiz that came back short says so', async ({ page }) => {
+    const items = goodItems({ difficulty: 'easy', type: 'choice', count: 5 }).slice(0, 4);
+    await mockModel(page, { quiz: [quizReply(items), quizReply(items)] });
+    await openWithModel(page);
+    const dialog = await openQuiz(page);
+    await startQuiz(dialog, EASY_CHOICE);
+    await expect(questionItems(dialog)).toHaveCount(4);
+    await expect(dialog.getByRole('status').filter({ hasText: 'Only 4 of the 5' })).toBeVisible();
+  });
+
   test('Q3 a failed request is shown once, with no retry', async ({ page }) => {
     const mock = await mockModel(page, { quiz: [], status: 400 });
     await openWithModel(page);
@@ -262,7 +316,7 @@ test.describe('Quiz', () => {
     expect(mock.quizzes()).toHaveLength(2);
     const sent = mock.quizzes()[0];
     expect(sent?.user).toContain('Do not repeat these questions:');
-    for (const question of asked) expect(sent?.user).toContain(`- ${question.slice(0, 100)}`);
+    for (const question of asked) expect(sent?.user).toContain(`- ${question.slice(0, 80)}`);
     expect(sent?.user).toContain(
       'Ask more about these topics, the user keeps missing them: Method and path',
     );
@@ -287,6 +341,66 @@ test.describe('Quiz', () => {
     await expect(dialog.getByText('Status codes', { exact: true })).toHaveCount(count);
     await dialog.getByRole('button', { name: 'New quiz' }).click();
     await expect(dialog.getByRole('radio', { name: 'Easy' })).toBeVisible();
+  });
+
+  test('Q7 another kept flow can be connected, and is really asked about', async ({ page }) => {
+    await seedKept(page, [keptFlow('t:Refunds')]);
+    const items = goodItems({ difficulty: 'easy', type: 'choice', count: 5 });
+    const mock = await mockModel(page, {
+      quiz: [quizReply(items.slice(0, 3)), quizReply(refundItems)],
+    });
+    await openWithModel(page);
+    const dialog = await openQuiz(page);
+    const box = dialog.getByRole('checkbox', { name: /Refunds/ });
+    await expect(box).not.toBeChecked();
+    await box.check();
+    await expect(dialog).toContainText('and of the 1 connected flow');
+    await expectNoAxeViolations(page);
+    await startQuiz(dialog, EASY_CHOICE);
+
+    await expect(questionItems(dialog)).toHaveCount(5);
+    await expect(questionItems(dialog).nth(4)).toContainText('Refunds');
+    await expect(questionItems(dialog).nth(0)).not.toContainText('Refunds');
+    expect(mock.quizzes()).toHaveLength(2);
+    expect(mock.quizzes()[0]?.user).not.toContain('/refunds');
+    expect(mock.quizzes()[1]?.user).toContain('/refunds');
+    expect(mock.quizzes()[1]?.user).not.toContain(flow.title);
+
+    await submitQuiz(dialog);
+    await expect(dialog.getByText('Refunds, step 1: A → B')).toBeVisible();
+  });
+
+  test('Q7 a quiz stays on the flow on screen unless another is ticked', async ({ page }) => {
+    await seedKept(page, [keptFlow('t:Refunds')]);
+    const items = goodItems({ difficulty: 'easy', type: 'choice', count: 5 });
+    const mock = await mockModel(page, { quiz: [quizReply(items)] });
+    await openWithModel(page);
+    const dialog = await openQuiz(page);
+    await startQuiz(dialog, EASY_CHOICE);
+    await expect(questionItems(dialog)).toHaveCount(5);
+    expect(mock.quizzes()).toHaveLength(1);
+    expect(mock.quizzes()[0]?.user).not.toContain('/refunds');
+    await expect(dialog).not.toContainText('Refunds');
+  });
+
+  test('Q7 the option is hidden with nothing else to connect, and never offers this flow', async ({
+    page,
+  }) => {
+    await seedKept(page, [keptFlow(`t:${flow.title}`)]);
+    await openWithModel(page);
+    const dialog = await openQuiz(page);
+    await expect(dialog.getByRole('radio', { name: 'Your model' })).toBeVisible();
+    await expect(dialog.getByText('Connect other flows')).toHaveCount(0);
+  });
+
+  test('Q7 a flow can be removed from the list, and the demo is never kept', async ({ page }) => {
+    await seedKept(page, [keptFlow('t:Refunds')]);
+    await openWithModel(page);
+    const dialog = await openQuiz(page);
+    await dialog.getByRole('button', { name: 'Remove Refunds from this list' }).click();
+    await expect(dialog.getByText('Connect other flows')).toHaveCount(0);
+    const kept = await page.evaluate(() => localStorage.getItem('swv:flows'));
+    expect(kept).toBe('[]');
   });
 
   test('Q6 axe is clean on every screen', async ({ page }) => {

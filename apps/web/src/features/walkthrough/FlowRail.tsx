@@ -1,5 +1,5 @@
 import type { Flow, Section, Step } from '@swv/core';
-import { memo, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
+import { Fragment, memo, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
 
 import { cx, plural } from '../../shared/lib/util.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
@@ -17,12 +17,19 @@ import {
   railValueText,
   sharedSideSteps,
   stepAt,
+  type RailMarkerKind,
 } from './railModel.ts';
 
 /** Pixels between two chapters on the line. The stylesheet positions everything from this number. */
 const GAP = 3;
 /** Past this many steps the tick marks would only blur together. */
 const MOST_TICKS = 120;
+const MARK_LABEL: Record<RailMarkerKind, string> = {
+  error: 'Result',
+  side: 'Side part',
+  threat: 'Watch out',
+  star: 'Yours',
+};
 
 const placedAt = (sections: readonly Section[], index: number): CSSProperties =>
   ({ '--i': index, '--j': chapterAt(sections, index) }) as CSSProperties;
@@ -99,7 +106,8 @@ function RailPreview({ flow, sections, step }: { flow: Flow; sections: readonly 
   const starred = useNotesStore((s) => s.data[step.key]?.star ?? false);
   const chapter = sections[chapterAt(sections, step.idx)];
   const lines = markerLines(step, starred);
-  const route = step.kind === 'self' ? `${step.fromName} to itself` : `${step.fromName} → ${step.toName}`;
+  const route = step.kind === 'self' ? `${step.fromName} works on its own` : `${step.fromName} → ${step.toName}`;
+  const sends = step.payloads[0]?.text.replace(/\s+/g, ' ').trim();
   return (
     <div
       className={styles.preview}
@@ -108,21 +116,31 @@ function RailPreview({ flow, sections, step }: { flow: Flow; sections: readonly 
       style={{ ...placedAt(sections, step.idx), '--ch': chapter?.hue ?? 210 } as CSSProperties}
     >
       <div className={styles.previewHead}>
-        <b>Step {step.n}</b>
+        <b>
+          Step {step.n} of {flow.steps.length}
+        </b>
         {flow.sections.length > 0 && chapter ? <span>{chapter.name}</span> : null}
       </div>
-      <div className={styles.previewRoute}>{route}</div>
-      <div className={cx(styles.previewLabel, 'mono')}>{step.label.join(' ')}</div>
       {step.explain ? <p className={styles.previewText}>{step.explain}</p> : null}
-      {lines.length > 0 ? (
-        <ul className={styles.previewMarks}>
-          {lines.map((line) => (
-            <li key={`${line.kind} ${line.text}`} data-kind={line.kind}>
-              {line.text}
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <dl className={styles.previewFacts}>
+        <dt>Who</dt>
+        <dd>{route}</dd>
+        <dt>Call</dt>
+        <dd className="mono">{step.label.join(' ')}</dd>
+        {sends ? (
+          <>
+            <dt>{step.kind === 'reply' ? 'Returns' : 'Sends'}</dt>
+            <dd className="mono">{sends}</dd>
+          </>
+        ) : null}
+        {lines.map((line) => (
+          <Fragment key={`${line.kind} ${line.text}`}>
+            <dt>{MARK_LABEL[line.kind]}</dt>
+            <dd data-kind={line.kind}>{line.text}</dd>
+          </Fragment>
+        ))}
+      </dl>
+      <div className={styles.previewFoot}>Click to go to this step</div>
     </div>
   );
 }

@@ -40,6 +40,7 @@ export function AiSettingsDialog() {
       title="AI settings"
       description={INTRO}
       showDescription
+      size="wide"
       actions={<Button onClick={close}>Done</Button>}
     >
       {open ? <SettingsBody /> : null}
@@ -66,6 +67,14 @@ function SettingsBody() {
           }}
         />
       ) : null}
+      <div className={styles.sectionHead}>
+        <h3 className={styles.sectionTitle}>Your models</h3>
+        <p className={styles.sectionHint}>
+          {state.models.length
+            ? 'Asked in this order. Auto-switch moves on only to the ones marked as fallback.'
+            : 'Pick a provider, paste its key, save. A free tier is enough.'}
+        </p>
+      </div>
       {state.models.length ? (
         <ol className={styles.rows} aria-label="Your models, in the order they are tried">
           {state.models.map((model, index) =>
@@ -90,13 +99,20 @@ function SettingsBody() {
       {editing === 'new' ? (
         <ModelForm original={null} onDone={done} />
       ) : (
-        <Button
-          onClick={() => {
-            setEditing('new');
-          }}
-        >
-          Add a model
-        </Button>
+        <>
+          {state.models.length ? null : (
+            <p className={styles.empty}>No model yet. Add one to get answers, quizzes and recaps.</p>
+          )}
+          <Button
+            className={styles.add}
+            variant={state.models.length ? 'default' : 'primary'}
+            onClick={() => {
+              setEditing('new');
+            }}
+          >
+            Add a model
+          </Button>
+        </>
       )}
       <Options switchAt={state.switchAt} forgetKeys={state.forgetKeys} />
       <SavedAnswers />
@@ -110,11 +126,13 @@ function Options({ switchAt, forgetKeys }: { switchAt: number; forgetKeys: boole
   const ids = useId();
   return (
     <div className={styles.options}>
-      <div className={styles.field}>
+      <div className={styles.sectionHead}>
+        <h3 className={styles.sectionTitle}>Options</h3>
+      </div>
+      <div className={styles.switchRow}>
         <label htmlFor={`${ids}-switch`}>Switch at</label>
         <input
           id={`${ids}-switch`}
-          className={styles.percent}
           type="number"
           min={0}
           max={100}
@@ -125,7 +143,8 @@ function Options({ switchAt, forgetKeys }: { switchAt: number; forgetKeys: boole
             if (Number.isFinite(value)) setSwitchAt(Math.min(100, Math.max(0, value)));
           }}
         />
-        <span>% left: the next question goes to the next model marked as a fallback.</span>
+        <span>% left.</span>
+        <span>The next question then goes to the next model marked as a fallback.</span>
       </div>
       <label className={styles.opt}>
         <input

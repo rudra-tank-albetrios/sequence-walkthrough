@@ -13,6 +13,7 @@ import { useFlowStore } from '../shared/state/flowStore.ts';
 import { useGlossaryStore } from '../shared/state/glossaryStore.ts';
 import { useNotesStore } from '../shared/state/notesStore.ts';
 import { flowId } from '../shared/storage/notes.ts';
+import { rememberFlow } from '../shared/storage/flowHistory.ts';
 import { applyPageTheme, saveCode } from '../shared/storage/settings.ts';
 import { Store } from '../shared/storage/store.ts';
 import { Button } from '../shared/ui/Button.tsx';
@@ -68,6 +69,8 @@ function EdgeTab({
   );
 }
 
+const KEEP_FLOW_AFTER_MS = 10_000;
+
 export function App() {
   const narrow = useIsNarrow();
   const flow = useFlowStore((s) => s.flow);
@@ -111,16 +114,25 @@ export function App() {
     const save = debounce((code: string) => {
       saveCode(code);
     }, 400);
+    // A flow is kept for the quiz once it has stayed the same for a while, so half-typed titles are not.
+    const keep = debounce(() => {
+      const { flow, code, ui } = useFlowStore.getState();
+      if (flow && !ui.tourOpen) rememberFlow(flow, code);
+    }, KEEP_FLOW_AFTER_MS);
     let last = useFlowStore.getState().code;
     const unsubscribe = useFlowStore.subscribe((s) => {
       if (s.code !== last) {
         last = s.code;
-        if (s.code.trim() && !s.ui.tourOpen) save(s.code);
+        if (s.code.trim() && !s.ui.tourOpen) {
+          save(s.code);
+          keep();
+        }
       }
     });
     return () => {
       unsubscribe();
       save.cancel();
+      keep.cancel();
     };
   }, []);
 

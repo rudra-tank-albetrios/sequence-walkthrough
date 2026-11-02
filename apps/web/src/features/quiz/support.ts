@@ -34,6 +34,8 @@ export interface Evidence {
 function stepText(step: Step): string[] {
   const flags = Object.values(step.flags).filter((flag): flag is string => typeof flag === 'string');
   return [
+    // A reason may name the step, as in "step 7 answers 201".
+    String(step.n),
     step.fromName,
     step.toName,
     step.labelRaw,
@@ -64,7 +66,11 @@ function relatedSteps(flow: Flow, step: Step): Step[] {
 export function stepEvidence(flow: Flow, step: Step): Evidence {
   const section = flow.sections[step.section];
   const texts = [
+    flow.title,
     flow.summary,
+    // Layer names and the chapter number are facts of the whole flow, which any step may name.
+    ...flow.participants.map((participant) => participant.name),
+    `Chapter ${step.section + 1}`,
     section?.name ?? '',
     section?.summary ?? '',
     flow.layers[step.from]?.desc ?? '',
@@ -93,6 +99,27 @@ export function factsIn(text: string): string[] {
 /** The facts in `text` that the evidence does not contain. */
 export function unsupportedFacts(text: string, evidence: Evidence): string[] {
   return factsIn(text).filter((fact) => !evidence.exact.has(fact));
+}
+
+const SAME_QUESTION_RATIO = 0.85;
+
+/**
+ * True when two questions ask the same thing in slightly different words. Questions that name
+ * different facts, such as another step or status code, are different questions.
+ */
+export function sameWording(a: string, b: string): boolean {
+  if (factsIn(a).sort().join() !== factsIn(b).sort().join()) return false;
+  const words = (text: string) =>
+    new Set(
+      wordsOf(text)
+        .filter((word) => !STOP_WORDS.has(word))
+        .map(stem),
+    );
+  const first = words(a);
+  const second = words(b);
+  const shared = [...first].filter((word) => second.has(word)).length;
+  const all = first.size + second.size - shared;
+  return all > 0 && shared / all >= SAME_QUESTION_RATIO;
 }
 
 /** True when the facts in `answer` are all in the evidence and most of its words are too. */

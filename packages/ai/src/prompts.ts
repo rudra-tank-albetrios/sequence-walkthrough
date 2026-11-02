@@ -55,8 +55,41 @@ function summaryHead(flow: Flow, chars: number): string[] {
   return lines;
 }
 
-const stepPrefix = (step: Step): string =>
-  `${step.n}. ${oneLine(step.fromName)} → ${oneLine(step.toName)}${step.isError ? ' [error]' : ''}: `;
+const KIND_TAG: Record<Step['kind'], string> = { request: '', reply: ' (reply)', self: ' (self)' };
+
+const stepPrefix = (step: Step, facts: boolean): string =>
+  `${step.n}. ${oneLine(step.fromName)} → ${oneLine(step.toName)}${facts ? KIND_TAG[step.kind] : ''}${step.isError ? ' [error]' : ''}: `;
+
+const flagText = (step: Step): string =>
+  Object.entries(step.flags)
+    .map(([tag, value]) => (value === true ? tag : `${tag} ${oneLine(value)}`))
+    .join(', ');
+
+/** What a step says beyond its label: the facts the quiz's medium and hard topics ask about. */
+function stepFacts(step: Step): string {
+  const parts: string[] = [];
+  const flags = flagText(step);
+  if (flags) parts.push(`Flags: ${flags}`);
+  if (step.effects.length) parts.push(`Effects: ${step.effects.map(oneLine).join('; ')}`);
+  if (step.state.before || step.state.after) {
+    parts.push(`State: ${oneLine(step.state.before)} → ${oneLine(step.state.after)}`);
+  }
+  if (step.uses.length) parts.push(`Uses: ${step.uses.map((u) => `${u.kind} ${oneLine(u.name)}`).join(', ')}`);
+  if (step.threats.length) {
+    parts.push(`Threat: ${step.threats.map((t) => `${t.level}, ${oneLine(t.text)}`).join('; ')}`);
+  }
+  return parts.join('. ');
+}
+
+/** The glossary and the replies that end the flow, for a summary with facts. */
+function factsHead(flow: Flow, chars: number): string[] {
+  const lines: string[] = [];
+  const terms = flow.terms.map((t) => `${oneLine(t.term)}: ${oneLine(t.def)}`);
+  if (terms.length) lines.push(clip(`Terms: ${terms.join('; ')}`, chars / 3));
+  const endings = flow.endings.map((i) => flow.steps[i]?.n).filter((n) => n !== undefined);
+  if (endings.length) lines.push(`The first caller finally receives: step ${endings.join(', step ')}`);
+  return lines;
+}
 
 const branchOf = (step: Step): string => oneLine(step.branch.map((b) => `${b.kind} ${b.label}`).join(' > '));
 
@@ -76,26 +109,35 @@ function fitLines(lines: readonly string[], budget: number, stepCount: number): 
 export interface FlowSummaryOptions {
   /** A smaller budget, in estimated tokens. Never more than `FLOW_SUMMARY_TOKENS`. */
   maxTokens?: number;
+  /**
+   * Adds what a quiz asks about: whether a step is a reply, its flags, effects, state, side parts
+   * and threats, plus the glossary and the replies that end the flow. The budget stays the same, so
+   * long explanations and payloads shrink sooner.
+   */
+  facts?: boolean;
 }
 
 /** The summary's lines, spending about `room` characters. */
-function summaryLines(flow: Flow, room: number): string[] {
+function summaryLines(flow: Flow, room: number, withFacts: boolean): string[] {
   const steps = flow.steps;
   const labels = steps.map((s) => oneLine(s.label.join(' ')));
   const explains = steps.map((s) => oneLine(s.explain));
   const payloads = steps.map((s) => oneLine(s.payload));
   const branches = steps.map(branchOf);
+  const facts = steps.map((s) => (withFacts ? stepFacts(s) : ''));
 
-  const head = summaryHead(flow, room / 4);
+  const head = [...summaryHead(flow, room / 4), ...(withFacts ? factsHead(flow, room / 4) : [])];
   const chapters = flow.sections.map((section, index) => {
     const summary = section.summary ? ` – ${clip(oneLine(section.summary), room / 40)}` : '';
     return `Chapter ${index + 1}: ${oneLine(section.name)}${summary}`;
   });
-  const prefixes = steps.map(stepPrefix);
+  const prefixes = steps.map((step) => stepPrefix(step, withFacts));
 
   let left = room - sum([...head, ...chapters, ...prefixes].map((line) => line.length + 1));
   const labelRoom = shares(labels.map((l) => l.length), left);
   left -= sum(labelRoom);
+  const factRoom = shares(facts.map((f) => (f ? f.length + 3 : 0)), left / 3);
+  left -= sum(factRoom);
   const branchRoom = shares(branches.map((b) => (b ? b.length + 6 : 0)), left / 4);
   left -= sum(branchRoom);
   const explainRoom = shares(explains.map((e) => (e ? e.length + 1 : 0)), left);
@@ -114,7 +156,8 @@ function summaryLines(flow: Flow, room: number): string[] {
     const branch = clip(branches[index] ?? '', (branchRoom[index] ?? 0) - 6);
     const explain = clip(explains[index] ?? '', (explainRoom[index] ?? 0) - 1);
     const payload = clip(payloads[index] ?? '', (payloadRoom[index] ?? 0) - 7);
-    const parts = [label, branch && `(in ${branch})`, explain, payload && `Data: ${payload}`];
+    const fact = clip(facts[index] ?? '', (factRoom[index] ?? 0) - 3);
+    const parts = [label, branch && `(in ${branch})`, explain, payload && `Data: ${payload}`, fact && `| ${fact}`];
     lines.push(`${prefixes[index] ?? ''}${parts.filter(Boolean).join(' ')}`.trimEnd());
   });
   return lines;
@@ -127,7 +170,8 @@ function summaryLines(flow: Flow, room: number): string[] {
  * layers, chapters, and one numbered line per step. Step numbers are `step.n`, so a model can name
  * its source step. It is built from the parsed flow and never holds the diagram code. When the
  * flow is long, payloads and explanations shrink first, then labels. Steps are dropped from the
- * end only when even their numbers do not fit, and the last line then says so.
+ * end only when even their numbers do not fit, and the last line then says so. With `facts`, each
+ * line also carries the step's flags, effects, state, side parts and threats, for a quiz.
  *
  * Send it through `asData`: `asData('The flow', flowSummary(flow))`.
  */
@@ -136,10 +180,11 @@ export function flowSummary(flow: Flow, options: FlowSummaryOptions = {}): strin
   // Room in characters, allowing for text that costs more than one byte per character.
   const sample = flow.steps.map((s) => `${s.label.join(' ')} ${s.explain} ${s.payload}`).join(' ');
   const room = (budget * sample.length) / (estimateTokens(sample) || 1) || budget * 4;
-  let lines = summaryLines(flow, room);
+  const withFacts = options.facts ?? false;
+  let lines = summaryLines(flow, room, withFacts);
   for (const shrink of [0.95, 0.9, 0.8, 0.7]) {
     if (estimateTokens(lines.join('\n')) <= budget) break;
-    lines = summaryLines(flow, room * shrink);
+    lines = summaryLines(flow, room * shrink, withFacts);
   }
   return fitLines(lines, budget, flow.steps.length);
 }

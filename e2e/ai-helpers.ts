@@ -109,8 +109,8 @@ export async function seedStorage(page: Page, items: Record<string, unknown>) {
 }
 
 const PRESETS = {
-  groq: { name: 'Groq', model: 'llama-3.3-70b-versatile', key: 'groq-key' },
-  gemini: { name: 'Gemini', model: 'gemini-2.5-flash', key: 'gemini-key' },
+  groq: { name: 'Groq', model: 'openai/gpt-oss-120b', key: 'groq-key' },
+  gemini: { name: 'Gemini', model: 'gemini-3.8-flash', key: 'gemini-key' },
   mistral: { name: 'Mistral', model: 'mistral-small-latest', key: 'mistral-key' },
 };
 

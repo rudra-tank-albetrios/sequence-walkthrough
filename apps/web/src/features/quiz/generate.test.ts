@@ -45,12 +45,12 @@ afterEach(() => {
 });
 
 describe('writing a quiz with a model', () => {
-  it('takes five good questions in one call within 1,200 reply tokens', async () => {
+  it('takes five good questions in one call within 3,000 reply tokens', async () => {
     mock = mockModel({ reply: quizReply(goodItems()) });
     const questions = await generateQuestions(args());
     expect(questions).toHaveLength(5);
     expect(mock.calls).toHaveLength(1);
-    expect(mock.calls[0]?.body.max_tokens).toBe(1200);
+    expect(mock.calls[0]?.body.max_tokens).toBe(3000);
     for (const question of questions) {
       expect(demoFlow.steps[question.stepIndex]).toBeDefined();
       expect(question.difficulty).toBe('easy');
@@ -58,12 +58,39 @@ describe('writing a quiz with a model', () => {
     expect(new Set(questions.map((question) => question.id)).size).toBe(5);
   });
 
-  it('gives a longer quiz the same budget per question', async () => {
+  it('asks for a longer quiz five questions at a time, each batch within the same budget', async () => {
+    const all = goodItems({ count: 15, difficulty: 'all' });
+    seedModels({});
+    const fetched = mockFetch(() => ({ reply: quizReply(all.slice(fetched.calls.length * 5 - 5, fetched.calls.length * 5)) }));
+    mock = fetched;
+    const questions = await generateQuestions(args({ config: config({ count: 15, difficulty: 'all' }) }));
+    expect(questions).toHaveLength(15);
+    expect(fetched.calls).toHaveLength(3);
+    expect(fetched.calls.map((call) => call.body.max_tokens)).toEqual([3000, 3000, 3000]);
+    expect(userMessage(fetched, 0)).toContain('Write exactly 5 questions');
+    // The second batch knows the first, so it asks about other steps and other questions.
+    const second = userMessage(fetched, 1);
+    expect(second).toContain('Steps already asked about, so prefer other steps:');
+    expect(second).toContain(`- ${all[0]?.question.slice(0, 80) ?? ''}`);
+    expect(new Set(questions.map((question) => question.difficulty)).size).toBe(3);
+    expect(new Set(questions.map((question) => question.id)).size).toBe(15);
+  });
+
+  it('takes a whole longer quiz from one generous reply', async () => {
     mock = mockModel({ reply: quizReply(goodItems({ count: 15, difficulty: 'all' })) });
     const questions = await generateQuestions(args({ config: config({ count: 15, difficulty: 'all' }) }));
     expect(questions).toHaveLength(15);
-    expect(mock.calls[0]?.body.max_tokens).toBe(3600);
-    expect(new Set(questions.map((question) => question.difficulty)).size).toBe(3);
+    expect(mock.calls).toHaveLength(1);
+  });
+
+  it('sends the flow with the facts of each step and the topics explained', async () => {
+    mock = mockModel({ reply: quizReply(goodItems()) });
+    await generateQuestions(args());
+    const sent = userMessage(mock, 0);
+    expect(sent).toContain('(reply)');
+    expect(sent).toContain('Terms: hold:');
+    expect(sent).toContain('The first caller finally receives: step');
+    expect(QUIZ_SYSTEM).toContain('Status codes: the status code and reason of a reply step');
   });
 
   it('sends the flow as marked data and never the diagram code', async () => {
@@ -144,7 +171,7 @@ describe('bad replies from the model', () => {
     const questions = await generateQuestions(args());
     expect(questions).toHaveLength(5);
     expect(fetched.calls).toHaveLength(2);
-    expect(fetched.calls[1]?.body.max_tokens).toBe(240);
+    expect(fetched.calls[1]?.body.max_tokens).toBe(600);
     const retry = userMessage(fetched, 1);
     expect(retry).toContain('Write exactly 1 questions');
     expect(retry).toContain('step 9999 does not exist');
@@ -171,13 +198,43 @@ describe('bad replies from the model', () => {
     ['three options', { options: ['a', 'b', 'c'] }, 'exactly four options'],
     ['two options the same', { options: ['a', 'a', 'b', 'c'] }, 'two options are the same'],
     ['an answer that is not an option', { options: ['a', 'b', 'c', 'd'] }, 'the answer is not one of the options'],
-  ])('gives up after one retry on %s, and says why', async (_, patch, reason) => {
+  ])('refuses %s, says why on the retry, and keeps the four good questions', async (_, patch, reason) => {
     const fetched = repliesInOrder(quizReply(firstChanged(patch)));
+    const questions = await generateQuestions(args());
+    expect(questions).toHaveLength(4);
+    expect(fetched.calls).toHaveLength(2);
+    expect(userMessage(fetched, 1)).toContain('Write exactly 1 questions');
+    expect(userMessage(fetched, 1)).toContain(reason);
+  });
+
+  it('gives up when fewer than half the questions can be used, and says why', async () => {
+    const [first, second] = goodItems();
+    if (!first || !second) throw new Error('No questions');
+    const bad = { ...first, question: 'Which step is this one?', step: 9999 };
+    const fetched = repliesInOrder(quizReply([first, second, bad]));
     const failure = await generateQuestions(args()).catch((error: unknown) => error);
     expect(failure).toBeInstanceOf(QuizError);
     expect((failure as QuizError).message).toContain('even after one retry');
-    expect((failure as QuizError).message).toContain(reason);
+    expect((failure as QuizError).message).toContain('step 9999 does not exist');
     expect(fetched.calls).toHaveLength(2);
+  });
+
+  it('names an empty reply as a token limit spent on thinking', async () => {
+    repliesInOrder('');
+    const failure = await generateQuestions(args()).catch((error: unknown) => error);
+    expect((failure as QuizError).message).toContain('spent its token limit on thinking');
+  });
+
+  it('keeps the whole questions of a reply the token limit cut short, and asks for the rest', async () => {
+    const items = goodItems();
+    const whole = quizReply(items);
+    const cut = whole.slice(0, whole.lastIndexOf('{"type"') + 20);
+    const fetched = repliesInOrder(cut, quizReply(items.slice(4)));
+    const questions = await generateQuestions(args());
+    expect(questions).toHaveLength(5);
+    expect(fetched.calls).toHaveLength(2);
+    expect(userMessage(fetched, 1)).toContain('Write exactly 1 questions');
+    expect(questions.map((question) => question.text)).toContain(items[4]?.question);
   });
 
   it.each([
@@ -188,21 +245,23 @@ describe('bad replies from the model', () => {
     ['a very long question', { question: 'q'.repeat(401) }],
     ['a very long answer', { answer: 'a'.repeat(501) }],
     ['a very long topic', { topic: 't'.repeat(61) }],
-  ])('rejects %s by its shape', async (_, patch) => {
-    repliesInOrder(quizReply(firstChanged(patch as Partial<ReplyItem>)));
-    await expect(generateQuestions(args())).rejects.toThrow('a question did not have the agreed fields');
+  ])('rejects %s by its shape, and says so on the retry', async (_, patch) => {
+    const fetched = repliesInOrder(quizReply(firstChanged(patch as Partial<ReplyItem>)));
+    await expect(generateQuestions(args())).resolves.toHaveLength(4);
+    expect(userMessage(fetched, 1)).toContain('a question did not have the agreed fields');
   });
 
   it('rejects the same question twice and a recent question', async () => {
     const [first] = goodItems();
     const twice = [first, ...goodItems().slice(0, 4)];
-    repliesInOrder(quizReply(twice));
-    await expect(generateQuestions(args())).rejects.toThrow('repeats an earlier question');
+    let fetched = repliesInOrder(quizReply(twice));
+    await expect(generateQuestions(args())).resolves.toHaveLength(4);
+    expect(userMessage(fetched, 1)).toContain('repeats an earlier question');
     mock?.restore();
-    repliesInOrder(quizReply(goodItems()));
-    await expect(generateQuestions(args({ avoid: [first?.question ?? ''] }))).rejects.toThrow(
-      'repeats an earlier question',
-    );
+    fetched = repliesInOrder(quizReply(goodItems()));
+    await expect(generateQuestions(args({ avoid: [first?.question ?? ''] }))).resolves.toHaveLength(4);
+    expect(userMessage(fetched, 1)).toContain('repeats an earlier question');
+    expect(userMessage(fetched, 0)).toContain(`- ${first?.question ?? ''}`);
   });
 
   it('rejects a topic outside "Retry my mistakes"', async () => {

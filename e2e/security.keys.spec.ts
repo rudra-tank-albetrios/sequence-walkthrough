@@ -194,7 +194,9 @@ test.describe('each key goes only to its own address', () => {
       PROVIDER_URLS.mistral,
       PROVIDER_URLS.mistral,
     ]);
+    // Typing the key also asks the same server for its model names, and it goes nowhere else.
     expect(keysInNetworkLog(armed)).toEqual([
+      `${key} in authorization to ${PROVIDER_URLS.mistral.replace('/chat/completions', '/models')}`,
       `${key} in authorization to ${PROVIDER_URLS.mistral}`,
       `${key} in authorization to ${PROVIDER_URLS.mistral}`,
     ]);

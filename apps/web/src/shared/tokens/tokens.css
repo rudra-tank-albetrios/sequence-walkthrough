@@ -55,6 +55,11 @@
   --ok: light-dark(#217a3c, #6fd08c);
   --focus: light-dark(#1d5bd0, #82aaff);
   --canvas: light-dark(#ffffff, #171b23);
+  /* The navigation colour: the header and the bottom bar, deep indigo in both themes.
+     Parts inside them use color-scheme: dark, so the light-dark() tokens read well on it. */
+  --nav: light-dark(#23245c, #1c1d4a);
+  --nav-edge: light-dark(#3a3b82, #34357a);
+  --nav-ink: #f2f2ff;
 
   /* What the Flow Rail marks besides errors: side parts in teal, threats in amber */
   --side: light-dark(#0f766e, #5eead4);
@@ -96,6 +101,32 @@
   --s-3xx: light-dark(#7a5a00, #e6c15a);
   --s-4xx: light-dark(#a33a00, #ffb07a);
   --s-5xx: light-dark(#9b1c1c, #ff9b8f);
+}
+
+/* The header and the bottom bar are always on the dark navigation colour. The tokens above settle on
+   :root once built, so these two set the dark values again instead of relying on color-scheme alone. */
+#topbar,
+#dock {
+  --surface: #2c2d68;
+  --surface-2: #33346f;
+  --surface-3: #3d3e7c;
+  --ink: #f2f2ff;
+  --muted: #c3c6e4;
+  --faint: #b4b7d8;
+  --line: #45468a;
+  --line-strong: #5a5ba0;
+  --marker-soft: #4b3d07;
+  --marker-ink: #fff4c7;
+  --star: #ffd43b;
+  --follow: #a5c1ff;
+  --follow-soft: #1b2b4d;
+  --danger: #ffb0a6;
+  --danger-soft: #3d1b18;
+  --ok: #6fd08c;
+  --focus: #a5c1ff;
+  --side: #5eead4;
+  --side-soft: #123b37;
+  --threat: #fbbf24;
 }
 
 :root[data-theme='light'] {

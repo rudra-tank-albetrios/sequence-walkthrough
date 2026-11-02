@@ -2,7 +2,7 @@ import { clearAnswerCache, loadModelState, type ModelEntry } from '@swv/ai';
 import { mockFetch, readStored, seedModels } from '@swv/ai/testing';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { Store } from '../../shared/storage/store.ts';
@@ -53,7 +53,7 @@ describe('adding a model', () => {
     expect(screen.getByText(/stored in this browser, not encrypted/)).toBeInTheDocument();
     expect(form('Add a model')).toBeInTheDocument();
     expect(screen.getByLabelText('Provider')).toHaveValue('groq');
-    expect(screen.getByLabelText('Model')).toHaveValue('llama-3.3-70b-versatile');
+    expect(screen.getByLabelText('Model')).toHaveValue('openai/gpt-oss-120b');
     expect(screen.getByLabelText('API key')).toHaveAttribute('type', 'password');
     expect(screen.getByRole('link', { name: 'console.groq.com/keys' })).toHaveAttribute('rel', 'noopener noreferrer');
   });
@@ -73,7 +73,7 @@ describe('adding a model', () => {
     open();
     await user.selectOptions(screen.getByLabelText('Provider'), 'gemini');
     expect(screen.getByLabelText('Name')).toHaveValue('Gemini');
-    expect(screen.getByLabelText('Model')).toHaveValue('gemini-2.5-flash');
+    expect(screen.getByLabelText('Model')).toHaveValue('gemini-3.8-flash');
     await fillNewKey('gem-key');
     await user.click(screen.getByRole('checkbox', { name: /Use as fallback/ }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -151,11 +151,37 @@ describe('adding a model', () => {
     await fillNewKey('draft-key');
     await user.click(screen.getByRole('button', { name: 'Test' }));
     await screen.findByText(/Works\. Groq said: OK\./);
-    expect(mock.calls[0]?.authorization).toBe('Bearer draft-key');
-    expect(mock.calls[0]?.url).toBe('https://api.groq.com/openai/v1/chat/completions');
+    // Filling in the key also lists the models, so find the Test call itself; both go to the same host.
+    const chat = mock.calls.find((call) => call.url.endsWith('/chat/completions'));
+    expect(chat?.authorization).toBe('Bearer draft-key');
+    expect(chat?.url).toBe('https://api.groq.com/openai/v1/chat/completions');
+    expect(mock.calls.every((call) => call.url.startsWith('https://api.groq.com/openai/v1/'))).toBe(true);
     expect(names()).toEqual([]);
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(readStored('swv:ai:usage')).toEqual({});
+  });
+});
+
+describe('a provider that no longer offers the starting model', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('moves to one it offers when the key is added, but keeps a typed name', async () => {
+    vi.stubGlobal('fetch', () => Promise.resolve(Response.json({ data: [{ id: 'still-here' }] })));
+    open();
+    await fillNewKey('k');
+    await user.tab();
+    await waitFor(() => {
+      expect(screen.getByLabelText('Model')).toHaveValue('still-here');
+    });
+    const model = screen.getByLabelText('Model');
+    await user.clear(model);
+    await user.type(model, 'typed-name');
+    await user.click(screen.getByLabelText('API key'));
+    await user.tab();
+    await screen.findByLabelText('Model');
+    expect(model).toHaveValue('typed-name');
   });
 });
 

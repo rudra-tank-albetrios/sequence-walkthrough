@@ -196,10 +196,10 @@ A shallow clone of the `<svg>` with `id="<renderId>-hdr"`, `viewBox="<vb.x> <vb.
 ### Providers (`AI_PROVIDERS`, in menu order)
 | id | name | url | default model | key | key page |
 |---|---|---|---|---|---|
-| `groq` | `Groq (free tier)` | `https://api.groq.com/openai/v1/chat/completions` | `llama-3.3-70b-versatile` | yes | `https://console.groq.com/keys` |
-| `gemini` | `Google Gemini (free tier)` | `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions` | `gemini-2.5-flash` | yes | `https://aistudio.google.com/apikey` |
-| `openrouter` | `OpenRouter (free models)` | `https://openrouter.ai/api/v1/chat/completions` | `meta-llama/llama-3.3-70b-instruct:free` | yes | `https://openrouter.ai/keys` |
-| `cerebras` | `Cerebras (free tier)` | `https://api.cerebras.ai/v1/chat/completions` | `llama-3.3-70b` | yes | `https://cloud.cerebras.ai` |
+| `groq` | `Groq (free tier)` | `https://api.groq.com/openai/v1/chat/completions` | `openai/gpt-oss-120b` | yes | `https://console.groq.com/keys` |
+| `gemini` | `Google Gemini (free tier)` | `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions` | `gemini-3.8-flash` | yes | `https://aistudio.google.com/apikey` |
+| `openrouter` | `OpenRouter (free models)` | `https://openrouter.ai/api/v1/chat/completions` | `google/gemma-4-31b-it:free` | yes | `https://openrouter.ai/keys` |
+| `cerebras` | `Cerebras (free tier)` | `https://api.cerebras.ai/v1/chat/completions` | `gpt-oss-120b` | yes | `https://cloud.cerebras.ai` |
 | `mistral` | `Mistral (free tier)` | `https://api.mistral.ai/v1/chat/completions` | `mistral-small-latest` | yes | `https://console.mistral.ai/api-keys` |
 | `ollama` | `Ollama on this computer (no key)` | `http://localhost:11434/v1/chat/completions` | `llama3.2` | no | — |
 | `custom` | `Custom OpenAI-compatible endpoint` | `settings.customUrl` | `''` | optional | — |

@@ -87,8 +87,10 @@ test.describe('diagram', () => {
     await page.getByTitle('Set zoom to 100%').click();
     const canvas = await overCanvas(page);
     const before = await camera(page);
+    // The left margin has no arrow, because a small move is a click and a click on an arrow moves the camera.
+    await page.mouse.move(canvas.x + 12, canvas.y + canvas.height / 2);
     await page.mouse.down();
-    await page.mouse.move(canvas.x + canvas.width / 2 + 3, canvas.y + canvas.height / 2);
+    await page.mouse.move(canvas.x + 15, canvas.y + canvas.height / 2);
     await page.mouse.up();
     expect((await camera(page)).x).toBe(before.x);
     await overCanvas(page);

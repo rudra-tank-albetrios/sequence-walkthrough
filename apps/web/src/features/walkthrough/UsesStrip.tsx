@@ -1,5 +1,7 @@
 import type { Step } from '@swv/core';
 
+import { useFlowStore } from '../../shared/state/flowStore.ts';
+import { Button } from '../../shared/ui/Button.tsx';
 import { Chip } from '../../shared/ui/Chip.tsx';
 import { TermText } from '../../shared/ui/TermText.tsx';
 import styles from './card.module.css';
@@ -8,6 +10,7 @@ import { usesSummary } from './steps.ts';
 
 /** "Also involved: 2 hooks · 1 util": the side parts a step uses, with their code references. */
 export function UsesStrip({ step }: { step: Step }) {
+  const setUi = useFlowStore((s) => s.setUi);
   if (step.uses.length === 0) return null;
   return (
     <details className={styles.uses} data-testid="uses" data-tour="side-parts">
@@ -26,6 +29,14 @@ export function UsesStrip({ step }: { step: Step }) {
           </li>
         ))}
       </ul>
+      <Button
+        variant="ghost"
+        onClick={() => {
+          setUi({ sidePartsStep: step.idx });
+        }}
+      >
+        Open the details
+      </Button>
     </details>
   );
 }

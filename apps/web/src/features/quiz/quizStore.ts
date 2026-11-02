@@ -2,6 +2,7 @@ import type { Flow } from '@swv/core';
 import { create } from 'zustand';
 
 import { useFlowStore } from '../../shared/state/flowStore.ts';
+import { rememberFlow } from '../../shared/storage/flowHistory.ts';
 import { flowId } from '../../shared/storage/notes.ts';
 import {
   loadWeakPoints,
@@ -11,7 +12,8 @@ import {
   weakTopics,
   type QuizRetry,
 } from '../../shared/storage/weakPoints.ts';
-import { generateQuestions, QuizError } from './generate.ts';
+import { connectedFlows, mergeQuiz, type FlowQuestions } from './connect.ts';
+import { generateAcross, QuizError } from './generate.ts';
 import { announceHosts } from './hosts.ts';
 import { chapterOf, markWritten, marksFor, type Answers, type Marks } from './marking.ts';
 import { loadRecentQuestions, rememberQuestions } from './recent.ts';
@@ -24,8 +26,14 @@ export interface QuizState {
   phase: Phase;
   config: QuizConfig;
   source: QuizSource;
-  /** The flow the quiz is about, as it was when the quiz started. */
+  /** The flow on screen as it was when the quiz started. */
+  base: Flow | null;
+  /** The flow the questions' steps are in: `base`, followed by any connected flows. */
   flow: Flow | null;
+  /** The connected flows chosen last, by id. They stay chosen for the next quiz. */
+  connected: string[];
+  /** Connected flows no usable question came back for. */
+  skipped: string[];
   questions: Question[];
   answers: Answers;
   marks: Marks;
@@ -45,7 +53,7 @@ export interface QuizState {
   /** Picks up a pending "Retry my mistakes" as the quiz opens; a stale result or flow is dropped. */
   prepare: () => void;
   dropRetry: () => void;
-  start: (config: QuizConfig, source: QuizSource) => Promise<void>;
+  start: (config: QuizConfig, source: QuizSource, connected?: readonly string[]) => Promise<void>;
   /** Stops writing a quiz, or leaves a running one, without keeping anything. */
   leave: () => void;
   answer: (questionId: string, text: string) => void;
@@ -57,7 +65,9 @@ export interface QuizState {
 }
 
 const EMPTY_SESSION = {
+  base: null,
   flow: null,
+  skipped: [],
   questions: [],
   answers: {},
   marks: {},
@@ -89,10 +99,11 @@ function messageOf(error: unknown): string {
 export const useQuizStore = create<QuizState>((set, get) => {
   /** Writes the marks that are new to the weak points. */
   const saveOutcomes = (): void => {
-    const { flow, questions, answers, marks } = get();
-    if (!flow) return;
-    const id = flowId(flow);
+    const { base, flow, questions, answers, marks } = get();
+    if (!flow || !base) return;
+    const baseId = flowId(base);
     for (const question of questions) {
+      const id = question.from?.id ?? baseId;
       const mark = marks[question.id];
       if (!mark || saved.has(question.id)) continue;
       if (mark.value === 'correct') {
@@ -102,7 +113,7 @@ export const useQuizStore = create<QuizState>((set, get) => {
         saved.set(question.id, 'miss');
         void recordMiss({
           flowId: id,
-          flow: flow.title,
+          flow: question.from?.title ?? base.title,
           step: flow.steps[question.stepIndex]?.n ?? 1,
           chapter: chapterOf(flow, question),
           topic: question.topic,
@@ -139,13 +150,14 @@ export const useQuizStore = create<QuizState>((set, get) => {
     phase: 'setup',
     config: DEFAULT_CONFIG,
     source: 'sample',
+    connected: [],
     retry: null,
     ...EMPTY_SESSION,
 
     prepare() {
-      const { flow, phase } = get();
+      const { base, phase } = get();
       const retry = takeQuizRetry();
-      const stale = flow !== null && flow !== useFlowStore.getState().flow;
+      const stale = base !== null && base !== useFlowStore.getState().flow;
       if (retry || (stale && phase !== 'running')) {
         newRequest();
         set({ phase: 'setup', ...EMPTY_SESSION, ...(retry ? { retry } : {}) });
@@ -156,37 +168,67 @@ export const useQuizStore = create<QuizState>((set, get) => {
       set({ retry: null });
     },
 
-    async start(config, source) {
-      const { flow } = useFlowStore.getState();
+    async start(config, source, connectedIds = []) {
+      const { flow, code } = useFlowStore.getState();
       if (!flow?.isSequence || get().phase === 'loading') return;
       const request = newRequest();
       saved = new Map();
-      set({ ...EMPTY_SESSION, phase: 'loading', config, source, flow });
+      set({
+        ...EMPTY_SESSION,
+        phase: 'loading',
+        config,
+        source,
+        base: flow,
+        flow,
+        connected: [...connectedIds],
+      });
+      rememberFlow(flow, code);
       const id = flowId(flow);
+      const connected = source === 'model' ? connectedFlows(connectedIds) : [];
       try {
         // The set-up screen named the hosts the text goes to; Start means the notice was read.
         if (source === 'model') announceHosts();
-        const [points, recent] = await Promise.all([loadWeakPoints(), loadRecentQuestions(id)]);
-        const weak = weakTopics(points, id);
-        const questions =
-          source === 'sample'
-            ? pickSample(flow, config, { weak, recent })
-            : await generateQuestions({
-                flow,
-                config,
-                avoid: recent,
-                weak,
-                signal: request.signal,
-              });
+        const ids = [id, ...connected.map((part) => part.id)];
+        const [points, ...recents] = await Promise.all([
+          loadWeakPoints(),
+          ...ids.map((one) => loadRecentQuestions(one)),
+        ]);
+        const recent = [...new Set(recents.flat())];
+        let parts: FlowQuestions[];
+        let skipped: string[] = [];
+        if (source === 'sample') {
+          const weak = weakTopics(points, id);
+          parts = [{ id: '', flow, questions: pickSample(flow, config, { weak, recent }) }];
+        } else {
+          ({ parts, skipped } = await generateAcross({
+            flow,
+            connected,
+            config,
+            avoid: recent,
+            weakOf: (one) => weakTopics(points, one),
+            id,
+            signal: request.signal,
+          }));
+        }
         if (request.signal.aborted) return;
-        if (questions.length === 0) {
+        const merged = mergeQuiz(flow, parts);
+        if (merged.questions.length === 0) {
           throw new QuizError('The built-in sample has no questions on these topics.');
         }
-        void rememberQuestions(
-          id,
-          questions.map((question) => question.text),
-        );
-        set({ phase: 'running', questions, startedAt: Date.now(), retry: null });
+        for (const part of parts) {
+          void rememberQuestions(
+            part.id || id,
+            part.questions.map((question) => question.text),
+          );
+        }
+        set({
+          phase: 'running',
+          flow: merged.flow,
+          questions: merged.questions,
+          skipped,
+          startedAt: Date.now(),
+          retry: null,
+        });
       } catch (error) {
         if (request.signal.aborted) return;
         if (error instanceof QuizError && error.needsSettings) {
@@ -222,16 +264,20 @@ export const useQuizStore = create<QuizState>((set, get) => {
     },
 
     markAsCorrect(questionId) {
-      const { flow, phase, questions, marks } = get();
+      const { base, phase, questions, marks } = get();
       const question = questions.find((candidate) => candidate.id === questionId);
-      if (phase !== 'result' || !flow || !question || question.type === 'choice') return;
+      if (phase !== 'result' || !base || !question || question.type === 'choice') return;
       if (marks[questionId]?.value === 'correct') return;
       set((s) => ({
         marks: { ...s.marks, [questionId]: { value: 'correct', by: 'user', feedback: '' } },
       }));
       // Takes back the miss this answer added, or counts as a correct answer if none was saved yet.
       saved.set(questionId, 'correct');
-      void recordCorrect({ flowId: flowId(flow), topic: question.topic, question: question.text });
+      void recordCorrect({
+        flowId: question.from?.id ?? flowId(base),
+        topic: question.topic,
+        question: question.text,
+      });
     },
 
     retryMarking() {

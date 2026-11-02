@@ -39,7 +39,10 @@ test.describe('header, Flow Rail and dock', () => {
     ]) {
       await expect(page.locator(`[data-tour="${name}"]`), name).toHaveCount(1);
     }
-    await expect(page.locator('#topbar')).toHaveCSS('backdrop-filter', /blur/);
+    // The header and the bottom bar share one solid navigation colour.
+    const navColour = /^rgb\((35, 36, 92|28, 29, 74)\)$/;
+    await expect(page.locator('#topbar')).toHaveCSS('background-color', navColour);
+    await expect(page.locator('#dock')).toHaveCSS('background-color', navColour);
     await expect(page.locator('#flowMeta')).toHaveText(/^43 steps/);
   });
 
@@ -91,15 +94,15 @@ test.describe('header, Flow Rail and dock', () => {
     await expect(rail(page)).toHaveAttribute('aria-valuenow', '2');
   });
 
-  test('the dock has a large Play, the speed, the chapters and the side parts by kind', async ({
+  test('the dock has a small Play, the speed, the chapters and the side parts by kind', async ({
     page,
   }) => {
     await openFocused(page);
     const dock = page.locator('#dock');
     const play = dock.getByRole('button', { name: 'Play' });
     const size = await boxOf(play);
-    expect(size.width).toBeGreaterThanOrEqual(44);
-    expect(size.height).toBeGreaterThanOrEqual(44);
+    expect(size.width).toBeLessThanOrEqual(28);
+    expect(size.height).toBeLessThanOrEqual(28);
     await expect(dock.getByLabel('Seconds per step')).toBeVisible();
     await expect(page.getByTestId('chapters').getByRole('button')).toHaveCount(5);
     await expect(
