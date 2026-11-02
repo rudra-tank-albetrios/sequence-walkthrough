@@ -54,6 +54,7 @@ export {
 export { askRequest } from './ask.ts';
 export { testModel, type ModelCheck } from './check.ts';
 export { consentMissing, grantConsent, modelHost } from './consent.ts';
+export { chooseModel, detectModelLink, listModelNames } from './detect.ts';
 export {
   applyEdit,
   DEFAULT_SWITCH_AT,

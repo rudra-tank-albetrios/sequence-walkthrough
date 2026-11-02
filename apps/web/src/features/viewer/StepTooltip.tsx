@@ -73,7 +73,7 @@ export function StepTooltip({
       ) : null}
       {step.uses.length > 0 ? (
         <div className={styles.tipRow}>
-          <b>Also involved</b> {step.uses.map((u) => `${u.kind} ${u.name}`).join(', ')}
+          <b>Side parts</b> {step.uses.map((u) => `${u.kind} ${u.name}`).join(', ')}
         </div>
       ) : null}
       {step.effects.length > 0 ? (
@@ -83,7 +83,7 @@ export function StepTooltip({
       ) : null}
       {flags.length > 0 ? (
         <div className={styles.tipRow}>
-          <b>Chips</b> {flags.join(' · ')}
+          <b>Behaviour</b> {flags.join(' · ')}
         </div>
       ) : null}
       {step.unconfirmed.length > 0 ? (
@@ -149,6 +149,7 @@ export function UsesTooltip({ flow, step }: { flow: Flow; step: Step }) {
           </div>
         );
       })}
+      <div className={styles.tipFoot}>Click the dot for the full details</div>
     </div>
   );
 }

@@ -50,7 +50,7 @@ export interface DiagramImage {
 function questionBlock(flow: Flow, question: Question, index: number): DocBlock {
   const step = flow.steps[question.stepIndex];
   const where = step ? `Step ${step.n}: ${route(step)}` : '';
-  const meta = [where, TYPE_LABELS[question.type], LEVELS[question.difficulty].label];
+  const meta = [question.from?.title ?? '', where, TYPE_LABELS[question.type], LEVELS[question.difficulty].label];
   return { kind: 'question', number: index + 1, text: question.text, meta: meta.filter(Boolean).join('. ') };
 }
 
@@ -60,7 +60,7 @@ export function quizBlocks({ flow, questions }: QuizDoc, withAnswers: boolean): 
     { kind: 'title', text: `${flow.title}: quiz` },
     {
       kind: 'text',
-      text: `${plural(questions.length, 'question')}, ${withAnswers ? 'with' : 'without'} answers. Each one comes from a step of this flow.`,
+      text: `${plural(questions.length, 'question')}, ${withAnswers ? 'with' : 'without'} answers. Each one comes from a step of ${questions.some((question) => question.from) ? 'the flows it connects' : 'this flow'}.`,
     },
   ];
   questions.forEach((question, index) => {

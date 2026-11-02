@@ -53,6 +53,34 @@ describe('flowSummary', () => {
     expect(text).toMatch(/4\. Orders → Checkout \[error\]: 402 Payment Required \(in alt card declined\)/);
   });
 
+  it('adds each step\'s facts, the glossary and the final replies when asked', () => {
+    const text = flowSummary(flow, { facts: true });
+    expect(text).toContain('Terms: hold: a short-lived key that keeps stock aside.');
+    expect(text).toContain('The first caller finally receives: step 2');
+    expect(text).toContain('2. Orders → Checkout (reply): 201 Created');
+    expect(text).toMatch(/4\. Orders → Checkout \(reply\) \[error\]: 402 Payment Required/);
+    expect(flowSummary(flow)).not.toContain('(reply)');
+    expect(flowSummary(flow)).not.toContain('Terms:');
+
+    const rich = parseFlow(`sequenceDiagram
+  %% @step The service holds the stock.
+  %% @retry 3×
+  %% @effect A hold row is written
+  %% @state before stock = 10
+  %% @state after stock = 9
+  %% @uses cron releaseHolds src/cron.ts:1 Returns expired holds.
+  %% @threat low The hold never expires.
+  A->>B: SET hold`).flow;
+    const line = flowSummary(rich, { facts: true }).split('\n').find((l) => l.startsWith('1.'));
+    expect(line).toContain('| Flags: retry 3×. Effects: A hold row is written. State: stock = 10 → stock = 9');
+    expect(line).toContain('Uses: cron releaseHolds. Threat: low, The hold never expires.');
+  });
+
+  it('stays within the budget with facts on a large flow', () => {
+    expect(estimateTokens(flowSummary(largeFlow(200), { facts: true }))).toBeLessThanOrEqual(FLOW_SUMMARY_TOKENS);
+    expect(estimateTokens(flowSummary(largeFlow(30), { facts: true, maxTokens: 400 }))).toBeLessThanOrEqual(400);
+  });
+
   it('never holds the diagram code', () => {
     const text = flowSummary(flow);
     for (const code of ['sequenceDiagram', '%% @', '->>', '-->>', 'participant ']) {

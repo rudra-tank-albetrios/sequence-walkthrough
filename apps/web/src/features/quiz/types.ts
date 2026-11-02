@@ -70,6 +70,8 @@ export interface Question {
   why: string;
   /** Sample questions only: every group needs one of its words, for marking without a model. */
   keywords?: string[][];
+  /** The connected flow this question comes from. Not set for the flow on screen. */
+  from?: { id: string; title: string };
 }
 
 export type MarkValue = 'correct' | 'partly' | 'wrong';

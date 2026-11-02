@@ -173,7 +173,7 @@ CI fails if a measured budget is broken. Numbers marked "goal" are checked by ha
 |---|---|
 | Flow summary sent to a model | At most about 1,500 tokens, and never the full diagram code |
 | Ask AI reply | At most 220 tokens, as today |
-| Quiz of 5 questions | At most about 1,200 reply tokens |
+| Quiz, per batch of 5 questions | At most 3,000 reply tokens, of which the questions use about 1,000; the rest is room for a reasoning model's thinking. A longer quiz is asked for in batches of 5. |
 | Marking a one-line answer | At most 80 reply tokens, in one batch per quiz |
 | Day recap | At most about 500 reply tokens, saved until new mistakes appear |
 | Repeated question | 0 tokens, from the answer cache |

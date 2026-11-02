@@ -206,7 +206,13 @@ export function loadModelState(): ModelState {
   });
   const state = migrateV2({ ...stored, models });
   const activeId = state.models.some((m) => m.id === state.activeId) ? state.activeId : (state.models[0]?.id ?? '');
-  return { ...state, activeId };
+  return { ...state, models: state.models.map(withoutRetiredModel), activeId };
+}
+
+/** An entry still on a default its provider shut down, moved to the current default. */
+function withoutRetiredModel(entry: ModelEntry): ModelEntry {
+  const { retired, model } = presetFor(entry.preset);
+  return retired?.includes(entry.model) ? { ...entry, model } : entry;
 }
 
 /** Saves the list. With `forgetKeys`, the keys go to this tab only and leave localStorage. */

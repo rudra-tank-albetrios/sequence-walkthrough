@@ -332,7 +332,9 @@ export function Viewer() {
         const m = mountedRef.current;
         const stepEl = target.closest('[data-step], [data-uses]');
         if (stepEl && m?.flow.isSequence) {
-          go(Number(stepEl.getAttribute('data-step') ?? stepEl.getAttribute('data-uses')));
+          const index = Number(stepEl.getAttribute('data-step') ?? stepEl.getAttribute('data-uses'));
+          go(index);
+          if (stepEl.hasAttribute('data-uses')) useFlowStore.getState().setUi({ sidePartsStep: index });
           return;
         }
         const actor = target.closest('.swv-actor');

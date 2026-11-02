@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_DIAGRAM } from '../../shared/lib/defaultDiagram.ts';
 import { useFlowStore } from '../../shared/state/flowStore.ts';
 import { useNotesStore } from '../../shared/state/notesStore.ts';
+import { TooltipProvider } from '../../shared/ui/Tooltip.tsx';
 import { WalkthroughRuntime } from './LiveRegion.tsx';
 import { WalkBar } from './WalkBar.tsx';
 
@@ -43,7 +44,7 @@ describe('WalkBar with the demo flow', () => {
     expect(conflict).toBeDefined();
     if (!conflict) return;
     useFlowStore.setState({ cur: conflict.idx });
-    render(<WalkBar />);
+    render(<TooltipProvider><WalkBar /></TooltipProvider>);
 
     expect(screen.getByTestId('status')).toHaveTextContent('409');
     expect(screen.getByTestId('status-note').textContent).toMatch(/^Conflict:/);
@@ -54,7 +55,7 @@ describe('WalkBar with the demo flow', () => {
     const request = flow.steps[conflict.answers];
     expect(useFlowStore.getState().cur).toBe(request?.idx);
     cleanup();
-    render(<WalkBar />);
+    render(<TooltipProvider><WalkBar /></TooltipProvider>);
     const replies = within(screen.getByTestId('replies')).getAllByRole('button');
     expect(replies.length).toBeGreaterThanOrEqual(2);
     expect(replies.some((b) => b.textContent.startsWith('409 Conflict'))).toBe(true);
@@ -62,7 +63,7 @@ describe('WalkBar with the demo flow', () => {
 
   it('shows the overview card at the start with the endings and the layers', () => {
     const flow = load(DEFAULT_DIAGRAM);
-    render(<WalkBar />);
+    render(<TooltipProvider><WalkBar /></TooltipProvider>);
     const overview = screen.getByTestId('overview');
     expect(within(overview).getByRole('heading', { level: 3 })).toHaveTextContent('Place an order');
     expect(within(overview).getByText(/Starts when:/)).toBeInTheDocument();
@@ -73,7 +74,7 @@ describe('WalkBar with the demo flow', () => {
 
   it('has one progress segment per chapter', () => {
     const flow = load(DEFAULT_DIAGRAM);
-    render(<WalkBar />);
+    render(<TooltipProvider><WalkBar /></TooltipProvider>);
     expect(flow.sections.length).toBeGreaterThan(1);
     expect(screen.getAllByTestId('progress-seg')).toHaveLength(flow.sections.length);
     expect(within(screen.getByTestId('chapters')).getAllByRole('button')).toHaveLength(flow.sections.length);
@@ -82,7 +83,7 @@ describe('WalkBar with the demo flow', () => {
 
   it('offers the path filter with the branch options', () => {
     load(DEFAULT_DIAGRAM);
-    render(<WalkBar />);
+    render(<TooltipProvider><WalkBar /></TooltipProvider>);
     const select = screen.getByTestId<HTMLSelectElement>('path-select');
     const labels = [...select.options].map((o) => o.textContent);
     expect(labels.slice(0, 3)).toEqual(['Path: all steps', 'Happy path only', 'Errors only']);
@@ -94,7 +95,7 @@ describe('WalkBar with the demo flow', () => {
   it('bookmarks the current step and keeps it in localStorage', () => {
     load(DEFAULT_DIAGRAM);
     useFlowStore.setState({ cur: 0 });
-    render(<WalkBar />);
+    render(<TooltipProvider><WalkBar /></TooltipProvider>);
     expect(screen.getByTestId('bm-btn')).toHaveTextContent('★ 0');
 
     fireEvent.click(screen.getByTestId('star-btn'));
@@ -126,7 +127,7 @@ describe('WalkBar with the demo flow', () => {
 describe('WalkBar with a flow without branches', () => {
   it('hides the path select and the chapters', () => {
     load(TWO_STEPS);
-    render(<WalkBar />);
+    render(<TooltipProvider><WalkBar /></TooltipProvider>);
     expect(screen.queryByTestId('path-select')).toBeNull();
     expect(screen.queryByTestId('chapters')).toBeNull();
     expect(screen.getAllByTestId('progress-seg')).toHaveLength(1);
@@ -135,7 +136,7 @@ describe('WalkBar with a flow without branches', () => {
   it('shows the fallback replies text and the kind chips', () => {
     load(TWO_STEPS);
     useFlowStore.setState({ cur: 1 });
-    render(<WalkBar />);
+    render(<TooltipProvider><WalkBar /></TooltipProvider>);
     expect(screen.getByTestId('status-note').textContent).toMatch(/^OK:/);
     expect(screen.getByTestId('pair-chip')).toHaveTextContent('answers step 1: GET /things');
   });

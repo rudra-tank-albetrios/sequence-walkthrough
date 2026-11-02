@@ -253,15 +253,24 @@
 }
 
 .tipDoes {
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  font-size: var(--text-md);
 }
 
+/* The key points: a label column and its text, so they read as a short list */
 .tipRow {
-  margin-top: 2px;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: var(--space-2);
+  padding-top: 3px;
+  margin-top: 3px;
+  border-top: 1px solid var(--line);
+  overflow-wrap: anywhere;
 }
 
 .tipRow b {
-  margin-right: 4px;
+  color: var(--muted);
+  font-weight: 650;
 }
 
 .tipUnconfirmed b {

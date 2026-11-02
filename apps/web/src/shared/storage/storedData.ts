@@ -18,6 +18,7 @@ const flowName = (id: string): string => (id.startsWith('t:') ? id.slice(2) : 'A
 const FIXED: Record<string, { group: string; label: string }> = {
   'swv:code': { group: 'This page', label: 'The last code you worked on' },
   'swv:settings': { group: 'This page', label: 'Theme and display settings' },
+  'swv:flows': { group: 'This page', label: 'Your flows, kept so a quiz can connect them' },
   'swv:ai': { group: 'Ask AI', label: 'Provider, model and API keys' },
   'swv:ai:cache': { group: 'Ask AI', label: 'Saved answers' },
 };

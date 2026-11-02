@@ -63,7 +63,7 @@ describe('callModel: the reply', () => {
       ok: true,
       data: 'The page starts the submit.',
       cached: false,
-      model: { id: m.entry.id, name: 'Groq', model: 'llama-3.3-70b-versatile' },
+      model: { id: m.entry.id, name: 'Groq', model: 'openai/gpt-oss-120b' },
       notices: [],
     });
   });
@@ -72,7 +72,7 @@ describe('callModel: the reply', () => {
     mock = mockModel({ reply: 'Fine.' });
     await callModel(ask());
     expect(mock.calls[0]?.body).toMatchObject({
-      model: 'llama-3.3-70b-versatile',
+      model: 'openai/gpt-oss-120b',
       max_tokens: 220,
       messages: [
         { role: 'system', content: 'Be short.' },
@@ -95,10 +95,25 @@ describe('callModel: the reply', () => {
     }
   });
 
+  it('keeps the whole items of a reply the token limit cut short, and skips thinking tags', async () => {
+    const schema = z.object({ questions: z.array(z.object({ step: z.number() })) });
+    for (const reply of [
+      '{"questions":[{"step":3},{"step":4},{"step":5,"ques',
+      '<think>Let me count the steps…</think>\n{"questions":[{"step":3},{"step":4}]}',
+      '<think>{"step":9}</think>```json\n{"questions":[{"step":3},{"step":4}]}',
+    ]) {
+      mock = mockModel({ reply });
+      const result = await callModel({ ...ask(), schema, format: 'json' });
+      mock.restore();
+      expect(result).toMatchObject({ ok: true, data: { questions: [{ step: 3 }, { step: 4 }] } });
+    }
+  });
+
   it.each([
     ['text that is not JSON', 'Sorry, I cannot do that.'],
     ['the wrong shape', '{"questions":"none"}'],
     ['broken JSON', '{"questions":['],
+    ['thinking that never ends', '<think>{"questions":["a"]}'],
   ])('reports %s as a typed bad reply, without trying another model', async (_name, reply) => {
     const [groq] = threeModels();
     mock = mockFetch({ reply });

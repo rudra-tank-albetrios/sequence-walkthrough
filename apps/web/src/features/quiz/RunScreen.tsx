@@ -64,6 +64,7 @@ function QuestionMeta({ question, flow }: { question: Question; flow: Flow }) {
         Step {step?.n}
         {step ? `: ${route(step)}` : ''}
       </Chip>
+      {question.from ? <Chip>{question.from.title}</Chip> : null}
       <Chip>{TYPE_LABELS[question.type]}</Chip>
       <Chip>{LEVELS[question.difficulty].label}</Chip>
     </div>
@@ -129,20 +130,30 @@ function WrittenAnswer({ question, label }: { question: Question; label: string 
 /** The questions, the clock, and the option to download the quiz. */
 export function RunScreen({ flow }: { flow: Flow }) {
   const questions = useQuizStore((s) => s.questions);
+  const wanted = useQuizStore((s) => s.config.count);
+  const source = useQuizStore((s) => s.source);
+  const skipped = useQuizStore((s) => s.skipped);
   return (
     <div className={styles.run}>
       <QuizClock />
+      {source === 'model' && questions.length < wanted ? (
+        <p className={styles.partial} role="status">
+          Only {questions.length} of the {wanted} questions passed the check against this flow, so
+          this quiz is shorter.
+          {skipped.length > 0 ? ` No usable question came back for ${skipped.join(', ')}.` : ''}
+        </p>
+      ) : null}
       <ol className={styles.questions}>
         {questions.map((question, i) => {
           const label = `${i + 1}. ${question.text}`;
           return (
             <li key={question.id} className={styles.question}>
+              <QuestionMeta question={question} flow={flow} />
               {question.type === 'choice' ? (
                 <ChoiceAnswer question={question} label={label} />
               ) : (
                 <WrittenAnswer question={question} label={label} />
               )}
-              <QuestionMeta question={question} flow={flow} />
             </li>
           );
         })}

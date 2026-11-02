@@ -1,7 +1,7 @@
 import type { Flow } from '@swv/core';
 import { z } from 'zod';
 
-import { isSupported, stepEvidence, unsupportedFacts } from './support.ts';
+import { isSupported, sameWording, stepEvidence, unsupportedFacts } from './support.ts';
 import { QUESTION_TYPES, type Difficulty, type Question } from './types.ts';
 
 /**
@@ -29,6 +29,10 @@ export const QuestionsEnvelopeSchema = z.object({ questions: z.array(z.unknown()
 export const normalizeText = (text: string): string =>
   text.trim().toLowerCase().replace(/\s+/g, ' ');
 
+/** The same question, however it is spaced, capitalised or lightly reworded. */
+export const sameQuestion = (a: string, b: string): boolean =>
+  normalizeText(a) === normalizeText(b) || sameWording(a, b);
+
 export type Checked = { ok: true; question: Question } | { ok: false; reason: string };
 
 const reject = (reason: string): Checked => ({ ok: false, reason });
@@ -55,6 +59,10 @@ export function checkQuestion(reply: QuestionReply, flow: Flow, difficulty: Diff
     if (problem) return reject(`step ${reply.step}: ${problem}`);
   }
   const evidence = stepEvidence(flow, step);
+  const foreign = unsupportedFacts(reply.question, evidence);
+  if (foreign.length > 0) {
+    return reject(`step ${reply.step}: the flow does not show "${foreign.join(', ').slice(0, 80)}"`);
+  }
   if (!isSupported(reply.answer, evidence)) {
     return reject(`step ${reply.step} does not support the answer "${reply.answer.slice(0, 80)}"`);
   }

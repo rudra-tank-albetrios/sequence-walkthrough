@@ -32,7 +32,7 @@ export function ModelRow({ model, index, count, onEdit }: ModelRowProps) {
   };
 
   return (
-    <li className={styles.row} data-testid="model-row">
+    <li className={`${styles.row} ${active ? styles.rowActive : ''}`} data-testid="model-row">
       <div className={styles.rowHead}>
         <label className={styles.first}>
           <input
@@ -44,7 +44,8 @@ export function ModelRow({ model, index, count, onEdit }: ModelRowProps) {
             }}
           />
           <span className={styles.name}>{model.name}</span>
-          {active ? <span className={styles.muted}>asked first</span> : null}
+          {active ? <span className={styles.badge}>Asked first</span> : null}
+          {!active && model.fallback ? <span className={styles.badge}>Fallback</span> : null}
         </label>
         <span className={`${styles.model} mono`}>
           {modelHost(model)}

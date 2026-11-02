@@ -88,7 +88,7 @@ describe('AskDialog', () => {
     await user.type(screen.getByRole('textbox', { name: 'Question' }), 'Why this step?');
     await user.click(screen.getByRole('button', { name: 'Ask' }));
     await screen.findByText('The client reserves stock first.');
-    expect(screen.getByText('Groq · llama-3.3-70b-versatile')).toBeInTheDocument();
+    expect(screen.getByText('Groq · openai/gpt-oss-120b')).toBeInTheDocument();
     expect(screen.getByText(/Saved to this step's note/)).toBeInTheDocument();
     expect(useNotesStore.getState().entry(step)?.note).toBe(
       'My own note\n\nQ: Why this step?\nA: The client reserves stock first.',
@@ -311,7 +311,7 @@ describe('models beside the question', () => {
     await user.click(chip('Why this step?'));
     await screen.findByText('From Gemini.');
     expect(screen.getByTestId('ask-notice')).toHaveTextContent('Groq limit reached, switched to Gemini');
-    expect(screen.getByText('Gemini · gemini-2.5-flash')).toBeInTheDocument();
+    expect(screen.getByText('Gemini · gemini-3.8-flash')).toBeInTheDocument();
     expect(mock.calls).toHaveLength(2);
   });
 

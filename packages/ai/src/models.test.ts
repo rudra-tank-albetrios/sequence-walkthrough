@@ -39,9 +39,20 @@ describe('moving version 2 settings over', () => {
     const state = loadModelState();
     expect(state.models.map((m) => [m.preset, m.key, m.model])).toEqual([
       ['gemini', 'AIza-old', 'gemini-2.0-flash'],
-      ['groq', 'gsk_old', 'llama-3.3-70b-versatile'],
+      ['groq', 'gsk_old', 'openai/gpt-oss-120b'],
     ]);
     expect(state.activeId).toBe(state.models[0]?.id);
+  });
+
+  it('moves a saved entry off a default the provider shut down, and leaves other names', () => {
+    const saved = (model: string) => ({ ...newModel('groq'), model });
+    saveModelState({
+      models: [saved('llama-3.3-70b-versatile'), saved('my-own-model')],
+      activeId: '',
+      switchAt: 5,
+      forgetKeys: false,
+    });
+    expect(loadModelState().models.map((m) => m.model)).toEqual(['openai/gpt-oss-120b', 'my-own-model']);
   });
 
   it('marks nothing as a fallback: only the person chooses that', () => {

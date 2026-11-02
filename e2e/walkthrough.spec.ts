@@ -389,9 +389,12 @@ test.describe('walkthrough', () => {
     await expect(stepInput(page)).toHaveValue('1');
     await page.mouse.wheel(0, 50);
     await expect(stepInput(page)).toHaveValue('2');
-    await page.mouse.wheel(0, -50);
+    await expect(page.getByTestId('scroll-cue')).toContainText('Step 2 of');
+    // A big scroll right after it is the same movement, so it moves nothing.
+    await page.mouse.wheel(0, 2400);
+    await page.mouse.wheel(0, 2400);
     await expect(stepInput(page)).toHaveValue('2');
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(700);
     await page.mouse.wheel(0, -50);
     await expect(stepInput(page)).toHaveValue('1');
   });

@@ -44,6 +44,8 @@ export interface FlowState {
     overlayTool: string | null;
     /** The question to ask before leaving the overlay, set while leaving would lose work (a running quiz). */
     overlayGuard: string | null;
+    /** The step whose side parts are open in their details container; null when closed. */
+    sidePartsStep: number | null;
     controlsHidden: boolean;
     presenter: boolean;
     /** The structure review overlay. */
@@ -129,6 +131,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     codeOpen: false,
     overlayTool: null,
     overlayGuard: null,
+    sidePartsStep: null,
     controlsHidden: false,
     presenter: false,
     reviewOpen: false,

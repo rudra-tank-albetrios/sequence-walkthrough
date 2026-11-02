@@ -117,11 +117,18 @@ test.describe('The model list', () => {
       'Works. Google said: OK.',
     );
 
-    expect([...log].sort()).toEqual([
-      `gemini-secret at ${GEMINI_URL}`,
-      `groq-secret at ${GROQ_URL}`,
-      `mistral-secret at ${MISTRAL_URL}`,
-    ]);
+    // Each key also asks its own server for the model names when it is typed in, and goes nowhere else.
+    const modelsOf = (url: string) => url.replace('/chat/completions', '/models');
+    expect([...log].sort()).toEqual(
+      [
+        `gemini-secret at ${GEMINI_URL}`,
+        `gemini-secret at ${modelsOf(GEMINI_URL)}`,
+        `groq-secret at ${GROQ_URL}`,
+        `groq-secret at ${modelsOf(GROQ_URL)}`,
+        `mistral-secret at ${MISTRAL_URL}`,
+        `mistral-secret at ${modelsOf(MISTRAL_URL)}`,
+      ].sort(),
+    );
   });
 
   test('explains a call the browser blocked, and tells it apart from a host that is down', async ({
@@ -380,7 +387,7 @@ test.describe('Auto-switch', () => {
     await dialog.getByRole('button', { name: 'Why this step?' }).click();
     const answer = answerOf(dialog);
     await expect(answer).toContainText('From Gemini.');
-    await expect(answer).toContainText('Gemini · gemini-2.5-flash');
+    await expect(answer).toContainText('Gemini · gemini-3.8-flash');
     await expect(answer.getByTestId('ask-notice')).toHaveText(
       'Groq limit reached, switched to Gemini',
     );
@@ -473,7 +480,7 @@ test.describe('The answer cache', () => {
     await expect(shown).toContainText('First answer.');
     await dialog.getByRole('button', { name: 'Why this step?' }).click();
     await expect(shown.getByText('Saved answer')).toBeVisible();
-    await expect(shown).toContainText('Groq · llama-3.3-70b-versatile');
+    await expect(shown).toContainText('Groq · openai/gpt-oss-120b');
     expect(groq).toHaveLength(2);
 
     answer = 'Second answer.';
@@ -506,7 +513,7 @@ test.describe('The answer cache', () => {
     await dialog.getByRole('button', { name: 'Why this step?' }).click();
     await expect(answerOf(dialog).getByText('Saved answer')).toBeVisible();
     await expect(answerOf(dialog)).toContainText('From Groq.');
-    await expect(answerOf(dialog)).toContainText('Groq · llama-3.3-70b-versatile');
+    await expect(answerOf(dialog)).toContainText('Groq · openai/gpt-oss-120b');
     expect(gemini).toHaveLength(1);
   });
 
