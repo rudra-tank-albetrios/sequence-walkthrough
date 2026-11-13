@@ -22,12 +22,12 @@
     "fflate": "^0.8.3",
     "idb-keyval": "^6.3.0",
     "jspdf": "^4.2.1",
-    "lucide-react": "^1.65.0",
-    "mermaid": "12.2.0",
+    "lucide-react": "^1.71.0",
+    "mermaid": "12.3.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "zod": "^4.6.7",
-    "zustand": "^5.0.16"
+    "zustand": "^5.1.0"
   },
   "devDependencies": {
     "@swv/build-skills": "*",
